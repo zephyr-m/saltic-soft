@@ -22,10 +22,6 @@ Keeper = Box {
     path = ".cache/bastion.save"
 
     skill store(realm, clock) {
-        @master = 0
-        (realm.master == yes) {
-            master = 1
-        }
         @lines = [
             "saved={clock}",
             "wave={realm.wave}",
@@ -36,8 +32,7 @@ Keeper = Box {
             "income_level={realm.income_level}",
             "earned={realm.earned}",
             "cleared={realm.cleared}",
-            "played={realm.played}",
-            "master={master}"
+            "played={realm.played}"
         ]
         drum (realm.towers) {
             @code = beat.code()
@@ -84,9 +79,6 @@ Keeper = Box {
             }
             (str.starts_with(beat, "played=") == yes) {
                 realm.played = number_of(value)
-            }
-            (str.starts_with(beat, "master=") == yes) {
-                realm.master = (number_of(value) == 1)
             }
             (str.starts_with(beat, "tower=") == yes) {
                 @parts = str.split(value, ",")

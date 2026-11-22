@@ -2,7 +2,7 @@
 -- (волна, золото с доходом, жизни ядра), место под поле (box с id field —
 -- его рисует Field, не UIEngine), справа башни и улучшения, снизу лента
 -- «пока тебя не было». Щелчки — по id: buy-archer, buy-cannon, buy-frost,
--- up-damage, up-speed, up-income, up-master, pause.
+-- up-damage, up-speed, up-income, up-tower, pause.
 --
 -- Panel { store } — store — лавка (shop.Shop), из неё строки башен и улучшений
 --     page(realm) -> JTML всего окна; realm — world.World

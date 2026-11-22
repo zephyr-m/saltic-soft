@@ -15,7 +15,7 @@
 -- World { wave, gold, lives, lives_most, columns, rows, path, spots, towers,
 --     enemies, spawned, spawn_wait, rest, damage_level, speed_level,
 --     income_level, carry, earned, cleared, played, paused, away_gold,
---     away_minutes, away_waves, first, news, master, master_wait }
+--     away_minutes, away_waves, first, news, master_wait }
 --     fresh() — новая дорожка и места под башни; step(ms) — время вперёд
 --     cover(spot) -> сколько клеток дорожки видно с места; ranked(spots) -> по cover
 --     at(step) -> [x, y] точки дорожки; income() -> золото в секунду
@@ -67,7 +67,6 @@ World = Box {
     away_waves = 0,
     first = yes,
     news = "",
-    master = no,
     master_wait = 1000
 
     skill fresh() {

@@ -1,15 +1,20 @@
 -- shop — лавка «Бастиона»: цены башен (×1,5 за каждую такую же) и улучшений
--- (×1,6 за уровень), покупки по щелчку панели и мастер — разовое улучшение за
--- MASTER_PRICE: раз в MASTER_GAP мс берёт самое дешёвое из башен и улучшений,
--- если хватает золота. Мир — realm (world.World); что вышло — realm.news.
+-- (×1,6 за уровень), покупки по щелчку панели и мастер — работает всегда (игра
+-- — хранитель экрана, играет сама): раз в MASTER_GAP мс берёт самое дешёвое из
+-- башен и улучшений, если хватает золота; когда места у дорожки заняты —
+-- поднимает уровень самой слабой башни. Мир — realm (world.World); что вышло —
+-- realm.news.
 --
 -- Shop:
 --     press(realm, id) — щелчок: buy-archer, buy-cannon, buy-frost, up-damage,
---         up-speed, up-income, up-master, pause
+--         up-speed, up-income, up-tower, pause
 --     tend(realm, ms) — ход мастера
 --     towers_on_sale(realm) -> [Offer] башен; upgrades(realm) -> [Offer] улучшений
 --     count_of(realm, code) / tower_price(realm, code) / upgrade_price(base, level)
---     master_title(realm) / bought_upgrade(realm, price, which) / bought_tower(realm, code)
+--     bought_upgrade(realm, price, which) / bought_tower(realm, code)
+--     weakest(realm) -> номер самой слабой башни (меньший уровень, первая)
+--     tower_up_price(realm) -> цена её следующего уровня; tower_up_title(realm);
+--     raised_tower(realm) — поднять её уровень
 
 use core.str
 use core.group
@@ -18,14 +23,10 @@ use soft.games.bastion.shop.offer
 
 DAMAGE_STEP = 40
 SPEED_STEP = 15
-MASTER_PRICE = 1500
 MASTER_GAP = 1000
 
 Shop = Box {
     skill tend(realm, ms) {
-        (realm.master == no) {
-            out none
-        }
         realm.master_wait = realm.master_wait - ms
         (realm.master_wait > 0) {
             out none
@@ -104,7 +105,7 @@ Shop = Box {
         @percent = DAMAGE_STEP * realm.damage_level
         @faster = SPEED_STEP * realm.speed_level
         @flow = realm.income()
-        out [
+        @offers = [
             offer.Offer {
                 id = "up-damage",
                 title = "урон +{percent}%",
@@ -119,14 +120,63 @@ Shop = Box {
                 id = "up-income",
                 title = "доход {flow}/с",
                 price = upgrade_price(300, realm.income_level)
-            },
-            offer.Offer {
-                id = "up-master",
-                title = master_title(realm),
-                price = MASTER_PRICE,
-                done = realm.master
             }
         ]
+        ((group.count(realm.towers) < group.count(realm.spots)) ○○ (group.count(realm.towers) == 0)) {
+            out offers
+        }
+        out group.add(offers, offer.Offer {
+            id = "up-tower",
+            title = tower_up_title(realm),
+            price = tower_up_price(realm)
+        })
+    }
+
+    skill weakest(realm) {
+        @best = 0
+        drum (group.count(realm.towers)) {
+            @here = group.get(realm.towers, beat)
+            @leader = group.get(realm.towers, best)
+            (here.level < leader.level) {
+                best = beat
+            }
+        }
+        out best
+    }
+
+    skill tower_up_price(realm) {
+        (group.count(realm.towers) == 0) {
+            out 0
+        }
+        @chosen = group.get(realm.towers, weakest(realm))
+        out upgrade_price(group.get([100, 400, 800], chosen.code()), chosen.level)
+    }
+
+    skill tower_up_title(realm) {
+        (group.count(realm.towers) == 0) {
+            out "башня: пока нет"
+        }
+        @chosen = group.get(realm.towers, weakest(realm))
+        @name = chosen.title()
+        @next = chosen.level + 1
+        out "{name} → ур. {next}"
+    }
+
+    skill raised_tower(realm) {
+        @price = tower_up_price(realm)
+        (realm.gold < price) {
+            realm.news = "мало золота: уровень башни стоит {price}"
+            out none
+        }
+        @at = weakest(realm)
+        @chosen = group.get(realm.towers, at)
+        chosen.level = chosen.level + 1
+        realm.towers = group.replaced(realm.towers, at, chosen)
+        realm.gold = realm.gold - price
+        @name = chosen.title()
+        @level = chosen.level
+        realm.news = "{name} подняла уровень до {level} за {price}"
+        out none
     }
 
     skill press(realm, id) {
@@ -147,8 +197,8 @@ Shop = Box {
         (id == "up-income") {
             out bought_upgrade(realm, upgrade_price(300, realm.income_level), "income")
         }
-        ((id == "up-master") ○ (realm.master == no)) {
-            out bought_upgrade(realm, MASTER_PRICE, "master")
+        (id == "up-tower") {
+            out raised_tower(realm)
         }
         @ids = ["buy-archer", "buy-cannon", "buy-frost"]
         drum (3) {
@@ -157,13 +207,6 @@ Shop = Box {
             }
         }
         out none
-    }
-
-    skill master_title(realm) {
-        (realm.master == yes) {
-            out "мастер строит сам"
-        }
-        out "мастер: строит без тебя"
     }
 
     skill bought_upgrade(realm, price, which) {
@@ -181,10 +224,6 @@ Shop = Box {
         }
         (which == "income") {
             realm.income_level = realm.income_level + 1
-        }
-        (which == "master") {
-            realm.master = yes
-            realm.news = "мастер нанят: теперь строит сам"
         }
         out none
     }
