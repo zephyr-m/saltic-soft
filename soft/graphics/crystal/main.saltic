@@ -14,8 +14,10 @@
 --     collect() — подобрать кадры, которые работники дописали
 --     draw(pixels) — кадр в окно; play() — показать кадр по часам
 --     turn() -> no, когда пора выходить
--- program(task) — task "" — окно; иначе — работник: номера кадров через пробел
--- WORKERS — сколько работников; FPS — кадров в секунду; TICK — пауза хода
+-- program(task) — task WINDOW («window») — окно; иначе — работник: номера
+--     кадров через пробел
+-- WINDOW — слово режима окна; WORKERS — сколько работников; FPS — кадров в
+-- секунду; TICK — пауза хода
 
 use io
 use core.u32
@@ -34,6 +36,7 @@ use tarantul.input.gestures
 use soft.graphics.crystal.studio
 
 TITLE = "Кристалл"
+WINDOW = "window"
 WORKERS = 8
 FPS = 24
 TICK = 10
@@ -178,7 +181,7 @@ Window = Box {
 program(task) {
     @workshop = studio.Studio {}
     workshop.prepare()
-    (str.bytes(task) > 0) {
+    ((task == WINDOW) == no) {
         drum (str.split(task, " ")) {
             workshop.save(workshop.index_of(beat))
         }

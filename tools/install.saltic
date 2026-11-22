@@ -6,7 +6,8 @@
 -- стол (стандарт freedesktop: KDE, GNOME). Программа запускается в корне
 -- проекта (Path=), чтобы видеть его файлы. Печатает ход по шагам.
 --
--- PROGRAMS — [имя, исходник, название, описание, категории, значок, [r, g, b]]
+-- PROGRAMS — [имя, исходник, название, описание, категории, значок, [r, g, b],
+--     аргументы запуска из меню ("" — без них)]
 -- program(name) — поставить программу name; нет такой — список доступных
 -- Внутри: entry(name) -> запись PROGRAMS или []; variable(key) -> значение
 --     переменной окружения; folder_of(command) -> вывод команды без «\n»;
@@ -29,14 +30,14 @@ use core.num
 use workbench.check.view.png
 
 PROGRAMS = [
-    ["salticide", "soft/development/salticide/linux/main.saltic", "SalticIDE", "IDE языка Saltic", "Development;", "logo", [47, 38, 33]],
-    ["jtmlview", "soft/development/jtmlview/main.saltic", "jtml-view", "Жители UIEngine настоящим движком", "Development;", "layout-grid", [122, 92, 196]],
-    ["polygon", "soft/development/polygon/main.saltic", "Полигон Saltic", "Сборки и железо — экран на жителях UIEngine", "Development;", "blocks", [208, 98, 63]],
-    ["scene", "soft/graphics/scene/main.saltic", "Сцена", "Оболочка 3D-редактора на жителях UIEngine — образец, движка ещё нет", "Graphics;", "box", [15, 149, 176]],
-    ["crystal", "soft/graphics/crystal/main.saltic", "Кристалл", "Гранёный кристалл с трассировкой лучей: вращается, свет преломляется в гранях", "Graphics;", "sparkles", [24, 150, 140]],
-    ["mail", "soft/communication/mail/main.saltic", "Почта", "Почтовый клиент на жителях UIEngine — образец, почта не подключена", "Network;Email;", "mail", [214, 160, 48]],
-    ["bastion", "soft/games/bastion/main.saltic", "Бастион", "Оборона башнями: мастер строит и улучшает сам, игра идёт без тебя", "Game;", "castle", [196, 64, 82]],
-    ["gems", "soft/games/gems/main.saltic", "Самоцветы", "Три в ряд: камни, лучи, звёзды и цепочки", "Game;", "gem", [64, 120, 214]]
+    ["salticide", "soft/development/salticide/linux/main.saltic", "SalticIDE", "IDE языка Saltic", "Development;", "logo", [47, 38, 33], ""],
+    ["jtmlview", "soft/development/jtmlview/main.saltic", "jtml-view", "Жители UIEngine настоящим движком", "Development;", "layout-grid", [122, 92, 196], ""],
+    ["polygon", "soft/development/polygon/main.saltic", "Полигон Saltic", "Сборки и железо — экран на жителях UIEngine", "Development;", "blocks", [208, 98, 63], ""],
+    ["scene", "soft/graphics/scene/main.saltic", "Сцена", "Оболочка 3D-редактора на жителях UIEngine — образец, движка ещё нет", "Graphics;", "box", [15, 149, 176], ""],
+    ["crystal", "soft/graphics/crystal/main.saltic", "Кристалл", "Гранёный кристалл с трассировкой лучей: вращается, свет преломляется в гранях", "Graphics;", "sparkles", [24, 150, 140], "window"],
+    ["mail", "soft/communication/mail/main.saltic", "Почта", "Почтовый клиент на жителях UIEngine — образец, почта не подключена", "Network;Email;", "mail", [214, 160, 48], ""],
+    ["bastion", "soft/games/bastion/main.saltic", "Бастион", "Оборона башнями: мастер строит и улучшает сам, игра идёт без тебя", "Game;", "castle", [196, 64, 82], ""],
+    ["gems", "soft/games/gems/main.saltic", "Самоцветы", "Три в ряд: камни, лучи, звёзды и цепочки", "Game;", "gem", [64, 120, 214], ""]
 ]
 HEAP = "268435456"
 SIZE = 64
@@ -201,8 +202,12 @@ skill logo() {
     out pixels
 }
 
-skill visiting(title, comment, binary, root, picture, kinds) {
-    @lines = ["[Desktop Entry]", "Type=Application", "Name={title}", "Comment={comment}", "Exec={binary}", "Path={root}", "Icon={picture}", "Terminal=false", "Categories={kinds}"]
+skill visiting(title, comment, binary, root, picture, kinds, arguments) {
+    @extra = ""
+    (str.bytes(arguments) > 0) {
+        extra = " {arguments}"
+    }
+    @lines = ["[Desktop Entry]", "Type=Application", "Name={title}", "Comment={comment}", "Exec={binary}{extra}", "Path={root}", "Icon={picture}", "Terminal=false", "Categories={kinds}"]
     out str.concat(str.join(lines, "\n"), "\n")
 }
 
@@ -254,7 +259,7 @@ program(name) {
     @drawn = picture_of(found)
     file.write_bytes(picture, png.encode(group.get(drawn, 0), SIZE, SIZE, group.get(drawn, 1)))
     io.show("4/5 пишу визитку {card} и ярлык на рабочий стол")
-    @text = visiting(title, group.get(found, 3), binary, root, picture, group.get(found, 4))
+    @text = visiting(title, group.get(found, 3), binary, root, picture, group.get(found, 4), group.get(found, 7))
     file.write(card, text)
     @shortcut = "{desk}/saltic-{name}.desktop"
     file.write(shortcut, text)
