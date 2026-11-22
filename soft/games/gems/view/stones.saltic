@@ -1,7 +1,6 @@
 -- stones — поле «Самоцветов» поверх места FIELD: клетки 8×8 квадратами по
--- меньшей стороне места, по центру. Шесть видов камня различаются и формой,
--- и цветом палитры (без цвета их тоже не спутать): круг, квадрат, лежачая
--- капсула, стоячая капсула, кольцо, квадрат с точкой. Луч — полоса ink через
+-- меньшей стороне места, по центру. Шесть видов камня — две формы (круг для
+-- видов 0–2, квадрат для 3–5) на три цвета (вид % 3). Луч — полоса ink через
 -- камень вдоль его линии, звезда — ink-круг в двойном кольце. Выбранный камень
 -- — кольцо mustard, подсказка — кольцо accent.
 --
@@ -11,7 +10,7 @@
 --     stone(canvas, palette, value, x, y) — один камень в клетке с углом x, y
 --     cell_of(game, x, y) -> номер клетки под точкой экрана или −1
 --     colour(palette, name) -> пиксель цвета палитры
--- TONES — тон каждого вида; GAP — зазор между клетками
+-- TONES — три цвета камней; GAP — зазор между клетками
 
 use core.group
 use tarantul.uiengine.draw.atoms
@@ -19,7 +18,7 @@ use tarantul.uiengine.draw.shapes
 use soft.games.gems.board
 use soft.games.gems.board.runs
 
-TONES = ["watermelon", "accent", "mustard", "up", "info", "ink"]
+TONES = ["watermelon", "accent", "mustard"]
 GAP = 4
 
 Stones = Box {
@@ -59,31 +58,17 @@ Stones = Box {
         }
         @kind = value % runs.POWER_STEP
         @power = value / runs.POWER_STEP
-        @shade = colour(palette, group.get(TONES, kind))
-        @ink = colour(palette, "ground")
+        @shade = colour(palette, group.get(TONES, kind % 3))
         @inner = cell - GAP * 4
         @x0 = x + GAP * 2
         @y0 = y + GAP * 2
         @third = inner / 3
         pick {
-            (kind == 0) {
+            (kind < 3) {
                 shapes.shape(canvas, x0, y0, inner, inner, inner / 2, shade)
             }
-            (kind == 1) {
-                shapes.shape(canvas, x0 + 2, y0 + 2, inner - 4, inner - 4, 5, shade)
-            }
-            (kind == 2) {
-                shapes.shape(canvas, x0, y0 + third / 2, inner, inner - third, (inner - third) / 2, shade)
-            }
-            (kind == 3) {
-                shapes.shape(canvas, x0 + third / 2, y0, inner - third, inner, (inner - third) / 2, shade)
-            }
-            (kind == 4) {
-                shapes.ring(canvas, x0, y0, inner, inner, inner / 2, inner / 5, shade)
-            }
             {
-                shapes.shape(canvas, x0 + 2, y0 + 2, inner - 4, inner - 4, inner / 4, shade)
-                shapes.shape(canvas, x0 + third, y0 + third, inner - third * 2, inner - third * 2, (inner - third * 2) / 2, ink)
+                shapes.shape(canvas, x0 + 2, y0 + 2, inner - 4, inner - 4, 6, shade)
             }
         }
         @light = colour(palette, "ink")
