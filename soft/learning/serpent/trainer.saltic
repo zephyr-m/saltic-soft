@@ -1,0 +1,67 @@
+-- trainer — урок «Змеи»: по шагу за вызовом агент (soft/learning/agent)
+-- играет в арену и учится. Любопытство падает от 1000 ‰ до EPSILON_LOW за
+-- EXPLORE партий. Каждые REPORT партий — средний счёт в history и строкой в
+-- журнал; лучший счёт — best.
+--
+-- Trainer { student, game, games, best, sum, history, chance } —
+--     start(seed) — новая сеть HIDDEN нейронов, первая партия; step_once() —
+--     один шаг с учёбой (умерла — новая партия); greedy(state) -> ход сети
+-- EXPLORE, EPSILON_LOW, REPORT, HIDDEN
+
+use io
+use core.group
+use soft.learning.agent
+use soft.learning.serpent.arena
+
+EXPLORE = 150
+EPSILON_LOW = 5
+REPORT = 10
+HIDDEN = 48
+
+Trainer = Box {
+    student = agent.Agent {},
+    game = arena.Arena {},
+    games = 0,
+    best = 0,
+    sum = 0,
+    history = [],
+    chance = 1000
+
+    skill start(seed) {
+        student.born(seed, 11, HIDDEN, 3)
+        out game.fresh()
+    }
+
+    skill greedy(state) {
+        out student.greedy(state)
+    }
+
+    skill step_once() {
+        @state = game.state()
+        @action = student.chosen(state)
+        @reward = game.move(action)
+        student.observe(state, action, reward, game.state(), game.over())
+        (game.over() == no) {
+            out none
+        }
+        games = games + 1
+        @score = game.score()
+        sum = sum + score
+        (score > best) {
+            best = score
+        }
+        ((games % REPORT) == 0) {
+            @average = sum / REPORT
+            history = group.add(history, average)
+            @curious = chance / 10
+            io.show("змея: партия {games} — в среднем {average} яблок, рекорд {best}, любопытство {curious} %")
+            sum = 0
+        }
+        chance = 1000 - (1000 - EPSILON_LOW) * games / EXPLORE
+        (chance < EPSILON_LOW) {
+            chance = EPSILON_LOW
+        }
+        student.curious(chance)
+        out game.fresh()
+    }
+}

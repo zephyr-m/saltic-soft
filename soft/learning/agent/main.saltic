@@ -1,0 +1,100 @@
+-- agent — ученик глубокого Q-обучения (DQN) для игр soft/learning: сам игру
+-- не знает. Игра даёт состояние (группу дробных), агент выбирает действие,
+-- игра отвечает наградой; observe кладёт снимок в кольцо памяти и учит сеть
+-- на batch случайных снимках: цель — награда + gamma · лучшая ценность
+-- следующего по замороженной копии сети (обновляется раз в SYNC шагов).
+-- Любопытство (‰ случайных ходов) задаёт игра через curious(…).
+--
+-- Agent { dice, weights, frozen, memory, at, steps, chance, batch, gamma,
+--     rate } — born(seed, inputs, hidden, actions) — новая сеть, пустая память
+--     curious(per_mille) — доля случайных ходов
+--     chosen(state) -> действие (ε-жадно); greedy(state) -> лучшее
+--     observe(state, action, reward, next, done) — снимок и шаг учёбы
+--     target_of(shot) -> цель снимка; trained() — batch снимков
+-- MEMORY — снимков в кольце; SYNC — шагов между копиями сети
+
+use core.group
+use core.fraction
+use tarantul.random.random
+use soft.learning.agent.net
+
+MEMORY = 5000
+SYNC = 300
+
+Agent = Box {
+    dice = random.Random {},
+    weights = [],
+    frozen = [],
+    memory = [],
+    at = 0,
+    steps = 0,
+    chance = 1000,
+    batch = 8,
+    gamma = 0.95,
+    rate = 0.01
+
+    skill born(seed, inputs, hidden, actions) {
+        dice = dice.seeded(seed)
+        weights = net.fresh(dice, inputs, hidden, actions)
+        frozen = weights
+        memory = []
+        at = 0
+        steps = 0
+        out none
+    }
+
+    skill curious(per_mille) {
+        chance = per_mille
+        out none
+    }
+
+    skill greedy(state) {
+        out net.best(group.get(net.values(weights, state), 1))
+    }
+
+    skill chosen(state) {
+        (dice.below(1000) < chance) {
+            out dice.below(group.count(group.get(weights, 3)))
+        }
+        out greedy(state)
+    }
+
+    skill target_of(shot) {
+        @reward = fraction.from(group.get(shot, 2))
+        (group.get(shot, 4) == yes) {
+            out reward
+        }
+        out reward + gamma * net.most(group.get(net.values(frozen, group.get(shot, 3)), 1))
+    }
+
+    skill trained() {
+        @now = weights
+        drum (batch) {
+            @shot = group.get(memory, dice.below(group.count(memory)))
+            now = net.learned(now, group.get(shot, 0), group.get(shot, 1), target_of(shot), rate)
+        }
+        weights = now
+        out none
+    }
+
+    skill observe(state, action, reward, next, done) {
+        @shot = [state, action, reward, next, done]
+        pick {
+            (group.count(memory) < MEMORY) {
+                memory = group.add(memory, shot)
+            }
+            {
+                memory = group.replaced(memory, at, shot)
+                at = (at + 1) % MEMORY
+            }
+        }
+        (group.count(memory) >= batch) {
+            trained()
+        }
+        steps = steps + 1
+        ((steps % SYNC) == 0) {
+            frozen = weights
+        }
+        out none
+    }
+}

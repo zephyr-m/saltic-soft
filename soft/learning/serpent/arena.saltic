@@ -1,0 +1,134 @@
+-- arena — «Змейка» (soft/games/snake, её модель как есть) для сети: сеть
+-- поворачивает голову налево, едет прямо или направо; арена переводит это в
+-- клавишу змейки и делает шаг. Глаза сети — 11 чисел 0/1: опасность прямо,
+-- справа, слева (стена или своё тело на следующей клетке); куда едет (4);
+-- еда левее, правее, выше, ниже головы. Награда: съела +10, умерла −10,
+-- иначе 0. Голод: без еды дольше HUNGER + 10 · длина шагов — смерть (−10),
+-- чтобы сеть не кружила вечно.
+--
+-- Arena { model, hungry, steps } — fresh() — новая змейка;
+--     state() -> 11 дробных; move(action) -> награда; over() -> yes, когда
+--     змейка мертва; score() -> съедено
+--     heading() -> 0…3 — вверх, вправо, вниз, влево (по часовой);
+--     ahead(direction) -> клетка перед головой в этом направлении;
+--     deadly(cell) -> yes, если там стена или тело; flag(value) -> 1.0 / 0.0
+-- KEYS — клавиши змейки для вверх, вправо, вниз, влево; HUNGER — запас шагов
+
+use core.group
+use soft.games.snake
+
+KEYS = [103, 106, 108, 105]
+HUNGER = 100
+
+Arena = Box {
+    model = snake.Model {},
+    hungry = 0,
+    steps = 0
+
+    skill fresh() {
+        model = snake.new()
+        hungry = 0
+        steps = 0
+        out none
+    }
+
+    skill heading() {
+        (model.direction == snake.Direction.UP) {
+            out 0
+        }
+        (model.direction == snake.Direction.RIGHT) {
+            out 1
+        }
+        (model.direction == snake.Direction.DOWN) {
+            out 2
+        }
+        out 3
+    }
+
+    skill ahead(direction) {
+        @head = group.get(model.body, 0)
+        @x = head.x
+        @y = head.y
+        (direction == 0) {
+            y = y - 1
+        }
+        (direction == 1) {
+            x = x + 1
+        }
+        (direction == 2) {
+            y = y + 1
+        }
+        (direction == 3) {
+            x = x - 1
+        }
+        out snake.Cell {
+            x = x,
+            y = y
+        }
+    }
+
+    skill deadly(cell) {
+        ((cell.x < 0) ○○ (cell.y < 0)) {
+            out yes
+        }
+        ((cell.x >= snake.BOARD_COLUMNS) ○○ (cell.y >= snake.BOARD_ROWS)) {
+            out yes
+        }
+        out snake.contains(model.body, cell, group.count(model.body) - 1)
+    }
+
+    skill flag(value) {
+        (value == yes) {
+            out 1.0
+        }
+        out 0.0
+    }
+
+    skill state() {
+        @way = heading()
+        @head = group.get(model.body, 0)
+        @food = model.food
+        out [
+            flag(deadly(ahead(way))),
+            flag(deadly(ahead((way + 1) % 4))),
+            flag(deadly(ahead((way + 3) % 4))),
+            flag((way == 0)),
+            flag((way == 1)),
+            flag((way == 2)),
+            flag((way == 3)),
+            flag((food.x < head.x)),
+            flag((food.x > head.x)),
+            flag((food.y < head.y)),
+            flag((food.y > head.y))
+        ]
+    }
+
+    skill move(action) {
+        @way = (heading() + action + 3) % 4
+        model = snake.turn(model, group.get(KEYS, way))
+        @tick = snake.step(model)
+        model = tick.model
+        steps = steps + 1
+        (tick.died == yes) {
+            out -10
+        }
+        (tick.grew == yes) {
+            hungry = 0
+            out 10
+        }
+        hungry = hungry + 1
+        (hungry > (HUNGER + 10 * group.count(model.body))) {
+            model.alive = no
+            out -10
+        }
+        out 0
+    }
+
+    skill over() {
+        out (model.alive == no)
+    }
+
+    skill score() {
+        out model.score
+    }
+}

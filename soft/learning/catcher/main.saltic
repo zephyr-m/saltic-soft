@@ -71,7 +71,7 @@ Window = Box {
         palette = atoms.with_faces(themes.named("soft", canvas), typeface_of(fonts.REGULAR), typeface_of(fonts.BOLD), typeface_of(fonts.MONO))
         clock = time.now()
         teacher.start(clock)
-        show.fresh(teacher.dice)
+        show.fresh(teacher.student.dice)
         out drawn()
     }
 
@@ -163,7 +163,7 @@ Window = Box {
             move_wait = MOVE_GAP
             pick {
                 (show.over() == yes) {
-                    show.fresh(teacher.dice)
+                    show.fresh(teacher.student.dice)
                 }
                 {
                     @result = show.move(teacher.greedy(show.state()))

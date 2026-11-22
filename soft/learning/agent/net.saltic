@@ -1,0 +1,143 @@
+-- net — маленькая полносвязная сеть агентов soft/learning: входы → скрытый
+-- слой (ReLU) → действия, выход — ценность каждого действия (Q). Веса — группа
+-- [w1, b1, w2, b2] групп дробных: w1 — строки скрытого слоя по входам, w2 —
+-- строки действий по скрытому; размеры берутся из самих весов. Учится одним
+-- снимком: ошибка — половина квадрата разницы только у выбранного действия,
+-- шаг спуска rate. Числа из групп начинаются с 1.0 * / 0.0 +: чекер иначе
+-- считает их целыми.
+--
+-- fresh(dice, inputs, hidden, actions) -> веса (He: ±sqrt(6 / входов слоя))
+-- values(weights, state) -> [скрытый слой, ценности действий]
+-- best(values) -> номер действия с наибольшей ценностью; most(values) -> она
+-- learned(weights, state, action, target, rate) -> новые веса
+-- Внутри: spread(dice, count, limit), zeros_of(count), root(value) — корень
+--     Ньютоном, sizes(weights) -> [входов, скрытых, действий]
+
+use core.group
+use core.fraction
+
+skill spread(dice, count, limit) {
+    @made = []
+    drum (count) {
+        made = group.add(made, fraction.from(dice.below(2001) - 1000) / 1000.0 * limit)
+    }
+    out made
+}
+
+skill zeros_of(count) {
+    @made = []
+    drum (count) {
+        made = group.add(made, 0.0)
+    }
+    out made
+}
+
+skill root(value) {
+    @guess = value
+    drum (30) {
+        guess = (guess + value / guess) / 2.0
+    }
+    out guess
+}
+
+skill fresh(dice, inputs, hidden, actions) {
+    @limit_in = root(6.0 / fraction.from(inputs))
+    @limit_hidden = root(6.0 / fraction.from(hidden))
+    out [spread(dice, hidden * inputs, limit_in), zeros_of(hidden), spread(dice, actions * hidden, limit_hidden), zeros_of(actions)]
+}
+
+skill sizes(weights) {
+    @hidden = group.count(group.get(weights, 1))
+    out [group.count(group.get(weights, 0)) / hidden, hidden, group.count(group.get(weights, 3))]
+}
+
+skill values(weights, state) {
+    @shape = sizes(weights)
+    @ins = group.get(shape, 0)
+    @mids = group.get(shape, 1)
+    @outs = group.get(shape, 2)
+    @w1 = group.get(weights, 0)
+    @b1 = group.get(weights, 1)
+    @w2 = group.get(weights, 2)
+    @b2 = group.get(weights, 3)
+    @hidden = []
+    drum (mids) {
+        @row = beat
+        @sum = 0.0 + group.get(b1, row)
+        drum (ins) {
+            sum = sum + 1.0 * group.get(w1, row * ins + beat) * group.get(state, beat)
+        }
+        (sum < 0.0) {
+            sum = 0.0
+        }
+        hidden = group.add(hidden, sum)
+    }
+    @answer = []
+    drum (outs) {
+        @row = beat
+        @sum = 0.0 + group.get(b2, row)
+        drum (mids) {
+            sum = sum + 1.0 * group.get(w2, row * mids + beat) * group.get(hidden, beat)
+        }
+        answer = group.add(answer, sum)
+    }
+    out [hidden, answer]
+}
+
+skill best(answer) {
+    @chosen = 0
+    @top = 0.0 + group.get(answer, 0)
+    drum (group.count(answer)) {
+        @value = 0.0 + group.get(answer, beat)
+        (value > top) {
+            top = value
+            chosen = beat
+        }
+    }
+    out chosen
+}
+
+skill most(answer) {
+    out 0.0 + group.get(answer, best(answer))
+}
+
+skill learned(weights, state, action, target, rate) {
+    @shape = sizes(weights)
+    @ins = group.get(shape, 0)
+    @mids = group.get(shape, 1)
+    @outs = group.get(shape, 2)
+    @pass = values(weights, state)
+    @hidden = group.get(pass, 0)
+    @answer = group.get(pass, 1)
+    @w1 = group.get(weights, 0)
+    @b1 = group.get(weights, 1)
+    @w2 = group.get(weights, 2)
+    @b2 = group.get(weights, 3)
+    @delta = (0.0 + group.get(answer, action) - target) * rate
+    @back = []
+    drum (mids) {
+        @push = 0.0
+        ((0.0 + group.get(hidden, beat)) > 0.0) {
+            push = delta * group.get(w2, action * mids + beat)
+        }
+        back = group.add(back, push)
+    }
+    @new_w2 = []
+    drum (outs * mids) {
+        @value = 0.0 + group.get(w2, beat)
+        ((beat / mids) == action) {
+            value = value - delta * group.get(hidden, beat % mids)
+        }
+        new_w2 = group.add(new_w2, value)
+    }
+    @new_b2 = group.replaced(b2, action, 0.0 + group.get(b2, action) - delta)
+    @new_w1 = []
+    drum (mids * ins) {
+        new_w1 = group.add(new_w1, 0.0 + group.get(w1, beat) - 1.0 * group.get(back, beat / ins) * group.get(state, beat % ins))
+    }
+    @new_b1 = []
+    drum (mids) {
+        new_b1 = group.add(new_b1, 0.0 + group.get(b1, beat) - group.get(back, beat))
+    }
+    out [new_w1, new_b1, new_w2, new_b2]
+}
