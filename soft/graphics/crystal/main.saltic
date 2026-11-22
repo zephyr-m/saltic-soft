@@ -5,12 +5,15 @@
 -- крутятся бесшовно. Сначала кадры считаются по ROWS строк за ход и
 -- проявляются на экране, потом крутятся с частотой FPS. «×» окна — выход.
 --
--- Window { canvas, link, reader, carver, frame, colors, frames, current, row,
---     started, shown, packet, hold, joined } — окно и всё долгое; frames —
+-- Window { canvas, link, reader, carver, base, turn, frame, colors, frames,
+--     current, row, started, shown, packet, hold, joined } — окно и всё долгое;
+--     base — кристалл, огранённый один раз; turn — rotation.Rotation; frames —
 --     готовые кадры (буферы номеров цветов), current — считаемый, row — его
 --     следующая строка, shown — номер показанного кадра
 --     open() — окно, палитра, первый кадр в работу; NoWindow
---     aim(index) — огранить кристалл под кадр index и поставить его в работу
+--     pose(index) -> кватернион кадра: поворот на 1/SIDES круга за цикл и
+--         покачивание наклоном TILT, к концу цикла — снова ноль
+--     aim(index) — повернуть кристалл под кадр index и поставить кадр в работу
 --     draw_rows(pixels, first, count) — строки кадра в окно, каждая точка SCALE × SCALE
 --     step() — следующие ROWS строк; кадр готов — в frames, следующий в работу
 --     play() — показать кадр по часам
@@ -30,6 +33,8 @@ use core.fraction
 use tarantul.wayland.wayland.screen
 use tarantul.graphics.graphics
 use tarantul.input.gestures
+use tarantul.rotation.rotation
+use soft.graphics.crystal.gem
 use soft.graphics.crystal.cutter
 use soft.graphics.crystal.stage
 use soft.graphics.crystal.tracer
@@ -41,12 +46,15 @@ FRAMES = 24
 FPS = 24
 ROWS = 30
 TICK = 4
+TILT = 0.12
 
 Window = Box {
     canvas = graphics.Screen {},
     link = screen.Link {},
     reader = gestures.Reader {},
     carver = cutter.Cutter {},
+    base = gem.Gem {},
+    turn = rotation.Rotation {},
     frame = picture.Picture {},
     colors = [],
     frames = [],
@@ -69,13 +77,20 @@ Window = Box {
             colors = group.add(colors, graphics.color(canvas, group.get(beat, 0), group.get(beat, 1), group.get(beat, 2)))
         }
         graphics.fill(canvas, 0, 0, canvas.width, canvas.height, graphics.color(canvas, 0, 0, 0))
+        base = carver.cut()
         out aim(0)
     }
 
+    skill pose(index) {
+        @phase = fraction.from(index) / fraction.from(FRAMES)
+        @spin = 0.3 + phase * 2.0 * fraction.PI / fraction.from(carver.sides)
+        @tilt = TILT * fraction.sin(phase * 2.0 * fraction.PI)
+        out turn.product(turn.around([1.0, 0.0, 0.0], tilt), turn.around([0.0, 1.0, 0.0], spin))
+    }
+
     skill aim(index) {
-        carver.spin = 0.3 + fraction.from(index) * 2.0 * fraction.PI / fraction.from(carver.sides * FRAMES)
         frame.light = tracer.Tracer {
-            jewel = carver.cut(),
+            jewel = base.posed(pose(index)),
             scene = stage.lit()
         }
         current = bytes.new(frame.width * frame.height)

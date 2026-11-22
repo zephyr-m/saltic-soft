@@ -1,5 +1,5 @@
 {
-  "catalog": {"from": "git@github.com:zephyr-m/saltic-registry.git", "commit": "86dc504277e13dba645172e29494bbe8bcfb7206"},
+  "catalog": {"from": "git@github.com:zephyr-m/saltic-registry.git", "commit": "084319b07b2965e029e768d3b9db51281ec643c0"},
   "packages": {
     "i2c_esp32": {"version": "1", "source": "registry/adapters/esp32/i2c", "fingerprint": "crc32 98e40745", "required_by": "project"},
     "ssd1306": {"version": "3", "source": "registry/adapters/esp32/ssd1306", "fingerprint": "crc32 7896751c", "required_by": "project"},
@@ -23,6 +23,8 @@
     "ink": {"version": "1", "source": "registry/libraries/ink", "fingerprint": "crc32 e009c5e0", "required_by": "project"},
     "qemu_virt": {"version": "1", "source": "registry/adapters/qemu_virt", "fingerprint": "crc32 a46a6bb2", "required_by": "project"},
     "clib": {"version": "1", "source": "registry/adapters/android/clib", "fingerprint": "crc32 e19f50c0", "required_by": "project"},
-    "wayland": {"version": "1", "source": "registry/adapters/linux/wayland", "fingerprint": "crc32 75740738", "required_by": "project"}
+    "wayland": {"version": "1", "source": "registry/adapters/linux/wayland", "fingerprint": "crc32 75740738", "required_by": "project"},
+    "vector": {"version": "2", "source": "registry/libraries/vector", "fingerprint": "crc32 422abf36", "required_by": "project"},
+    "rotation": {"version": "2", "source": "registry/libraries/rotation", "fingerprint": "crc32 760dae6b", "required_by": "project"}
   }
 }

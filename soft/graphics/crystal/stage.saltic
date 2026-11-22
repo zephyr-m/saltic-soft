@@ -12,7 +12,7 @@
 -- KEY, RIM, SIDE — направления; FLOOR — высота пола; GLOW — яркость лужицы в центре;
 -- SPREAD — как быстро она гаснет
 
-use soft.graphics.crystal.space
+use tarantul.vector.vector
 
 KEY = [-0.45, 0.75, -0.5]
 RIM = [0.85, 0.25, 0.45]
@@ -25,7 +25,7 @@ Stage = Box {
     key = [],
     rim = [],
     side = [],
-    math = space.Space {}
+    math = vector.Vector {}
 
     skill sky(direction) {
         @value = 0.0
@@ -67,7 +67,7 @@ Stage = Box {
 }
 
 skill lit() {
-    @math = space.Space {}
+    @math = vector.Vector {}
     out Stage {
         key = math.unit(KEY),
         rim = math.unit(RIM),

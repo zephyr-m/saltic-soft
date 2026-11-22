@@ -5,7 +5,7 @@
 -- Цвет один — яркость; бирюзу даёт палитра картинки.
 --
 -- Tracer { jewel, scene, math } — jewel — gem.Gem, scene — stage.Stage, math —
---     space.Space
+--     vector.Vector
 --     trace(origin, direction, inside, depth, weight) -> яркость; inside — луч
 --         внутри стекла; weight — доля этой ветки в пикселе
 --     outside(origin, direction) -> свет снаружи: небо и пол
@@ -14,7 +14,7 @@
 
 use core.group
 use core.fraction
-use soft.graphics.crystal.space
+use tarantul.vector.vector
 use soft.graphics.crystal.gem
 use soft.graphics.crystal.stage
 
@@ -26,7 +26,7 @@ TINT = 0.9
 Tracer = Box {
     jewel = gem.Gem {},
     scene = stage.Stage {},
-    math = space.Space {}
+    math = vector.Vector {}
 
     skill outside(origin, direction) {
         out scene.sky(direction) + scene.floor(origin, direction)

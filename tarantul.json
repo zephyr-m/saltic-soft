@@ -24,6 +24,8 @@
     "ink": "1",
     "qemu_virt": "1",
     "clib": "1",
-    "wayland": "1"
+    "wayland": "1",
+    "vector": "2",
+    "rotation": "2"
   }
 }

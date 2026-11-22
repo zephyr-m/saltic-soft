@@ -3,8 +3,9 @@
 -- Мёллеру — Трумбору. Сначала луч проверяется по описанному шару: мимо шара
 -- — мимо всех граней.
 --
--- Gem { faces, center, reach, math } — reach — радиус описанного шара, math —
---     space.Space
+-- Gem { faces, center, reach, math, spin } — reach — радиус описанного шара,
+--     math — vector.Vector, spin — rotation.Rotation
+--     posed(q) -> Gem, повёрнутый кватернионом q вокруг своего центра
 --     nearest(origin, direction) -> [t, normal] ближней грани; мимо — [FAR, []]
 --     hit(sides, origin, direction) -> расстояние до грани sides или MISS
 --     misses(origin, direction) -> yes, если луч снаружи шара и мимо него
@@ -12,7 +13,8 @@
 -- ближе этого попадание не считается (луч только что вышел с грани)
 
 use core.group
-use soft.graphics.crystal.space
+use tarantul.vector.vector
+use tarantul.rotation.rotation
 
 FAR = 1000000.0
 MISS = -1.0
@@ -23,7 +25,21 @@ Gem = Box {
     faces = [],
     center = [0.0, 0.0, 0.0],
     reach = 0.0,
-    math = space.Space {}
+    math = vector.Vector {},
+    spin = rotation.Rotation {}
+
+    skill posed(q) {
+        @moved = []
+        drum (faces) {
+            @corner = math.plus(center, spin.turned(q, math.minus(group.get(beat, 0), center)))
+            moved = group.add(moved, [corner, spin.turned(q, group.get(beat, 1)), spin.turned(q, group.get(beat, 2)), spin.turned(q, group.get(beat, 3))])
+        }
+        out Gem {
+            faces = moved,
+            center = center,
+            reach = reach
+        }
+    }
 
     skill nearest(origin, direction) {
         @best = FAR

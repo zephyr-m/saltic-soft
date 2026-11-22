@@ -3,19 +3,19 @@
 -- бирюза → бирюза → белый». Ход — в консоль каждые EVERY строк.
 --
 -- Picture { light, width, height, zoom, eye, math } — light — tracer.Tracer,
---     eye — место камеры [x, y, z], math — space.Space
+--     eye — место камеры [x, y, z], math — vector.Vector
 --     render_rows(pixels, first, count) — строки first…first+count-1 в буфер
 --         core.bytes номеров цветов pixels (width × height)
 --     shade(value) -> номер цвета 0…255 по яркости (корень — мягче к тёмному)
 --     palette() -> группа [r, g, b] из 256 цветов
---     blend(from, to, part, whole) -> [r, g, b] на part/whole пути от from к to
+--     between(from, to, part, whole) -> [r, g, b] на part/whole пути от from к to
 -- DEPTH — глубина луча; BRIGHT — яркость, что становится белым; BLACK, DEEP, CYAN, WHITE — опорные цвета палитры
 
 use core.num
 use core.bytes
 use core.group
 use core.fraction
-use soft.graphics.crystal.space
+use tarantul.vector.vector
 use soft.graphics.crystal.tracer
 
 DEPTH = 7
@@ -31,7 +31,7 @@ Picture = Box {
     height = 480,
     zoom = 0.9,
     eye = [0.0, 0.15, -6.5],
-    math = space.Space {}
+    math = vector.Vector {}
 
     skill render_rows(pixels, first, count) {
         @wide = fraction.from(width)
@@ -64,19 +64,19 @@ Picture = Box {
     skill palette() {
         @colors = []
         drum (256) {
-            @color = blend(DEEP, CYAN, beat - 102, 102)
+            @color = between(DEEP, CYAN, beat - 102, 102)
             (beat < 102) {
-                color = blend(BLACK, DEEP, beat, 102)
+                color = between(BLACK, DEEP, beat, 102)
             }
             (beat > 204) {
-                color = blend(CYAN, WHITE, beat - 204, 51)
+                color = between(CYAN, WHITE, beat - 204, 51)
             }
             colors = group.add(colors, color)
         }
         out colors
     }
 
-    skill blend(from, to, part, whole) {
+    skill between(from, to, part, whole) {
         @mixed = []
         drum (3) {
             @start = group.get(from, beat)

@@ -3,8 +3,8 @@
 -- (кольцо со сдвигом) и нижняя вершина. Между кольцами — ромбы из двух
 -- треугольников, у вершин — веер.
 --
--- Cutter { sides, spin, math } — sides — граней по кругу, spin — поворот
---     вокруг оси, math — space.Space
+-- Cutter { sides, math } — sides — граней по кругу, math — vector.Vector;
+--     кристалл режется один раз, поворачивает его gem.Gem.posed
 --     cut() -> gem.Gem
 --     face_of(a, b, c) -> грань [a, ab, ac, normal]
 --     ring(height, radius, shift) -> группа точек [x, y, z] по кругу; shift — сдвиг
@@ -15,7 +15,7 @@
 
 use core.fraction
 use core.group
-use soft.graphics.crystal.space
+use tarantul.vector.vector
 use soft.graphics.crystal.gem
 
 TOP = [2.2, 0.0]
@@ -28,8 +28,7 @@ CENTER_Y = 0.12
 
 Cutter = Box {
     sides = 8,
-    spin = 0.3,
-    math = space.Space {}
+    math = vector.Vector {}
 
     skill cut() {
         @top = [0.0, math.part(TOP, 0), 0.0]
@@ -50,7 +49,7 @@ Cutter = Box {
     skill ring(height, radius, shift) {
         @points = []
         drum (sides) {
-            @angle = (fraction.from(beat) + shift) * 2.0 * fraction.PI / fraction.from(sides) + spin
+            @angle = (fraction.from(beat) + shift) * 2.0 * fraction.PI / fraction.from(sides)
             points = group.add(points, [radius * fraction.cos(angle), height, radius * fraction.sin(angle)])
         }
         out points
