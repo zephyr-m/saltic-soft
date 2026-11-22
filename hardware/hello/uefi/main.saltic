@@ -1,0 +1,13 @@
+-- hello — программа: первая проба UEFI — две строки в консоль, ждёт клавишу.
+--
+-- program() — вход
+
+use io
+
+program() {
+    io.show("Saltic is running without Linux.")
+    io.show("Press any key.")
+    @pressed = io.key()
+    io.show("Pressed: {pressed}. Bye!")
+    out none
+}
