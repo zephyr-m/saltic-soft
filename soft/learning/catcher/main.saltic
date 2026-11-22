@@ -1,154 +1,194 @@
--- main — «Ловец»: глубокое Q-обучение (DQN) с нуля. Сеть (net) смотрит на
--- поле (field) и выбирает: влево, стоять, вправо. Опыт — в кольце памяти
--- MEMORY снимков [состояние, действие, награда, следующее, конец]; каждый шаг
--- сеть учится на BATCH случайных снимках: цель — награда + GAMMA · лучшая
--- ценность следующего по замороженной копии сети (обновляется раз в SYNC
--- шагов). Любопытство ε падает от 1 до EPSILON_LOW за EXPLORE эпизодов.
--- Раз в REPORT эпизодов — строка: сколько поймала из последних, ε, время.
--- В конце — партия без любопытства картинкой и итог.
+-- main — «Ловец» в окне Wayland: сеть учится ловить мяч (trainer, DQN с
+-- нуля) по LEARN_EVERY эпизодов за кадр, а слева на поле живая партия, которую
+-- играет текущая сеть без любопытства — ход раз в MOVE_GAP мс: видно, как она
+-- сначала мечется, а потом ловит всё. Справа столбики: доля пойманных за
+-- каждые trainer.REPORT эпизодов. После trainer.EPISODES учёба стоит, партия
+-- идёт дальше. «×» окна — выход. Пока только Linux.
 --
--- program() — обучение EPISODES эпизодов
--- Внутри: chosen(weights, state, dice, chance) -> действие (ε-жадно);
---     sample(memory, dice) -> снимок; target_of(frozen, shot) -> цель;
---     trained(weights, frozen, memory, dice) -> веса после BATCH снимков;
---     show_game(weights, dice) — партия картинкой; stamp(start) -> «12 с»
+-- Window { canvas, link, palette, reader, teacher, show, clock, move_wait, caught,
+--     missed, packet, hold, joined } — окно и всё долгое
+--     open() — окно, шрифты, новая сеть; NoWindow
+--     typeface_of(path) -> Typeface из файла
+--     drawn() — весь кадр: поле, мяч, платформа, столбики, подписи
+--     words(text, x, y, size, tone) — строка текста
+--     colour(name) -> пиксель цвета палитры
+--     turn() -> no, когда пора выходить
+-- program() — вход
+-- WIDE, HIGH — окно; CELL — клетка поля; LEARN_EVERY, MOVE_GAP, TICK
 
-use io
+use io.file
+use core.bytes
 use core.group
+use core.socket
 use core.time
-use core.fraction
-use tarantul.random.random
-use soft.learning.catcher.net
+use tarantul.fonts.fonts
+use tarantul.wayland.wayland.screen
+use tarantul.graphics.graphics
+use tarantul.input.gestures
+use tarantul.uiengine.draw.atoms
+use tarantul.uiengine.draw.shapes
+use tarantul.uiengine.draw.typeface
+use tarantul.uiengine.themes
+use soft.learning.catcher.trainer
 use soft.learning.catcher.field
 
-EPISODES = 1500
-EXPLORE = 600
-EPSILON_LOW = 50
-MEMORY = 2000
-BATCH = 8
-SYNC = 200
-REPORT = 50
-GAMMA = 0.95
-RATE = 0.01
-SEED = 2026
+TITLE = "Ловец"
+WIDE = 960
+HIGH = 640
+CELL = 64
+LEARN_EVERY = 1
+MOVE_GAP = 140
+TICK = 16
+FIELD_X = 40
+FIELD_Y = 90
+CHART_X = 540
+CHART_Y = 90
+CHART_W = 380
+CHART_H = 300
 
-skill chosen(weights, state, dice, chance) {
-    (dice.below(1000) < chance) {
-        out dice.below(net.ACTIONS)
-    }
-    out net.best(group.get(net.values(weights, state), 1))
-}
+Window = Box {
+    canvas = graphics.Screen {},
+    link = screen.Link {},
+    palette = atoms.Palette {},
+    reader = gestures.Reader {},
+    teacher = trainer.Trainer {},
+    show = field.Field {},
+    clock = 0,
+    move_wait = 0,
+    caught = 0,
+    missed = 0,
+    packet = bytes.new(8192),
+    hold = bytes.new(4096),
+    joined = bytes.new(12288)
 
-skill sample(memory, dice) {
-    out group.get(memory, dice.below(group.count(memory)))
-}
-
-skill target_of(frozen, shot) {
-    @reward = fraction.from(group.get(shot, 2))
-    (group.get(shot, 4) == yes) {
-        out reward
-    }
-    out reward + GAMMA * net.most(group.get(net.values(frozen, group.get(shot, 3)), 1))
-}
-
-skill trained(weights, frozen, memory, dice) {
-    @now = weights
-    drum (BATCH) {
-        @shot = sample(memory, dice)
-        now = net.learned(now, group.get(shot, 0), group.get(shot, 1), target_of(frozen, shot), RATE)
-    }
-    out now
-}
-
-skill stamp(start) {
-    @spent = (time.now() - start) / 1000
-    out "{spent} с"
-}
-
-skill show_game(weights, dice) {
-    @game = field.Field {}
-    game.fresh(dice)
-    drum (field.HIGH) {
-        @action = net.best(group.get(net.values(weights, game.state()), 1))
-        (game.over() == no) {
-            game.move(action)
+    skill open() {
+        @host = screen.sized(TITLE, WIDE, HIGH)
+        (group.count(host) == 0) {
+            out error.NoWindow
         }
+        canvas = group.get(host, 0)
+        link = group.get(host, 1)
+        palette = atoms.with_faces(themes.named("soft", canvas), typeface_of(fonts.REGULAR), typeface_of(fonts.BOLD), typeface_of(fonts.MONO))
+        clock = time.now()
+        teacher.start(clock)
+        show.fresh(teacher.dice)
+        out drawn()
     }
-    drum (game.picture()) {
-        io.show("    {beat}")
+
+    skill typeface_of(path) {
+        out typeface.from_bytes(file.read_bytes(path))
     }
-    out none
+
+    skill colour(name) {
+        out atoms.tone_color(palette, name, palette.ink)
+    }
+
+    skill words(text, x, y, size, tone) {
+        @ink = colour(tone)
+        @pen = typeface.Brush {
+            size = size,
+            ink = ink,
+            fade = ink
+        }
+        out typeface.paint(canvas, palette.regular, x, y, text, pen)
+    }
+
+    skill drawn() {
+        shapes.shape(canvas, 0, 0, WIDE, HIGH, 0, colour("ground"))
+        @curious = teacher.chance / 10
+        @state = "учится"
+        (teacher.done() == yes) {
+            state = "выучилась"
+        }
+        words("Ловец · {state}", FIELD_X, 24, 26, "ink")
+        words("эпизод {teacher.episode} из {trainer.EPISODES} · любопытство {curious} % · на поле поймала {caught}, уронила {missed}", FIELD_X, 58, 15, "quiet")
+        @well = colour("well")
+        @tile = colour("panel")
+        shapes.shape(canvas, FIELD_X - 8, FIELD_Y - 8, field.WIDE * CELL + 16, field.HIGH * CELL + 16, 14, well)
+        drum (field.WIDE * field.HIGH) {
+            @cx = FIELD_X + (beat % field.WIDE) * CELL
+            @cy = FIELD_Y + (beat / field.WIDE) * CELL
+            shapes.shape(canvas, cx + 3, cy + 3, CELL - 6, CELL - 6, 8, tile)
+        }
+        @bottom = FIELD_Y + (field.HIGH - 1) * CELL
+        shapes.shape(canvas, FIELD_X + (show.paddle - 1) * CELL + 4, bottom + CELL / 2 - 8, CELL * 3 - 8, 16, 8, colour("accent"))
+        shapes.shape(canvas, FIELD_X + show.ball_x * CELL + 12, FIELD_Y + show.ball_y * CELL + 12, CELL - 24, CELL - 24, (CELL - 24) / 2, colour("mustard"))
+        words("доля пойманных за каждые {trainer.REPORT} эпизодов", CHART_X, CHART_Y - 30, 15, "quiet")
+        shapes.shape(canvas, CHART_X, CHART_Y, CHART_W, CHART_H, 12, well)
+        @count = group.count(teacher.history)
+        @slots = trainer.EPISODES / trainer.REPORT
+        @bar = (CHART_W - 16) / slots
+        @index = 0
+        drum (teacher.history) {
+            @tall = (CHART_H - 16) * beat / 100
+            @tone = "down"
+            (beat >= 50) {
+                tone = "mustard"
+            }
+            (beat >= 90) {
+                tone = "up"
+            }
+            shapes.shape(canvas, CHART_X + 8 + index * bar, CHART_Y + CHART_H - 8 - tall, bar - 2, tall, 2, colour(tone))
+            index = index + 1
+        }
+        (count > 0) {
+            @last = group.get(teacher.history, count - 1)
+            words("сейчас ловит {last} %", CHART_X, CHART_Y + CHART_H + 20, 22, "ink")
+        }
+        words("сеть 3 → 32 → 3 · глубокое Q-обучение с нуля на Saltic", CHART_X, CHART_Y + CHART_H + 60, 15, "quiet")
+        words("мяч — жёлтый, платформа — голубая", CHART_X, CHART_Y + CHART_H + 84, 15, "quiet")
+        out screen.present(link)
+    }
+
+    skill turn() {
+        ((link.way_closed == yes) ○○ (link.way_failed == yes)) {
+            out no
+        }
+        screen.pump(link, packet, hold, joined)
+        @drained = reader.drain(link.way_events)
+        link.way_events = drained.core
+        @now = time.now()
+        @spent = now - clock
+        (spent < 0) {
+            spent = spent + time.DAY_MILLISECONDS
+        }
+        clock = now
+        (teacher.done() == no) {
+            drum (LEARN_EVERY) {
+                teacher.episode_once()
+            }
+        }
+        move_wait = move_wait - spent
+        (move_wait <= 0) {
+            move_wait = MOVE_GAP
+            pick {
+                (show.over() == yes) {
+                    show.fresh(teacher.dice)
+                }
+                {
+                    @result = show.move(teacher.greedy(show.state()))
+                    (result > 0) {
+                        caught = caught + 1
+                    }
+                    (result < 0) {
+                        missed = missed + 1
+                    }
+                }
+            }
+        }
+        drawn()
+        socket.sleep(TICK)
+        out yes
+    }
 }
 
 program() {
-    @dice = random.Random {}
-    dice = dice.seeded(SEED)
-    @weights = net.fresh(dice)
-    @frozen = weights
-    @memory = []
-    @at = 0
-    @steps = 0
-    @caught = 0
-    @start = time.now()
-    @game = field.Field {}
-    io.show("ловец: учусь ловить — {EPISODES} эпизодов, сеть {net.INPUTS}→{net.HIDDEN}→{net.ACTIONS}, отчёт раз в {REPORT}")
-    drum (EPISODES) {
-        @episode = beat + 1
-        @chance = 1000 - (1000 - EPSILON_LOW) * episode / EXPLORE
-        (chance < EPSILON_LOW) {
-            chance = EPSILON_LOW
-        }
-        game.fresh(dice)
-        drum (field.HIGH) {
-            (game.over() == no) {
-                @state = game.state()
-                @action = chosen(weights, state, dice, chance)
-                @reward = game.move(action)
-                @shot = [state, action, reward, game.state(), game.over()]
-                pick {
-                    (group.count(memory) < MEMORY) {
-                        memory = group.add(memory, shot)
-                    }
-                    {
-                        memory = group.replaced(memory, at, shot)
-                        at = (at + 1) % MEMORY
-                    }
-                }
-                (reward > 0) {
-                    caught = caught + 1
-                }
-                (group.count(memory) >= BATCH) {
-                    weights = trained(weights, frozen, memory, dice)
-                }
-                steps = steps + 1
-                ((steps % SYNC) == 0) {
-                    frozen = weights
-                }
-            }
-        }
-        ((episode % REPORT) == 0) {
-            @percent = caught * 100 / REPORT
-            @curious = chance / 10
-            @spent = stamp(start)
-            io.show("эпизод {episode}: поймала {caught} из {REPORT} ({percent} %), любопытство {curious} %, {spent}")
-            caught = 0
+    @window = Window {}
+    window.open()
+    always {
+        (window.turn() == no) {
+            leave
         }
     }
-    @wins = 0
-    drum (200) {
-        game.fresh(dice)
-        @last = 0
-        drum (field.HIGH) {
-            (game.over() == no) {
-                last = game.move(net.best(group.get(net.values(weights, game.state()), 1)))
-            }
-        }
-        (last > 0) {
-            wins = wins + 1
-        }
-    }
-    io.show("партия без любопытства:")
-    show_game(weights, dice)
-    @spent = stamp(start)
-    io.show("итог: без любопытства ловит {wins} из 200 · {spent}")
+    out none
 }

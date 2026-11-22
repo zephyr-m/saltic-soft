@@ -37,7 +37,8 @@ PROGRAMS = [
     ["crystal", "soft/graphics/crystal/main.saltic", "Кристалл", "Гранёный кристалл с трассировкой лучей: вращается, свет преломляется в гранях", "Graphics;", "sparkles", [24, 150, 140], "window"],
     ["mail", "soft/communication/mail/main.saltic", "Почта", "Почтовый клиент на жителях UIEngine — образец, почта не подключена", "Network;Email;", "mail", [214, 160, 48], ""],
     ["bastion", "soft/games/bastion/main.saltic", "Бастион", "Оборона башнями: мастер строит и улучшает сам, игра идёт без тебя", "Game;", "castle", [196, 64, 82], ""],
-    ["gems", "soft/games/gems/main.saltic", "Самоцветы", "Три в ряд: камни, лучи, звёзды и цепочки", "Game;", "gem", [64, 120, 214], ""]
+    ["gems", "soft/games/gems/main.saltic", "Самоцветы", "Три в ряд: камни, лучи, звёзды и цепочки", "Game;", "gem", [64, 120, 214], ""],
+    ["catcher", "soft/learning/catcher/main.saltic", "Ловец", "Нейросеть учится ловить мяч у тебя на глазах — DQN с нуля", "Education;", "brain", [150, 90, 200], ""]
 ]
 HEAP = "268435456"
 SIZE = 64

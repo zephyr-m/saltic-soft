@@ -1,0 +1,131 @@
+-- trainer — учитель «Ловца»: глубокое Q-обучение (DQN) по эпизоду за вызов.
+-- Опыт — в кольце памяти MEMORY снимков [состояние, действие, награда,
+-- следующее, конец]; каждый шаг сеть учится на BATCH случайных снимках: цель
+-- — награда + GAMMA · лучшая ценность следующего по замороженной копии сети
+-- (обновляется раз в SYNC шагов). Любопытство (‰) падает от 1000 до
+-- EPSILON_LOW за EXPLORE эпизодов. Раз в REPORT эпизодов — доля пойманных в
+-- history и строкой в журнал.
+--
+-- Trainer { dice, game, weights, frozen, memory, at, steps, caught, episode,
+--     chance, history } — start(seed) — новая сеть и пустая память;
+--     episode_once() — один эпизод с учёбой; done() -> yes после EPISODES
+--     chosen(state) -> действие (ε-жадно); greedy(state) -> лучшее действие
+--     remembered(shot) — снимок в кольцо; trained() — BATCH снимков учёбы
+--     target_of(shot) -> цель снимка
+-- EPISODES, EXPLORE, EPSILON_LOW, MEMORY, BATCH, SYNC, REPORT, GAMMA, RATE
+
+use io
+use core.group
+use core.fraction
+use tarantul.random.random
+use soft.learning.catcher.net
+use soft.learning.catcher.field
+
+EPISODES = 1500
+EXPLORE = 600
+EPSILON_LOW = 50
+MEMORY = 2000
+BATCH = 8
+SYNC = 200
+REPORT = 50
+GAMMA = 0.95
+RATE = 0.01
+
+Trainer = Box {
+    dice = random.Random {},
+    game = field.Field {},
+    weights = [],
+    frozen = [],
+    memory = [],
+    at = 0,
+    steps = 0,
+    caught = 0,
+    episode = 0,
+    chance = 1000,
+    history = []
+
+    skill start(seed) {
+        dice = dice.seeded(seed)
+        weights = net.fresh(dice)
+        frozen = weights
+        out none
+    }
+
+    skill done() {
+        out (episode >= EPISODES)
+    }
+
+    skill greedy(state) {
+        out net.best(group.get(net.values(weights, state), 1))
+    }
+
+    skill chosen(state) {
+        (dice.below(1000) < chance) {
+            out dice.below(net.ACTIONS)
+        }
+        out greedy(state)
+    }
+
+    skill target_of(shot) {
+        @reward = fraction.from(group.get(shot, 2))
+        (group.get(shot, 4) == yes) {
+            out reward
+        }
+        out reward + GAMMA * net.most(group.get(net.values(frozen, group.get(shot, 3)), 1))
+    }
+
+    skill remembered(shot) {
+        (group.count(memory) < MEMORY) {
+            memory = group.add(memory, shot)
+            out none
+        }
+        memory = group.replaced(memory, at, shot)
+        at = (at + 1) % MEMORY
+        out none
+    }
+
+    skill trained() {
+        @now = weights
+        drum (BATCH) {
+            @shot = group.get(memory, dice.below(group.count(memory)))
+            now = net.learned(now, group.get(shot, 0), group.get(shot, 1), target_of(shot), RATE)
+        }
+        weights = now
+        out none
+    }
+
+    skill episode_once() {
+        episode = episode + 1
+        chance = 1000 - (1000 - EPSILON_LOW) * episode / EXPLORE
+        (chance < EPSILON_LOW) {
+            chance = EPSILON_LOW
+        }
+        game.fresh(dice)
+        drum (field.HIGH) {
+            (game.over() == no) {
+                @state = game.state()
+                @action = chosen(state)
+                @reward = game.move(action)
+                remembered([state, action, reward, game.state(), game.over()])
+                (reward > 0) {
+                    caught = caught + 1
+                }
+                (group.count(memory) >= BATCH) {
+                    trained()
+                }
+                steps = steps + 1
+                ((steps % SYNC) == 0) {
+                    frozen = weights
+                }
+            }
+        }
+        ((episode % REPORT) == 0) {
+            @percent = caught * 100 / REPORT
+            history = group.add(history, percent)
+            @curious = chance / 10
+            io.show("ловец: эпизод {episode} — поймала {percent} %, любопытство {curious} %")
+            caught = 0
+        }
+        out none
+    }
+}
