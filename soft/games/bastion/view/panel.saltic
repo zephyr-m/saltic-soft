@@ -1,5 +1,5 @@
 -- panel — интерфейс «Бастиона» из жителей закрытой библиотеки UIEngine: шапка
--- (волна, золото с доходом, жизни ядра), место под поле (box с id field —
+-- (волна, здоровье врага волны, золото с доходом, жизни ядра), место под поле (box с id field —
 -- его рисует Field, не UIEngine), справа башни и улучшения, снизу лента
 -- «пока тебя не было». Щелчки — по id: buy-archer, buy-cannon, buy-frost,
 -- up-damage, up-speed, up-income, up-tower, pause.
@@ -38,18 +38,23 @@ Panel = Box {
         @money = grouped(realm.gold)
         @income = grouped(realm.income())
         @gold = calls.call("gold-pill", [["icon", calls.quoted("coins")], ["text", calls.quoted("{money}  +{income}/с")]])
+        @health = grouped(realm.strength())
+        @foe = calls.call("chip", [["text", calls.quoted("враг ♥ {health}")], ["fill", calls.quoted("panel")], ["tone", calls.quoted("down")]])
         @lives = calls.call("status", [["icon", calls.quoted("heart")], ["text", calls.quoted("{realm.lives}/{realm.lives_most}")], ["tone", calls.quoted("down")], ["mono", calls.quoted("no")]])
         @word = "Пауза"
         (realm.paused == yes) {
             word = "Дальше"
         }
         @pause = clicked("pause", calls.call("button", [["text", calls.quoted(word)], ["fill", calls.quoted("panel")], ["tone", calls.quoted("ink")]]))
-        @row = "\{\"box\": \{\"flow\": \"row\", \"gap\": 14, \"align\": \"center\", \"children\": [{title}, {wave}, {gold}, {lives}, {pause}]\}\}"
+        @row = "\{\"box\": \{\"flow\": \"row\", \"gap\": 14, \"align\": \"center\", \"children\": [{title}, {wave}, {foe}, {gold}, {lives}, {pause}]\}\}"
         out calls.call("top-bar", [["height", "64"], ["children", calls.listed([row])]])
     }
 
     skill side(realm) {
         @towers_title = calls.call("section-title", [["text", calls.quoted("Башни")]])
+        @count = group.count(realm.towers)
+        @fire = grouped(realm.firepower())
+        @field_line = calls.call("hint", [["text", calls.quoted("на поле {count} · урон {fire}/с")]])
         @cards = []
         drum (store.towers_on_sale(realm)) {
             cards = group.add(cards, tower_card(beat))
@@ -63,7 +68,7 @@ Panel = Box {
         @lines = calls.listed(rows)
         @card_box = "\{\"box\": \{\"gap\": 10, \"children\": {shelf}\}\}"
         @row_box = "\{\"box\": \{\"gap\": 8, \"children\": {lines}\}\}"
-        out calls.call("side-plate", [["width", "{SIDE_WIDTH}"], ["children", calls.listed([towers_title, card_box, upgrades_title, row_box])]])
+        out calls.call("side-plate", [["width", "{SIDE_WIDTH}"], ["children", calls.listed([towers_title, field_line, card_box, upgrades_title, row_box])]])
     }
 
     skill tower_card(offer) {

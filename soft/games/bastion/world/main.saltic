@@ -19,6 +19,9 @@
 --     fresh() — новая дорожка и места под башни; step(ms) — время вперёд
 --     cover(spot) -> сколько клеток дорожки видно с места; ranked(spots) -> по cover
 --     at(step) -> [x, y] точки дорожки; income() -> золото в секунду
+--     strength() -> здоровье врага этой волны (босс — ×10)
+--     damage_of(tower) -> урон выстрела с улучшениями; firepower() -> урон всех
+--         башен в секунду
 --     Покупки, улучшения и мастер — shop.Shop; news — что вышло у последней
 --     tower.tower_of(code, column, row, level) -> Tower по коду вида
 
@@ -189,7 +192,7 @@ World = Box {
         (spawned < wave_size()) {
             spawn_wait = spawn_wait - ms
             (spawn_wait <= 0) {
-                @strength = 15 + wave * 8 + wave * wave
+                @strength = strength()
                 @boss = ((wave % 10) == 0) ○ (spawned == 0)
                 (boss == yes) {
                     strength = strength * 10
@@ -255,6 +258,24 @@ World = Box {
             rest = REST
         }
         out none
+    }
+
+    skill strength() {
+        out 15 + wave * 8 + wave * wave
+    }
+
+    skill damage_of(shooter) {
+        out shooter.power() * (100 + damage_level * DAMAGE_STEP) / 100
+    }
+
+    skill firepower() {
+        @haste = 100 + speed_level * SPEED_STEP
+        @total = 0
+        drum (towers) {
+            @pause = beat.pause() * 100 / haste
+            total = total + damage_of(beat) * 1000 / pause
+        }
+        out total
     }
 
     skill shoot(ms) {

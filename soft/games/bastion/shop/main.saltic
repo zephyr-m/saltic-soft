@@ -18,11 +18,10 @@
 
 use core.str
 use core.group
+use soft.games.bastion.world
 use soft.games.bastion.world.tower
 use soft.games.bastion.shop.offer
 
-DAMAGE_STEP = 40
-SPEED_STEP = 15
 MASTER_GAP = 1000
 
 Shop = Box {
@@ -94,7 +93,7 @@ Shop = Box {
                 icon = sample.icon(),
                 title = sample.title(),
                 count = count_of(realm, beat),
-                power = sample.power(),
+                power = realm.damage_of(sample),
                 price = tower_price(realm, beat)
             })
         }
@@ -102,8 +101,8 @@ Shop = Box {
     }
 
     skill upgrades(realm) {
-        @percent = DAMAGE_STEP * realm.damage_level
-        @faster = SPEED_STEP * realm.speed_level
+        @percent = world.DAMAGE_STEP * realm.damage_level
+        @faster = world.SPEED_STEP * realm.speed_level
         @flow = realm.income()
         @offers = [
             offer.Offer {
