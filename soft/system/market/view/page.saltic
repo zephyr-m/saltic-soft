@@ -1,0 +1,162 @@
+-- page — экран маркета из жителей закрытой библиотеки UIEngine: шапка (имя,
+-- поиск, сколько найдено), слева категории и платформы, справа список
+-- программ страницами по choice.ROWS или карточка открытой программы. Щелчки —
+-- по id из choice (cat:, plat:, prog:, back, run).
+--
+-- Page { labels } — labels — подписи категорий (shelf.Shelf)
+--     page(catalog, picked, installed) -> JTML окна; picked — choice.Choice,
+--     installed — имена программ, что стоят в ~/.local/bin
+--     head(picked, total) / side(catalog, picked, installed) /
+--     listing(found, picked) / card(found, installed) / menu(…) -> JTML частей
+--     row(found) -> строка программы; clicked(id, inner) -> box с id вокруг
+-- PLATFORMS — [платформа, слово] фильтра; SIDE_WIDTH — ширина левой колонки
+
+use core.str
+use core.group
+use tarantul.uiengine.jtml.calls
+use soft.system.market.view.choice
+use soft.system.market.view.shelf
+
+PLATFORMS = [
+    ["linux", "Linux"],
+    ["uefi", "Acer"],
+    ["android", "Телефон"],
+    ["esp32", "ESP32"],
+    ["qemu_virt", "QEMU"]
+]
+SIDE_WIDTH = 260
+
+Page = Box {
+    labels = shelf.Shelf {}
+
+    skill page(catalog, picked, installed) {
+        @found = catalog.found(picked.category, picked.query, picked.wanted)
+        @top = head(picked, group.count(found))
+        @left = side(catalog, picked, installed)
+        @right = listing(found, picked)
+        (str.bytes(picked.opened) > 0) {
+            @open = catalog.named(picked.opened)
+            right = card(open, installed)
+        }
+        @body = "\{\"box\": \{\"flow\": \"row\", \"grow\": 1, \"gap\": 12, \"padding\": [12, 12, 12, 12], \"children\": [{left}, {right}]\}\}"
+        out "\{\"box\": \{\"fill\": \"ground\", \"grow\": 1, \"gap\": 0, \"children\": [{top}, {body}]\}\}"
+    }
+
+    skill head(picked, total) {
+        @title = calls.call("headline", [["text", calls.quoted("Маркет Saltic")], ["grow", "0"]])
+        @hint = "набери с клавиатуры"
+        @search = calls.call("search-box", [["text", calls.quoted(picked.query)], ["hint", calls.quoted(hint)], ["tone", calls.quoted("line")]])
+        @wide = "\{\"box\": \{\"grow\": 1, \"gap\": 0, \"children\": [{search}]\}\}"
+        @count = calls.call("chip", [["text", calls.quoted("найдено {total}")], ["fill", calls.quoted("panel")], ["tone", calls.quoted("ink")]])
+        @row = "\{\"box\": \{\"flow\": \"row\", \"gap\": 16, \"align\": \"center\", \"children\": [{title}, {wide}, {count}]\}\}"
+        out calls.call("top-bar", [["height", "64"], ["children", calls.listed([row])]])
+    }
+
+    skill side(catalog, picked, installed) {
+        @rows = [menu("", "layout-grid", "Все", group.count(catalog.programs), picked.category)]
+        drum (catalog.categories()) {
+            rows = group.add(rows, menu(beat, labels.icon_of(beat), labels.title_of(beat), catalog.count_in(beat), picked.category))
+        }
+        @kinds = calls.call("section-title", [["text", calls.quoted("Категории")]])
+        @where = calls.call("section-title", [["text", calls.quoted("Платформа")]])
+        @marks = []
+        drum (PLATFORMS) {
+            @platform = group.get(beat, 0)
+            @word = group.get(beat, 1)
+            @mark = "○"
+            (group.contains(picked.wanted, platform) == yes) {
+                mark = "●"
+            }
+            @line = calls.call("words", [["text", calls.quoted("{mark}  {word}")], ["tone", calls.quoted("ink")], ["weight", calls.quoted("regular")], ["grow", "1"]])
+            marks = group.add(marks, clicked("{choice.PLATFORM}{platform}", "\{\"box\": \{\"height\": 30, \"justify\": \"center\", \"padding\": [0, 10, 0, 10], \"gap\": 0, \"children\": [{line}]\}\}"))
+        }
+        @own_count = group.count(installed)
+        @own = calls.call("detail-row", [["label", calls.quoted("Стоит на ноуте")], ["value", calls.quoted("{own_count}")]])
+        @list = calls.listed(rows)
+        @boxes = calls.listed(marks)
+        @menus = "\{\"box\": \{\"gap\": 2, \"children\": {list}\}\}"
+        @toggles = "\{\"box\": \{\"gap\": 2, \"children\": {boxes}\}\}"
+        out calls.call("side-plate", [["width", "{SIDE_WIDTH}"], ["children", calls.listed([kinds, menus, where, toggles, own])]])
+    }
+
+    skill menu(category, icon, title, count, current) {
+        @name = "menu-row"
+        (category == current) {
+            name = "menu-row-current"
+        }
+        out calls.call(name, [["id", calls.quoted("{choice.CATEGORY}{category}")], ["icon", calls.quoted(icon)], ["text", calls.quoted(title)], ["count", calls.quoted("{count}")]])
+    }
+
+    skill listing(found, picked) {
+        @rows = []
+        @total = group.count(found)
+        @last = picked.offset + choice.ROWS
+        (last > total) {
+            last = total
+        }
+        drum (group.slice(found, picked.offset, last)) {
+            rows = group.add(rows, row(beat))
+        }
+        (total == 0) {
+            rows = [calls.call("hint", [["text", calls.quoted("ничего не нашлось — сотри поиск или сними платформы")]])]
+        }
+        @first = picked.offset + 1
+        (total == 0) {
+            first = 0
+        }
+        @title = calls.call("section-title", [["text", calls.quoted("Программы")]])
+        @where = calls.call("hint", [["text", calls.quoted("{first}–{last} из {total} · колесо листает")]])
+        @top = "\{\"box\": \{\"flow\": \"row\", \"gap\": 10, \"align\": \"center\", \"justify\": \"between\", \"children\": [{title}, {where}]\}\}"
+        @list = calls.listed(rows)
+        @lines = "\{\"box\": \{\"gap\": 6, \"children\": {list}\}\}"
+        out calls.call("card", [["gap", "12"], ["padding", "16"], ["width", "0"], ["grow", "1"], ["children", calls.listed([top, lines])]])
+    }
+
+    skill row(found) {
+        @mark = calls.call("glyph", [["icon", calls.quoted(labels.icon_of(found.category))], ["tone", calls.quoted("accent")], ["size", "20"]])
+        @name = calls.call("words", [["text", calls.quoted(found.name)], ["tone", calls.quoted("ink")], ["weight", calls.quoted("bold")], ["grow", "0"]])
+        @about = calls.call("words", [["text", calls.quoted(found.summary())], ["tone", calls.quoted("quiet")], ["weight", calls.quoted("regular")], ["grow", "1"]])
+        @where = calls.call("tag", [["text", calls.quoted(found.shown_platforms())], ["fill", calls.quoted("well")], ["tone", calls.quoted("quiet")]])
+        @line = "\{\"box\": \{\"flow\": \"row\", \"height\": 44, \"gap\": 12, \"align\": \"center\", \"padding\": [0, 8, 0, 8], \"children\": [{mark}, {name}, {about}, {where}]\}\}"
+        out clicked("{choice.PROGRAM}{found.name}", line)
+    }
+
+    skill card(found, installed) {
+        @back = clicked(choice.BACK, calls.call("back-link", [["text", calls.quoted("к списку")]]))
+        @crest = calls.call("crest", [["icon", calls.quoted(labels.icon_of(found.category))]])
+        @title = calls.call("figure", [["text", calls.quoted(found.name)], ["size", "26"], ["tone", calls.quoted("ink")]])
+        @shelf_word = labels.title_of(found.category)
+        @platform_words = found.shown_platforms()
+        @kind = calls.call("hint", [["text", calls.quoted("{shelf_word} · {platform_words}")]])
+        @names = "\{\"box\": \{\"grow\": 1, \"gap\": 4, \"children\": [{title}, {kind}]\}\}"
+        @action = calls.call("hint", [["text", calls.quoted("на этом ноуте не стоит")]])
+        (group.contains(installed, found.name) == yes) {
+            action = clicked(choice.RUN, calls.call("button", [["text", calls.quoted("Запустить")], ["fill", calls.quoted("accent")], ["tone", calls.quoted("ground")]]))
+        }
+        @top = "\{\"box\": \{\"flow\": \"row\", \"gap\": 14, \"align\": \"center\", \"children\": [{crest}, {names}, {action}]\}\}"
+        @lines = []
+        drum (found.about) {
+            lines = group.add(lines, calls.call("words", [["text", calls.quoted(beat)], ["tone", calls.quoted("ink")], ["weight", calls.quoted("regular")], ["grow", "0"]]))
+        }
+        @told = calls.listed(lines)
+        @about = "\{\"box\": \{\"gap\": 4, \"children\": {told}\}\}"
+        @packages = str.join(found.packages, " · ")
+        (str.bytes(packages) == 0) {
+            packages = "только язык"
+        }
+        @facts = [
+            calls.call("detail-row", [["label", calls.quoted("Стоит на")], ["value", calls.quoted(packages)]]),
+            calls.call("detail-row", [["label", calls.quoted("Входы")], ["value", calls.quoted(str.join(found.entries, "  "))]]),
+            calls.call("detail-row", [["label", calls.quoted("Проверок")], ["value", calls.quoted("{found.checks}")]]),
+            calls.call("detail-row", [["label", calls.quoted("Папка")], ["value", calls.quoted(found.folder)]])
+        ]
+        @facts_box = calls.listed(facts)
+        @table = "\{\"box\": \{\"gap\": 6, \"children\": {facts_box}\}\}"
+        @section = calls.call("section-title", [["text", calls.quoted("О программе")]])
+        out calls.call("card", [["gap", "16"], ["padding", "20"], ["width", "0"], ["grow", "1"], ["children", calls.listed([back, top, section, about, table])]])
+    }
+
+    skill clicked(id, inner) {
+        out "\{\"box\": \{\"id\": \"{id}\", \"gap\": 0, \"children\": [{inner}]\}\}"
+    }
+}

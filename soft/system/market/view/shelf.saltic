@@ -1,0 +1,42 @@
+-- shelf — подписи категорий маркета: папка soft/<категория> → слово и значок.
+-- Новая папка без подписи показывается своим именем и значком папки.
+--
+-- Shelf {} — title_of(category) -> слово; icon_of(category) -> значок Lucide
+-- WORDS — [папка, слово, значок]
+
+use core.group
+
+WORDS = [
+    ["communication", "Связь", "message-circle"],
+    ["development", "Разработка", "code"],
+    ["finance", "Финансы", "wallet"],
+    ["games", "Игры", "gamepad-2"],
+    ["graphics", "Графика", "image"],
+    ["hardware", "Железо", "cpu"],
+    ["learning", "Учёба", "graduation-cap"],
+    ["music", "Музыка", "music"],
+    ["science", "Наука", "flask-conical"],
+    ["system", "Система", "settings"],
+    ["vision", "Зрение", "eye"],
+    ["work", "Работа", "briefcase"]
+]
+
+Shelf = Box {
+    skill title_of(category) {
+        drum (WORDS) {
+            (group.get(beat, 0) == category) {
+                out group.get(beat, 1)
+            }
+        }
+        out category
+    }
+
+    skill icon_of(category) {
+        drum (WORDS) {
+            (group.get(beat, 0) == category) {
+                out group.get(beat, 2)
+            }
+        }
+        out "folder"
+    }
+}

@@ -1,0 +1,92 @@
+-- choice — что выбрал человек в маркете: категория, поиск, платформы, открытая
+-- программа и сдвиг списка. Меняется щелчком по id, набором и колесом.
+--
+-- Choice { category, query, wanted, opened, offset } — category "" — все;
+--     wanted — платформы фильтра ([] — все); opened — имя программы в
+--     карточке ("" — список); offset — первая строка списка
+--     press(id) -> yes, если id маркета: cat:<имя>, cat:, plat:<платформа>,
+--         prog:<имя>, back
+--     typed(text) — знак в поиск, «⌫» — стереть последний
+--     wheel(amount, total) — сдвиг списка на amount строк в пределах total
+--     toggled(items, value) -> группа без value или с ним
+-- CATEGORY, PLATFORM, PROGRAM, BACK, RUN — начала и имена id (RUN — запуск
+--     поставленной, его ведёт окно); ROWS — строк на экране
+
+use core.str
+use core.group
+
+CATEGORY = "cat:"
+PLATFORM = "plat:"
+PROGRAM = "prog:"
+BACK = "back"
+RUN = "run"
+ROWS = 11
+
+Choice = Box {
+    category = "",
+    query = "",
+    wanted = [],
+    opened = "",
+    offset = 0
+
+    skill press(id) {
+        (str.starts_with(id, CATEGORY) == yes) {
+            category = str.slice(id, str.bytes(CATEGORY), str.bytes(id))
+            opened = ""
+            offset = 0
+            out yes
+        }
+        (str.starts_with(id, PLATFORM) == yes) {
+            wanted = toggled(wanted, str.slice(id, str.bytes(PLATFORM), str.bytes(id)))
+            offset = 0
+            out yes
+        }
+        (str.starts_with(id, PROGRAM) == yes) {
+            opened = str.slice(id, str.bytes(PROGRAM), str.bytes(id))
+            out yes
+        }
+        (id == BACK) {
+            opened = ""
+            out yes
+        }
+        out no
+    }
+
+    skill typed(text) {
+        opened = ""
+        offset = 0
+        (text == "⌫") {
+            @letters = str.letters(query)
+            (group.count(letters) > 0) {
+                query = str.join(group.slice(letters, 0, group.count(letters) - 1), "")
+            }
+            out none
+        }
+        query = str.concat(query, text)
+        out none
+    }
+
+    skill wheel(amount, total) {
+        offset = offset + amount
+        (offset > total - ROWS) {
+            offset = total - ROWS
+        }
+        (offset < 0) {
+            offset = 0
+        }
+        out none
+    }
+
+    skill toggled(items, value) {
+        (group.contains(items, value) == no) {
+            out group.add(items, value)
+        }
+        @kept = []
+        drum (items) {
+            ((beat == value) == no) {
+                kept = group.add(kept, beat)
+            }
+        }
+        out kept
+    }
+}

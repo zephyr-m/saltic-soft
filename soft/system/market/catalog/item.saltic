@@ -1,0 +1,78 @@
+-- item — одна программа каталога маркета: папка soft/<категория>/<имя>/.
+-- Всё — из самих файлов, без выдуманного: описание — шапка входа, платформы —
+-- по use входов, пакеты — use tarantul.<пакет> во всех файлах, проверки — файлы
+-- checks/*.saltic.
+--
+-- Item { category, name, folder, about, entries, platforms, packages, checks }
+--     about — строки шапки входа после «имя — »; entries — пути входов;
+--     platforms — linux, uefi, android, esp32, qemu_virt; checks — число файлов
+--     fits(query, wanted) -> yes, если в имени или описании есть query (без
+--         регистра) и платформ wanted нет или хоть одна из них есть у программы
+--     summary() -> первая строка описания
+--     shown_platforms() -> «Linux · Acer» для глаза
+
+use core.str
+use core.group
+
+Item = Box {
+    category = "",
+    name = "",
+    folder = "",
+    about = [],
+    entries = [],
+    platforms = [],
+    packages = [],
+    checks = 0
+
+    skill fits(query, wanted) {
+        @needle = str.lower(query)
+        @told = str.join(about, " ")
+        @text = str.lower("{name} {category} {told}")
+        (str.contains(text, needle) == no) {
+            out no
+        }
+        (group.count(wanted) == 0) {
+            out yes
+        }
+        drum (wanted) {
+            (group.contains(platforms, beat) == yes) {
+                out yes
+            }
+        }
+        out no
+    }
+
+    skill summary() {
+        (group.count(about) == 0) {
+            out "без описания в шапке"
+        }
+        out group.get(about, 0)
+    }
+
+    skill shown_platforms() {
+        @words = []
+        drum (platforms) {
+            words = group.add(words, platform_word(beat))
+        }
+        out str.join(words, " · ")
+    }
+
+    skill platform_word(platform) {
+        (platform == "linux") {
+            out "Linux"
+        }
+        (platform == "uefi") {
+            out "Acer"
+        }
+        (platform == "android") {
+            out "Телефон"
+        }
+        (platform == "esp32") {
+            out "ESP32"
+        }
+        (platform == "qemu_virt") {
+            out "QEMU"
+        }
+        out platform
+    }
+}

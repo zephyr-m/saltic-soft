@@ -1,0 +1,170 @@
+-- main — вход маркета (soft/system/market): все программы saltic-soft одним
+-- окном Wayland на этом ноуте — категории, поиск, платформы и карточка
+-- программы. Каталог читается из soft/ при запуске (запускать из корня
+-- saltic-soft). Поставленную в ~/.local/bin (just install) можно запустить из
+-- карточки. Набор с клавиатуры — поиск, колесо — листать, «×» — выход. Пока
+-- только Linux; дальше — тот же экран сайтом через wasm.
+--
+-- Window { canvas, link, palette, runtime, reader, shelf_of, picked, board,
+--     installed, packet, hold, joined } — окно и всё долгое
+--     open() — окно, шрифты, каталог, первый кадр; NoWindow
+--     typeface_of(path) -> Typeface из файла
+--     shown() — пересобрать JTML и показать
+--     bin() -> папка ~/.local/bin; installed_names() -> какие программы там есть
+--     launch() — запустить открытую программу из ~/.local/bin
+--     turn() -> no, когда пора выходить
+-- program() — вход
+
+use io
+use io.file
+use core.bytes
+use core.group
+use core.process
+use core.socket
+use core.str
+use tarantul.icons.icons
+use tarantul.fonts.ttf
+use tarantul.fonts.fonts
+use tarantul.wayland.wayland.screen
+use tarantul.graphics.graphics
+use tarantul.input.gestures
+use tarantul.uiengine.jtml
+use tarantul.uiengine.jtml.read
+use tarantul.uiengine.draw.atoms
+use tarantul.uiengine.draw.typeface
+use tarantul.uiengine.themes
+use soft.system.market.catalog
+use soft.system.market.view.choice
+use soft.system.market.view.page
+
+TITLE = "Маркет Saltic"
+WIDE = 1280
+HIGH = 820
+TICK = 16
+ROOT = "soft"
+
+Window = Box {
+    canvas = graphics.Screen {},
+    link = screen.Link {},
+    palette = atoms.Palette {},
+    runtime = jtml.Runtime {},
+    reader = gestures.Reader {},
+    shelf_of = catalog.Catalog {},
+    picked = choice.Choice {},
+    board = page.Page {},
+    installed = [],
+    packet = bytes.new(8192),
+    hold = bytes.new(4096),
+    joined = bytes.new(12288)
+
+    skill open() {
+        @host = screen.sized(TITLE, WIDE, HIGH)
+        (group.count(host) == 0) {
+            out error.NoWindow
+        }
+        canvas = group.get(host, 0)
+        link = group.get(host, 1)
+        @sheet = file.read_bytes(icons.SHEET)
+        @dark = themes.named("soft", canvas)
+        @lettered = atoms.with_faces(dark, typeface_of(fonts.REGULAR), typeface_of(fonts.BOLD), typeface_of(fonts.MONO))
+        palette = atoms.with_icons(lettered, icons.open(ttf.from_bytes(sheet), bytes.count(sheet)))
+        shelf_of.scan(ROOT)
+        installed = installed_names()
+        @total = group.count(shelf_of.programs)
+        @own = group.count(installed)
+        io.show("маркет: программ {total}, на ноуте {own}")
+        out shown()
+    }
+
+    skill typeface_of(path) {
+        out typeface.from_bytes(file.read_bytes(path))
+    }
+
+    skill shown() {
+        @tree = atoms.fitted(read.page(board.page(shelf_of, picked, installed)), no, palette)
+        runtime = jtml.mount(canvas, tree)
+        atoms.draw(canvas, runtime, palette)
+        out screen.present(link)
+    }
+
+    skill bin() {
+        @head = "HOME="
+        drum (process.environment()) {
+            (str.starts_with(beat, head) == yes) {
+                @home = str.slice(beat, str.bytes(head), str.bytes(beat))
+                out "{home}/.local/bin"
+            }
+        }
+        out error.NoHome
+    }
+
+    skill installed_names() {
+        @there = file.list(bin()) rescue |err| {
+            []
+        }
+        @names = []
+        drum (shelf_of.programs) {
+            (group.contains(there, beat.name) == yes) {
+                names = group.add(names, beat.name)
+            }
+        }
+        out names
+    }
+
+    skill launch() {
+        @folder = bin()
+        @path = "{folder}/{picked.opened}"
+        io.show("маркет: запускаю {path}")
+        out process.open(path, [path], "", no, process.environment_with([]), no)
+    }
+
+    skill turn() {
+        ((link.way_closed == yes) ○○ (link.way_failed == yes)) {
+            out no
+        }
+        screen.pump(link, packet, hold, joined)
+        @drained = reader.drain(link.way_events)
+        link.way_events = drained.core
+        @changed = no
+        drum (drained.gestures) {
+            (beat.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, beat.x, beat.y)
+                (hit.found == yes) {
+                    pick {
+                        (hit.id == choice.RUN) {
+                            launch()
+                        }
+                        (picked.press(hit.id) == yes) {
+                            changed = yes
+                        }
+                    }
+                }
+            }
+            (beat.kind == gestures.Kind.TYPE) {
+                picked.typed(beat.text)
+                changed = yes
+            }
+            (beat.kind == gestures.Kind.WHEEL) {
+                @total = group.count(shelf_of.found(picked.category, picked.query, picked.wanted))
+                picked.wheel(beat.amount, total)
+                changed = yes
+            }
+        }
+        (changed == yes) {
+            shown()
+        }
+        socket.sleep(TICK)
+        out yes
+    }
+}
+
+program() {
+    @window = Window {}
+    window.open()
+    always {
+        (window.turn() == no) {
+            leave
+        }
+    }
+    out none
+}

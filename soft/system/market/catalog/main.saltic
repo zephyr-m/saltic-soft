@@ -1,0 +1,265 @@
+-- catalog — каталог маркета: обходит soft/ и собирает программы. Программа —
+-- папка soft/<категория>/<имя>/, у которой есть вход — файл .saltic с
+-- program() в корне или в подпапке платформы (linux, uefi, android, esp32).
+-- Входы читаются: шапка — описание, use — платформы и пакеты.
+--
+-- Catalog { programs } — программы по категориям, внутри — по имени
+--     scan(root) — прочитать root (обычно "soft"); File
+--     categories() -> имена категорий по порядку программ
+--     count_in(category) -> число программ категории
+--     found(category, query, wanted) -> программы категории ("" — все),
+--         подходящие под поиск и платформы (item.Item.fits)
+--     named(name) -> программа по имени; ProgramMissing
+--     read_program(category, name, folder) -> item.Item
+--     entry_text(path) -> текст входа или ""; with_platform, about_of,
+--     platform_of, packages_of, sorted (по байтам), str_before — внутри
+-- SIDES — подпапки платформ, где ищется вход
+
+use io.file
+use core.str
+use core.group
+use soft.system.market.catalog.item
+
+SIDES = ["linux", "uefi", "android", "esp32"]
+
+Catalog = Box {
+    programs = []
+
+    skill scan(root) {
+        programs = []
+        drum (sorted(file.list(root))) {
+            @category = beat
+            @shelf = "{root}/{category}"
+            @names = file.list(shelf) rescue |err| {
+                []
+            }
+            drum (sorted(names)) {
+                @folder = "{shelf}/{beat}"
+                @made = read_program(category, beat, folder)
+                (group.count(made.entries) > 0) {
+                    programs = group.add(programs, made)
+                }
+            }
+        }
+        out none
+    }
+
+    skill read_program(category, name, folder) {
+        @made = item.Item {
+            category = category,
+            name = name,
+            folder = folder
+        }
+        @texts = []
+        drum (group.concat([""], SIDES)) {
+            @place = beat
+            @where = folder
+            ((place == "") == no) {
+                where = "{folder}/{place}"
+            }
+            @files = file.list(where) rescue |err| {
+                []
+            }
+            drum (sorted(files)) {
+                @text = entry_text("{where}/{beat}")
+                (str.bytes(text) > 0) {
+                    made.entries = group.add(made.entries, "{where}/{beat}")
+                    (group.count(made.about) == 0) {
+                        made.about = about_of(text)
+                    }
+                    texts = group.add(texts, text)
+                    made.platforms = with_platform(made.platforms, platform_of(text, place))
+                }
+            }
+        }
+        @checks = file.list("{folder}/checks") rescue |err| {
+            []
+        }
+        drum (checks) {
+            (str.ends_with(beat, ".saltic") == yes) {
+                made.checks = made.checks + 1
+            }
+        }
+        drum (texts) {
+            drum (packages_of(beat)) {
+                (group.contains(made.packages, beat) == no) {
+                    made.packages = group.add(made.packages, beat)
+                }
+            }
+        }
+        out made
+    }
+
+    skill entry_text(path) {
+        (str.ends_with(path, ".saltic") == no) {
+            out ""
+        }
+        @text = file.read(path) rescue |err| {
+            ""
+        }
+        (str.starts_with(text, "program(") == yes) {
+            out text
+        }
+        (str.contains(text, "\nprogram(") == yes) {
+            out text
+        }
+        out ""
+    }
+
+    skill with_platform(platforms, platform) {
+        (group.contains(platforms, platform) == yes) {
+            out platforms
+        }
+        out group.add(platforms, platform)
+    }
+
+    skill about_of(text) {
+        @lines = []
+        drum (str.rows(text)) {
+            (str.starts_with(beat, "--") == no) {
+                out lines
+            }
+            @line = str.slice(beat, 2, str.bytes(beat))
+            (str.starts_with(line, " ") == yes) {
+                line = str.slice(line, 1, str.bytes(line))
+            }
+            (str.bytes(line) == 0) {
+                out lines
+            }
+            (group.count(lines) == 0) {
+                @dash = " — "
+                @parts = str.split(line, dash)
+                (group.count(parts) > 1) {
+                    line = str.join(group.slice(parts, 1, group.count(parts)), dash)
+                }
+            }
+            lines = group.add(lines, line)
+        }
+        out lines
+    }
+
+    skill platform_of(text, place) {
+        (place == "uefi") {
+            out "uefi"
+        }
+        (place == "android") {
+            out "android"
+        }
+        (place == "esp32") {
+            out "esp32"
+        }
+        (str.contains(text, "use tarantul.qemu_virt") == yes) {
+            out "qemu_virt"
+        }
+        (str.contains(text, "use tarantul.firmware") == yes) {
+            out "uefi"
+        }
+        (str.contains(text, "use tarantul.camera_android") == yes) {
+            out "android"
+        }
+        (str.contains(text, "use tarantul.i2c_esp32") == yes) {
+            out "esp32"
+        }
+        out "linux"
+    }
+
+    skill packages_of(text) {
+        @names = []
+        @head = "use tarantul."
+        drum (str.lines(text)) {
+            (str.starts_with(beat, head) == yes) {
+                @rest = str.slice(beat, str.bytes(head), str.bytes(beat))
+                @parts = str.split(rest, ".")
+                @package = group.get(parts, 0)
+                (group.contains(names, package) == no) {
+                    names = group.add(names, package)
+                }
+            }
+        }
+        out names
+    }
+
+    skill categories() {
+        @names = []
+        drum (programs) {
+            (group.contains(names, beat.category) == no) {
+                names = group.add(names, beat.category)
+            }
+        }
+        out names
+    }
+
+    skill count_in(category) {
+        @total = 0
+        drum (programs) {
+            (beat.category == category) {
+                total = total + 1
+            }
+        }
+        out total
+    }
+
+    skill found(category, query, wanted) {
+        @chosen = []
+        drum (programs) {
+            @kept = yes
+            ((category == "") == no) {
+                kept = (beat.category == category)
+            }
+            (kept == yes) {
+                (beat.fits(query, wanted) == yes) {
+                    chosen = group.add(chosen, beat)
+                }
+            }
+        }
+        out chosen
+    }
+
+    skill named(name) {
+        drum (programs) {
+            (beat.name == name) {
+                out beat
+            }
+        }
+        out error.ProgramMissing
+    }
+
+    skill sorted(names) {
+        @result = []
+        drum (names) {
+            @name = beat
+            @placed = []
+            @done = no
+            drum (result) {
+                ((done == no) ○ (str_before(name, beat) == yes)) {
+                    placed = group.add(placed, name)
+                    done = yes
+                }
+                placed = group.add(placed, beat)
+            }
+            (done == no) {
+                placed = group.add(placed, name)
+            }
+            result = placed
+        }
+        out result
+    }
+
+    skill str_before(left, right) {
+        @count = str.bytes(left)
+        (str.bytes(right) < count) {
+            count = str.bytes(right)
+        }
+        drum (count) {
+            @a = str.byte(left, beat)
+            @b = str.byte(right, beat)
+            (a < b) {
+                out yes
+            }
+            (a > b) {
+                out no
+            }
+        }
+        out (str.bytes(left) < str.bytes(right))
+    }
+}
