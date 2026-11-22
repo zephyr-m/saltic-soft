@@ -5,7 +5,8 @@
 -- с рамкой и точками уровня (до 5; каждые 5 уровней — новый цвет STAGES),
 -- враг — круг down (босс крупнее, watermelon) с
 -- полоской здоровья над ним, иней — кольцо info у замедленного, вспышка
--- попадания — кольцо ink. Место врага — realm.at(step) в сотых клетки.
+-- попадания — кольцо ink; над полосой — здоровье числом (LABEL px, шрифт
+-- mono). Место врага — realm.at(step) в сотых клетки.
 --
 -- Field { cell, left, top } — размер клетки и угол поля после place
 --     place(realm, x, y, width, height) — клетка и угол под место
@@ -18,9 +19,11 @@
 use core.group
 use tarantul.uiengine.draw.atoms
 use tarantul.uiengine.draw.shapes
+use tarantul.uiengine.draw.typeface
 use soft.games.bastion.world
 
 PATH_GAP = 3
+LABEL = 11
 STAGES = ["line", "accent", "mustard", "watermelon", "info", "up"]
 ROUND = 8
 
@@ -132,6 +135,11 @@ Field = Box {
         @alive = colour(palette, "up")
         @frost = colour(palette, "info")
         @spark = colour(palette, "ink")
+        @pen = typeface.Brush {
+            size = LABEL,
+            ink = spark,
+            fade = spark
+        }
         drum (realm.enemies) {
             @place = realm.at(beat.step)
             @middle_x = left + group.get(place, 0) * cell / world.CELL
@@ -153,6 +161,9 @@ Field = Box {
             }
             shapes.shape(canvas, x, y - 7, size, 4, 2, well)
             shapes.shape(canvas, x, y - 7, size * beat.health / beat.most, 4, 2, alive)
+            @number = "{beat.health}"
+            @wide = typeface.measure(palette.mono, number, LABEL, 0)
+            typeface.paint(canvas, palette.mono, middle_x - wide / 2, y - 9 - typeface.line_height(palette.mono, LABEL), number, pen)
         }
         out none
     }
