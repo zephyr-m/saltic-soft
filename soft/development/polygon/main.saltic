@@ -151,7 +151,7 @@ Window = Box {
 
 program() {
     @window = Window {}
-    window.open() rescue |err| { out none }
+    window.open()
     always {
         (window.step() == no) { leave }
     }

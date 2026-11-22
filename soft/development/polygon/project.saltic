@@ -1,5 +1,5 @@
 -- project — экран «saltic» Полигона, субъект Project: сам язык в числах из
--- этого репозитория. Код — файлы .saltic из git ls-files (свои и новые, без
+-- его дома (SALTIC_HOME, по умолчанию ../saltic — соседний репозиторий). Код — файлы .saltic из git ls-files (свои и новые, без
 -- игнорируемых), строки — str.line_count каждого, по верхним папкам (AREAS —
 -- в порядке показа, прочее — «другое»); пирамида жителей UIEngine — прямо из
 -- собранной библиотеки (library.LEVELS, атомов — ATOMS); полка — компиляторы
@@ -8,7 +8,7 @@
 -- Project { files, lines, areas, compilers, version, trouble } — файлов и строк
 --     Saltic, строк по AREAS, процессоры компиляторов на полке, версия полки,
 --     причина сбоя или ""
---     refresh() — пересчитать; jtml() -> список JTML экрана
+--     refresh() — пересчитать; jtml() -> список JTML экрана; home() -> дом языка
 --     shelf(flow, gap, items) — ряд или столбик; grouped(number) -> «105 952»
 --     — большое число с разрядами; widest(items) -> наибольшее число
 -- Внутри: shelf_of(names) — процессоры и версия полки; floors() — пирамида;
@@ -22,7 +22,7 @@ use tarantul.uiengine.library
 use tarantul.uiengine.themes
 use tarantul.uiengine.jtml.calls
 
-AREAS = ["os", "soul", "soft", "workbench"]
+AREAS = ["soul", "workbench", "tests", "formats"]
 ATOMS = 4
 PREFIX = "saltic-"
 MARK = "-compiler-"
@@ -67,8 +67,18 @@ Project = Box {
         out most
     }
 
+    skill home() {
+        drum (process.environment()) {
+            (str.starts_with(beat, "SALTIC_HOME=") == yes) {
+                out str.slice(beat, 12, str.bytes(beat))
+            }
+        }
+        out "../saltic"
+    }
+
     skill refresh() {
-        @listed = process.capture(["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.saltic"], "", []) rescue |err| {
+        @root = home()
+        @listed = process.capture(["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.saltic"], root, []) rescue |err| {
             trouble = "git не запустился — {err}"
             out none
         }
@@ -78,7 +88,7 @@ Project = Box {
         lines = 0
         drum (str.lines(listed.output)) {
             @path = beat
-            @text = file.read(path) rescue |err| { "" }
+            @text = file.read("{root}/{path}") rescue |err| { "" }
             ((text == "") == no) {
                 @many = str.line_count(text)
                 files = files + 1
@@ -92,7 +102,7 @@ Project = Box {
             }
         }
         areas = counted
-        shelf_of(file.list("bootstrap"))
+        shelf_of(file.list("{root}/bootstrap"))
         trouble = ""
         out none
     }
