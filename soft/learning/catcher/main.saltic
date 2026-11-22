@@ -1,0 +1,154 @@
+-- main — «Ловец»: глубокое Q-обучение (DQN) с нуля. Сеть (net) смотрит на
+-- поле (field) и выбирает: влево, стоять, вправо. Опыт — в кольце памяти
+-- MEMORY снимков [состояние, действие, награда, следующее, конец]; каждый шаг
+-- сеть учится на BATCH случайных снимках: цель — награда + GAMMA · лучшая
+-- ценность следующего по замороженной копии сети (обновляется раз в SYNC
+-- шагов). Любопытство ε падает от 1 до EPSILON_LOW за EXPLORE эпизодов.
+-- Раз в REPORT эпизодов — строка: сколько поймала из последних, ε, время.
+-- В конце — партия без любопытства картинкой и итог.
+--
+-- program() — обучение EPISODES эпизодов
+-- Внутри: chosen(weights, state, dice, chance) -> действие (ε-жадно);
+--     sample(memory, dice) -> снимок; target_of(frozen, shot) -> цель;
+--     trained(weights, frozen, memory, dice) -> веса после BATCH снимков;
+--     show_game(weights, dice) — партия картинкой; stamp(start) -> «12 с»
+
+use io
+use core.group
+use core.time
+use core.fraction
+use tarantul.random.random
+use soft.learning.catcher.net
+use soft.learning.catcher.field
+
+EPISODES = 1500
+EXPLORE = 600
+EPSILON_LOW = 50
+MEMORY = 2000
+BATCH = 8
+SYNC = 200
+REPORT = 50
+GAMMA = 0.95
+RATE = 0.01
+SEED = 2026
+
+skill chosen(weights, state, dice, chance) {
+    (dice.below(1000) < chance) {
+        out dice.below(net.ACTIONS)
+    }
+    out net.best(group.get(net.values(weights, state), 1))
+}
+
+skill sample(memory, dice) {
+    out group.get(memory, dice.below(group.count(memory)))
+}
+
+skill target_of(frozen, shot) {
+    @reward = fraction.from(group.get(shot, 2))
+    (group.get(shot, 4) == yes) {
+        out reward
+    }
+    out reward + GAMMA * net.most(group.get(net.values(frozen, group.get(shot, 3)), 1))
+}
+
+skill trained(weights, frozen, memory, dice) {
+    @now = weights
+    drum (BATCH) {
+        @shot = sample(memory, dice)
+        now = net.learned(now, group.get(shot, 0), group.get(shot, 1), target_of(frozen, shot), RATE)
+    }
+    out now
+}
+
+skill stamp(start) {
+    @spent = (time.now() - start) / 1000
+    out "{spent} с"
+}
+
+skill show_game(weights, dice) {
+    @game = field.Field {}
+    game.fresh(dice)
+    drum (field.HIGH) {
+        @action = net.best(group.get(net.values(weights, game.state()), 1))
+        (game.over() == no) {
+            game.move(action)
+        }
+    }
+    drum (game.picture()) {
+        io.show("    {beat}")
+    }
+    out none
+}
+
+program() {
+    @dice = random.Random {}
+    dice = dice.seeded(SEED)
+    @weights = net.fresh(dice)
+    @frozen = weights
+    @memory = []
+    @at = 0
+    @steps = 0
+    @caught = 0
+    @start = time.now()
+    @game = field.Field {}
+    io.show("ловец: учусь ловить — {EPISODES} эпизодов, сеть {net.INPUTS}→{net.HIDDEN}→{net.ACTIONS}, отчёт раз в {REPORT}")
+    drum (EPISODES) {
+        @episode = beat + 1
+        @chance = 1000 - (1000 - EPSILON_LOW) * episode / EXPLORE
+        (chance < EPSILON_LOW) {
+            chance = EPSILON_LOW
+        }
+        game.fresh(dice)
+        drum (field.HIGH) {
+            (game.over() == no) {
+                @state = game.state()
+                @action = chosen(weights, state, dice, chance)
+                @reward = game.move(action)
+                @shot = [state, action, reward, game.state(), game.over()]
+                pick {
+                    (group.count(memory) < MEMORY) {
+                        memory = group.add(memory, shot)
+                    }
+                    {
+                        memory = group.replaced(memory, at, shot)
+                        at = (at + 1) % MEMORY
+                    }
+                }
+                (reward > 0) {
+                    caught = caught + 1
+                }
+                (group.count(memory) >= BATCH) {
+                    weights = trained(weights, frozen, memory, dice)
+                }
+                steps = steps + 1
+                ((steps % SYNC) == 0) {
+                    frozen = weights
+                }
+            }
+        }
+        ((episode % REPORT) == 0) {
+            @percent = caught * 100 / REPORT
+            @curious = chance / 10
+            @spent = stamp(start)
+            io.show("эпизод {episode}: поймала {caught} из {REPORT} ({percent} %), любопытство {curious} %, {spent}")
+            caught = 0
+        }
+    }
+    @wins = 0
+    drum (200) {
+        game.fresh(dice)
+        @last = 0
+        drum (field.HIGH) {
+            (game.over() == no) {
+                last = game.move(net.best(group.get(net.values(weights, game.state()), 1)))
+            }
+        }
+        (last > 0) {
+            wins = wins + 1
+        }
+    }
+    io.show("партия без любопытства:")
+    show_game(weights, dice)
+    @spent = stamp(start)
+    io.show("итог: без любопытства ловит {wins} из 200 · {spent}")
+}

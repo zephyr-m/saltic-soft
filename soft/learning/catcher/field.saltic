@@ -1,0 +1,86 @@
+-- field — игра «Ловца»: поле WIDE × HIGH, мячик падает из случайного
+-- столбца на строку за шаг, платформа шириной 3 внизу ездит влево, стоит или
+-- вправо. Долетел до низа: под платформой — поймала (+1), мимо — уронила
+-- (−1). Состояние для сети — три числа в −1…1: столбец мяча, его строка,
+-- место платформы.
+--
+-- Field { ball_x, ball_y, paddle } — fresh(dice) — новый мяч сверху,
+--     платформа в середине; state() -> [три дробных]; move(action) -> награда
+--     (0 — летит, 1 — поймала, −1 — уронила); over() -> yes, когда мяч внизу;
+--     picture() -> поле строками ASCII («o» — мяч, «===» — платформа)
+-- WIDE, HIGH — размер поля
+
+use core.group
+use core.str
+use core.fraction
+
+WIDE = 7
+HIGH = 8
+
+Field = Box {
+    ball_x = 0,
+    ball_y = 0,
+    paddle = 3
+
+    skill fresh(dice) {
+        ball_x = dice.below(WIDE)
+        ball_y = 0
+        paddle = WIDE / 2
+        out none
+    }
+
+    skill state() {
+        @span_x = fraction.from(WIDE - 1)
+        @span_y = fraction.from(HIGH - 1)
+        out [fraction.from(ball_x) * 2.0 / span_x - 1.0, fraction.from(ball_y) * 2.0 / span_y - 1.0, fraction.from(paddle) * 2.0 / span_x - 1.0]
+    }
+
+    skill move(action) {
+        paddle = paddle + action - 1
+        (paddle < 0) {
+            paddle = 0
+        }
+        (paddle >= WIDE) {
+            paddle = WIDE - 1
+        }
+        ball_y = ball_y + 1
+        (ball_y < (HIGH - 1)) {
+            out 0
+        }
+        @gap = ball_x - paddle
+        ((gap * gap) <= 1) {
+            out 1
+        }
+        out -1
+    }
+
+    skill over() {
+        out (ball_y >= (HIGH - 1))
+    }
+
+    skill picture() {
+        @rows = []
+        drum (HIGH) {
+            @row = beat
+            @line = ""
+            drum (WIDE) {
+                @mark = "."
+                ((row == ball_y) ○ (beat == ball_x)) {
+                    mark = "o"
+                }
+                (row == (HIGH - 1)) {
+                    @gap = beat - paddle
+                    ((gap * gap) <= 1) {
+                        mark = "="
+                        ((beat == ball_x) ○ (ball_y == row)) {
+                            mark = "@"
+                        }
+                    }
+                }
+                line = str.concat(line, mark)
+            }
+            rows = group.add(rows, line)
+        }
+        out rows
+    }
+}
