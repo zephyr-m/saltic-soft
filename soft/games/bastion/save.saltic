@@ -1,8 +1,9 @@
 -- save — сохранение «Бастиона» в файл строками «ключ=значение», башни —
--- «tower=код,столбец,строка,уровень». Отлучка считается честно, по скорости,
--- которую намерила сама игра: золото и волны за всё прожитое время (earned,
--- cleared за played мс) умножаются на мс отлучки. Часы языка — мс от полуночи,
--- поэтому отлучка дольше суток видна как остаток от суток.
+-- «tower=код,столбец,строка,уровень». Отлучка — честно: только пассивный доход
+-- (realm.income() в секунду × секунды отлучки); волны и награды за убитых
+-- без боя не начисляются — волна проходится только настоящим боем. Часы
+-- языка — мс от полуночи, поэтому отлучка дольше суток видна как остаток от
+-- суток.
 --
 -- Keeper { path } — где лежит файл
 --     store(realm, clock) — записать мир и время clock (time.now)
@@ -92,12 +93,8 @@ Keeper = Box {
             away = away + time.DAY_MILLISECONDS
         }
         realm.away_minutes = away / 60000
-        (realm.played > 0) {
-            realm.away_gold = realm.earned * away / realm.played
-            realm.away_waves = realm.cleared * away / realm.played
-        }
+        realm.away_gold = realm.income() * (away / 1000)
         realm.gold = realm.gold + realm.away_gold
-        realm.wave = realm.wave + realm.away_waves
         out none
     }
 

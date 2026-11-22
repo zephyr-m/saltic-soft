@@ -94,7 +94,7 @@ Panel = Box {
             @money = grouped(realm.away_gold)
             @hours = realm.away_minutes / 60
             @minutes = realm.away_minutes % 60
-            line = "{hours} ч {minutes} мин: +{money} золота, пройдено волн: {realm.away_waves}"
+            line = "{hours} ч {minutes} мин: +{money} золота дохода"
         }
         @when = "пока тебя не было"
         (str.bytes(realm.news) > 0) {

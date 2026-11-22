@@ -1,0 +1,41 @@
+-- selfplay — «Бастион» без окна: новая игра, мастер, шаги по STEP мс,
+-- SECONDS игровых секунд. Проверяет, что игра идёт сама: мастер ставит
+-- башни, враги гибнут (золото заработано боем), ядро цело, волны растут;
+-- раз в REPORT мс печатает волну, золото, жизни, башни и врагов.
+--
+-- program() -> none; TestsFailed
+-- STEP, SECONDS, REPORT — шаг, длина прогона, частота печати
+
+use io
+use core.str
+use core.group
+use craft.testing
+use soft.games.bastion.world
+use soft.games.bastion.shop
+
+STEP = 50
+SECONDS = 180
+REPORT = 30000
+
+program() {
+    @suite = testing.test_new()
+    @realm = world.World {}
+    realm.fresh()
+    @store = shop.Shop {}
+    @steps = SECONDS * 1000 / STEP
+    drum (steps) {
+        realm.step(STEP)
+        store.tend(realm, STEP)
+        (((beat * STEP) % REPORT) == 0) {
+            @second = beat * STEP / 1000
+            @towers = group.count(realm.towers)
+            @foes = group.count(realm.enemies)
+            io.show("{second} с: волна {realm.wave}, золото {realm.gold}, заработано {realm.earned}, жизни {realm.lives}, башен {towers}, врагов {foes}")
+        }
+    }
+    suite = testing.test_yes(suite, "мастер поставил башни", group.count(realm.towers) >= 2)
+    suite = testing.test_yes(suite, "враги гибнут — золото заработано боем", realm.earned > 0)
+    suite = testing.test_yes(suite, "волны идут", realm.wave > 3)
+    suite = testing.test_equal(suite, "ядро цело", realm.lives, realm.lives_most)
+    out testing.test_finish(suite)
+}
