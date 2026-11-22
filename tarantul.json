@@ -1,0 +1,29 @@
+{
+  "project": "saltic",
+  "catalog": {"from": "git@github.com:zephyr-m/saltic-registry.git"},
+  "packages": {
+    "i2c_esp32": "1",
+    "ssd1306": "3",
+    "camera_android": "2",
+    "uiengine": "7",
+    "rtl8111": "2",
+    "intel_gpu": "2",
+    "qca9377": "4",
+    "usb": "5",
+    "camera": "4",
+    "pointer": "3",
+    "firmware": "1",
+    "graphics": "1",
+    "gop": "1",
+    "fonts": "2",
+    "icons": "2",
+    "input": "3",
+    "lettering": "2",
+    "net": "1",
+    "files": "1",
+    "ink": "1",
+    "qemu_virt": "1",
+    "clib": "1",
+    "wayland": "1"
+  }
+}

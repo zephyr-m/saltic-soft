@@ -1,0 +1,5 @@
+.cache/
+/tarantul/
+__pycache__/
+# журнал аварий программ Saltic (страховочная сетка)
+yamatakudasai.log
