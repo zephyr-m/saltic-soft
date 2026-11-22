@@ -26,6 +26,8 @@
     "clib": "1",
     "wayland": "1",
     "vector": "2",
-    "rotation": "2"
+    "rotation": "2",
+    "random": "1",
+    "exponent": "2"
   }
 }

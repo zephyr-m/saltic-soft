@@ -1,0 +1,63 @@
+-- runs — ряды «Самоцветов»: три и больше одинаковых камня подряд по строке или
+-- столбцу. Клетка — число kind + POWER_STEP · сила (board); пустая — EMPTY;
+-- звезда (сила STAR) ни с чем в ряд не встаёт.
+--
+-- Finder {} — runs(cells, width, height) -> [[клетки…], …] — каждый ряд —
+--     группа номеров клеток, сначала строки, потом столбцы
+--     kind_of(value) -> вид камня или −1 (пусто, звезда)
+--     scan(cells, starts, step, count) -> ряды одной линии
+-- EMPTY — пустая клетка; POWER_STEP — шаг силы в числе клетки; STAR — сила звезды
+
+use core.group
+
+EMPTY = -1
+POWER_STEP = 8
+STAR = 3
+
+Finder = Box {
+    skill kind_of(value) {
+        (value < 0) {
+            out -1
+        }
+        ((value / POWER_STEP) == STAR) {
+            out -1
+        }
+        out value % POWER_STEP
+    }
+
+    skill scan(cells, start, step, count) {
+        @found = []
+        @run = [start]
+        drum (count - 1) {
+            @here = start + (beat + 1) * step
+            @kind = kind_of(group.get(cells, here))
+            @previous = kind_of(group.get(cells, group.get(run, group.count(run) - 1)))
+            pick {
+                ((kind >= 0) ○ (kind == previous)) {
+                    run = group.add(run, here)
+                }
+                {
+                    (group.count(run) >= 3) {
+                        found = group.add(found, run)
+                    }
+                    run = [here]
+                }
+            }
+        }
+        (group.count(run) >= 3) {
+            found = group.add(found, run)
+        }
+        out found
+    }
+
+    skill runs(cells, width, height) {
+        @found = []
+        drum (height) {
+            found = group.concat(found, scan(cells, beat * width, 1, width))
+        }
+        drum (width) {
+            found = group.concat(found, scan(cells, beat, width, height))
+        }
+        out found
+    }
+}

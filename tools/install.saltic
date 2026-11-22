@@ -27,7 +27,8 @@ PROGRAMS = [
     ["polygon", "soft/development/polygon/main.saltic", "Полигон Saltic", "Сборки и железо — экран на жителях UIEngine", "Development;"],
     ["scene", "soft/graphics/scene/main.saltic", "Сцена", "Оболочка 3D-редактора на жителях UIEngine — образец, движка ещё нет", "Graphics;"],
     ["mail", "soft/communication/mail/main.saltic", "Почта", "Почтовый клиент на жителях UIEngine — образец, почта не подключена", "Network;Email;"],
-    ["bastion", "soft/games/bastion/main.saltic", "Бастион", "Оборона башнями: мастер строит и улучшает сам, игра идёт без тебя", "Game;"]
+    ["bastion", "soft/games/bastion/main.saltic", "Бастион", "Оборона башнями: мастер строит и улучшает сам, игра идёт без тебя", "Game;"],
+    ["gems", "soft/games/gems/main.saltic", "Самоцветы", "Три в ряд: камни, лучи, звёзды и цепочки", "Game;"]
 ]
 HEAP = "268435456"
 SIZE = 64

@@ -1,0 +1,172 @@
+-- main — «Самоцветы»: три в ряд в окне Wayland. Поле 8×8 (board.Board),
+-- интерфейс из жителей UIEngine (view.panel), камни рисует view.stones.
+-- Щелчок по камню выбирает его, по соседнему — меняет местами; каскад идёт
+-- шагами раз в CASCADE_GAP мс, чтобы было видно, как падают камни и
+-- складываются цепочки. Кнопки: «подсказка», «заново». Окно перерисовывается
+-- только после изменений. «×» окна — выход. Пока только Linux.
+--
+-- Window { canvas, link, palette, runtime, reader, game, layout, pieces, area,
+--     clock, cascade_wait, dirty, packet, hold, joined } — окно и всё долгое —
+--     его поля; area — место поля после раскладки
+--     open() — окно, шрифты, новая игра, первый кадр; NoWindow
+--     typeface_of(path) -> Typeface из файла
+--     shown() — пересобрать JTML, нарисовать его и поле поверх, показать
+--     field_place() -> TargetSlot места поля; FieldMissing
+--     elapsed() -> мс с прошлого кадра (переход через полночь учтён)
+--     press(id, x, y) — щелчок по цели id в точке x, y
+--     turn() -> no, когда пора выходить
+-- program() — вход
+
+use io.file
+use core.bytes
+use core.group
+use core.socket
+use core.time
+use tarantul.icons.icons
+use tarantul.fonts.ttf
+use tarantul.wayland.wayland.screen
+use tarantul.graphics.graphics
+use tarantul.input.gestures
+use tarantul.uiengine.jtml
+use tarantul.uiengine.jtml.read
+use tarantul.uiengine.draw.atoms
+use tarantul.uiengine.draw.typeface
+use tarantul.uiengine.themes
+use tarantul.fonts.fonts
+use soft.games.gems.board
+use soft.games.gems.view.panel
+use soft.games.gems.view.stones
+
+TITLE = "Самоцветы"
+WIDE = 1200
+HIGH = 900
+TICK = 16
+CASCADE_GAP = 220
+
+Window = Box {
+    canvas = graphics.Screen {},
+    link = screen.Link {},
+    palette = atoms.Palette {},
+    runtime = jtml.Runtime {},
+    reader = gestures.Reader {},
+    game = board.Board {},
+    layout = panel.Panel {},
+    pieces = stones.Stones {},
+    area = jtml.TargetSlot {},
+    clock = 0,
+    cascade_wait = 0,
+    dirty = no,
+    packet = bytes.new(8192),
+    hold = bytes.new(4096),
+    joined = bytes.new(12288)
+
+    skill open() {
+        @host = screen.sized(TITLE, WIDE, HIGH)
+        (group.count(host) == 0) {
+            out error.NoWindow
+        }
+        canvas = group.get(host, 0)
+        link = group.get(host, 1)
+        @sheet = file.read_bytes(icons.SHEET)
+        @dark = themes.named("soft", canvas)
+        @lettered = atoms.with_faces(dark, typeface_of(fonts.REGULAR), typeface_of(fonts.BOLD), typeface_of(fonts.MONO))
+        palette = atoms.with_icons(lettered, icons.open(ttf.from_bytes(sheet), bytes.count(sheet)))
+        clock = time.now()
+        game.fresh(clock)
+        out shown()
+    }
+
+    skill typeface_of(path) {
+        out typeface.from_bytes(file.read_bytes(path))
+    }
+
+    skill field_place() {
+        drum (runtime.targets) {
+            (beat.id == panel.FIELD) {
+                out beat
+            }
+        }
+        out error.FieldMissing
+    }
+
+    skill shown() {
+        @tree = atoms.fitted(read.page(layout.page(game)), no, palette)
+        runtime = jtml.mount(canvas, tree)
+        atoms.draw(canvas, runtime, palette)
+        area = field_place()
+        pieces.paint(canvas, palette, game, area.x, area.y, area.width, area.height)
+        dirty = no
+        out screen.present(link)
+    }
+
+    skill elapsed() {
+        @now = time.now()
+        @spent = now - clock
+        (spent < 0) {
+            spent = spent + time.DAY_MILLISECONDS
+        }
+        clock = now
+        out spent
+    }
+
+    skill press(id, x, y) {
+        (id == panel.FIELD) {
+            @index = pieces.cell_of(game, x, y)
+            (index >= 0) {
+                game.touch(index)
+                cascade_wait = CASCADE_GAP
+            }
+            out none
+        }
+        (id == "hint") {
+            out game.show_hint()
+        }
+        (id == "new") {
+            out game.fresh(clock)
+        }
+        out none
+    }
+
+    skill turn() {
+        ((link.way_closed == yes) ○○ (link.way_failed == yes)) {
+            out no
+        }
+        screen.pump(link, packet, hold, joined)
+        @drained = reader.drain(link.way_events)
+        link.way_events = drained.core
+        drum (drained.gestures) {
+            (beat.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, beat.x, beat.y)
+                (hit.found == yes) {
+                    press(hit.id, beat.x, beat.y)
+                }
+                dirty = yes
+            }
+        }
+        @spent = elapsed()
+        (game.busy == yes) {
+            cascade_wait = cascade_wait - spent
+            (cascade_wait <= 0) {
+                game.settle()
+                cascade_wait = CASCADE_GAP
+                dirty = yes
+            }
+        }
+        (dirty == yes) {
+            shown()
+        }
+        socket.sleep(TICK)
+        out yes
+    }
+}
+
+program() {
+    @window = Window {}
+    window.open()
+    always {
+        (window.turn() == no) {
+            leave
+        }
+    }
+    out none
+}

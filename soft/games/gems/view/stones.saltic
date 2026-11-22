@@ -1,0 +1,123 @@
+-- stones — поле «Самоцветов» поверх места FIELD: клетки 8×8 квадратами по
+-- меньшей стороне места, по центру. Шесть видов камня различаются и формой,
+-- и цветом палитры (без цвета их тоже не спутать): круг, квадрат, лежачая
+-- капсула, стоячая капсула, кольцо, квадрат с точкой. Луч — полоса ink через
+-- камень вдоль его линии, звезда — ink-круг в двойном кольце. Выбранный камень
+-- — кольцо mustard, подсказка — кольцо accent.
+--
+-- Stones { cell, left, top } — размер клетки и угол поля после place
+--     place(game, x, y, width, height) — клетка и угол под место
+--     paint(canvas, palette, game, x, y, width, height) — всё поле
+--     stone(canvas, palette, value, x, y) — один камень в клетке с углом x, y
+--     cell_of(game, x, y) -> номер клетки под точкой экрана или −1
+--     colour(palette, name) -> пиксель цвета палитры
+-- TONES — тон каждого вида; GAP — зазор между клетками
+
+use core.group
+use tarantul.uiengine.draw.atoms
+use tarantul.uiengine.draw.shapes
+use soft.games.gems.board
+use soft.games.gems.board.runs
+
+TONES = ["watermelon", "accent", "mustard", "up", "info", "ink"]
+GAP = 4
+
+Stones = Box {
+    cell = 1,
+    left = 0,
+    top = 0
+
+    skill place(game, x, y, width, height) {
+        cell = width / game.width
+        (height / game.height < cell) {
+            cell = height / game.height
+        }
+        left = x + (width - cell * game.width) / 2
+        top = y + (height - cell * game.height) / 2
+        out none
+    }
+
+    skill colour(palette, name) {
+        out atoms.tone_color(palette, name, palette.ink)
+    }
+
+    skill cell_of(game, x, y) {
+        ((x < left) ○○ (y < top)) {
+            out -1
+        }
+        @column = (x - left) / cell
+        @row = (y - top) / cell
+        ((column >= game.width) ○○ (row >= game.height)) {
+            out -1
+        }
+        out row * game.width + column
+    }
+
+    skill stone(canvas, palette, value, x, y) {
+        (value < 0) {
+            out none
+        }
+        @kind = value % runs.POWER_STEP
+        @power = value / runs.POWER_STEP
+        @shade = colour(palette, group.get(TONES, kind))
+        @ink = colour(palette, "ground")
+        @inner = cell - GAP * 4
+        @x0 = x + GAP * 2
+        @y0 = y + GAP * 2
+        @third = inner / 3
+        pick {
+            (kind == 0) {
+                shapes.shape(canvas, x0, y0, inner, inner, inner / 2, shade)
+            }
+            (kind == 1) {
+                shapes.shape(canvas, x0 + 2, y0 + 2, inner - 4, inner - 4, 5, shade)
+            }
+            (kind == 2) {
+                shapes.shape(canvas, x0, y0 + third / 2, inner, inner - third, (inner - third) / 2, shade)
+            }
+            (kind == 3) {
+                shapes.shape(canvas, x0 + third / 2, y0, inner - third, inner, (inner - third) / 2, shade)
+            }
+            (kind == 4) {
+                shapes.ring(canvas, x0, y0, inner, inner, inner / 2, inner / 5, shade)
+            }
+            {
+                shapes.shape(canvas, x0 + 2, y0 + 2, inner - 4, inner - 4, inner / 4, shade)
+                shapes.shape(canvas, x0 + third, y0 + third, inner - third * 2, inner - third * 2, (inner - third * 2) / 2, ink)
+            }
+        }
+        @light = colour(palette, "ink")
+        (power == board.LINE_ROW) {
+            shapes.shape(canvas, x + GAP, y + cell / 2 - 3, cell - GAP * 2, 6, 3, light)
+        }
+        (power == board.LINE_COLUMN) {
+            shapes.shape(canvas, x + cell / 2 - 3, y + GAP, 6, cell - GAP * 2, 3, light)
+        }
+        (power == board.STAR) {
+            shapes.shape(canvas, x0 + third, y0 + third, inner - third * 2, inner - third * 2, (inner - third * 2) / 2, light)
+            shapes.ring(canvas, x + GAP, y + GAP, cell - GAP * 2, cell - GAP * 2, (cell - GAP * 2) / 2, 3, light)
+        }
+        out none
+    }
+
+    skill paint(canvas, palette, game, x, y, width, height) {
+        place(game, x, y, width, height)
+        shapes.shape(canvas, x, y, width, height, 12, colour(palette, "well"))
+        @tile = colour(palette, "panel")
+        @mark = colour(palette, "mustard")
+        @tip = colour(palette, "accent")
+        drum (group.count(game.cells)) {
+            @cx = left + (beat % game.width) * cell
+            @cy = top + (beat / game.width) * cell
+            shapes.shape(canvas, cx + GAP / 2, cy + GAP / 2, cell - GAP, cell - GAP, 10, tile)
+            stone(canvas, palette, group.get(game.cells, beat), cx, cy)
+            (beat == game.selected) {
+                shapes.ring(canvas, cx + GAP / 2, cy + GAP / 2, cell - GAP, cell - GAP, 10, 4, mark)
+            }
+            (group.contains(game.hint, beat) == yes) {
+                shapes.ring(canvas, cx + GAP / 2, cy + GAP / 2, cell - GAP, cell - GAP, 10, 3, tip)
+            }
+        }
+        out none
+    }
+}

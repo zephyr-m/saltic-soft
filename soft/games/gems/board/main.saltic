@@ -1,0 +1,356 @@
+-- board — поле «Самоцветов» 8×8: шесть видов камней, обмен соседей, ряды по
+-- три и больше исчезают, сверху падают новые — цепочки. Ряд из 4 оставляет
+-- луч (чистит свою строку или столбец, когда исчезает), из 5 — звезду (обмен
+-- со звездой убирает все камни вида соседа). Каскад идёт по шагу: settle()
+-- делает один шаг, чтобы окно успело показать. Ходов нет — поле
+-- перемешивается. Уровень: набрать target очков за moves ходов; набрал —
+-- следующий, не успел — уровень заново.
+--
+-- Board { width, height, kinds, cells, dice, finder, score, start_score, level,
+--     moves, target, chain, busy, selected, hint, log, last }
+--     fresh(seed) — новая игра; begin_level() — счёт и ходы уровня
+--     touch(index) — щелчок по клетке: выбрать, второй соседний — обмен
+--     settle() -> yes, если был шаг каскада; ходы кончились — итог уровня
+--     possible() -> [a, b] обмена, дающего ряд, или []; show_hint()
+--     kind_of(value) / power_of(value) / near(a, b) / swapped(cells, a, b) /
+--     filled() / no_runs_at(cells, index) / note(text) / clear_marks(marks) /
+--     fall() — внутри
+-- KINDS — видов камней; LINE_ROW, LINE_COLUMN, STAR — силы; POINTS — очков за
+-- камень; LOG — строк журнала; LEVEL_TARGET, LEVEL_MOVES — цель и ходы уровня
+
+use core.group
+use tarantul.random.random
+use soft.games.gems.board.runs
+
+KINDS = 6
+LINE_ROW = 1
+LINE_COLUMN = 2
+STAR = 3
+POINTS = 10
+LOG = 6
+LEVEL_TARGET = 1500
+LEVEL_MOVES = 20
+
+Board = Box {
+    width = 8,
+    height = 8,
+    kinds = 6,
+    cells = [],
+    dice = random.Random {},
+    finder = runs.Finder {},
+    score = 0,
+    start_score = 0,
+    level = 1,
+    moves = 20,
+    target = 1500,
+    chain = 0,
+    busy = no,
+    selected = -1,
+    hint = [],
+    log = [],
+    last = -1
+
+    skill kind_of(value) {
+        out value % runs.POWER_STEP
+    }
+
+    skill power_of(value) {
+        out value / runs.POWER_STEP
+    }
+
+    skill note(text) {
+        log = group.add(log, text)
+        (group.count(log) > LOG) {
+            log = group.slice(log, group.count(log) - LOG, group.count(log))
+        }
+        out none
+    }
+
+    skill no_runs_at(made, index) {
+        @column = index % width
+        @row = index / width
+        @kind = group.get(made, index)
+        (column >= 2) {
+            ((group.get(made, index - 1) == kind) ○ (group.get(made, index - 2) == kind)) {
+                out no
+            }
+        }
+        (row >= 2) {
+            ((group.get(made, index - width) == kind) ○ (group.get(made, index - 2 * width) == kind)) {
+                out no
+            }
+        }
+        out yes
+    }
+
+    skill filled() {
+        @made = []
+        drum (width * height) {
+            @index = beat
+            made = group.add(made, dice.below(KINDS))
+            drum (20) {
+                (no_runs_at(made, index) == yes) {
+                    leave
+                }
+                made = group.replaced(made, index, dice.below(KINDS))
+            }
+        }
+        out made
+    }
+
+    skill fresh(seed) {
+        dice = dice.seeded(seed)
+        cells = filled()
+        level = 1
+        score = 0
+        log = []
+        begin_level()
+        out none
+    }
+
+    skill begin_level() {
+        start_score = score
+        moves = LEVEL_MOVES + level
+        target = score + LEVEL_TARGET * level
+        busy = no
+        selected = -1
+        hint = []
+        (group.count(possible()) == 0) {
+            cells = filled()
+        }
+        out note("уровень {level}: набрать {target} за {moves} ходов")
+    }
+
+    skill near(a, b) {
+        @da = a % width - b % width
+        @db = a / width - b / width
+        out ((da * da + db * db) == 1)
+    }
+
+    skill swapped(made, a, b) {
+        @first = group.get(made, a)
+        @result = group.replaced(made, a, group.get(made, b))
+        out group.replaced(result, b, first)
+    }
+
+    skill possible() {
+        drum (width * height) {
+            @a = beat
+            @right = a + 1
+            @down = a + width
+            (((a % width) + 1) < width) {
+                (group.count(finder.runs(swapped(cells, a, right), width, height)) > 0) {
+                    out [a, right]
+                }
+            }
+            (down < (width * height)) {
+                (group.count(finder.runs(swapped(cells, a, down), width, height)) > 0) {
+                    out [a, down]
+                }
+            }
+            ((power_of(group.get(cells, a)) == STAR) == yes) {
+                out [a, right % (width * height)]
+            }
+        }
+        out []
+    }
+
+    skill show_hint() {
+        hint = possible()
+        out none
+    }
+
+    skill touch(index) {
+        ((busy == yes) ○○ (moves <= 0)) {
+            out none
+        }
+        hint = []
+        (selected < 0) {
+            selected = index
+            out none
+        }
+        (selected == index) {
+            selected = -1
+            out none
+        }
+        (near(selected, index) == no) {
+            selected = index
+            out none
+        }
+        @a = selected
+        selected = -1
+        @star_a = (power_of(group.get(cells, a)) == STAR)
+        @star_b = (power_of(group.get(cells, index)) == STAR)
+        ((star_a == yes) ○○ (star_b == yes)) {
+            @other = group.get(cells, index)
+            @star = a
+            (star_b == yes) {
+                other = group.get(cells, a)
+                star = index
+            }
+            @kind = kind_of(other)
+            @marks = [star]
+            drum (width * height) {
+                ((power_of(group.get(cells, beat)) == STAR) == no) {
+                    (kind_of(group.get(cells, beat)) == kind) {
+                        marks = group.add(marks, beat)
+                    }
+                }
+            }
+            moves = moves - 1
+            chain = 1
+            clear_marks(marks)
+            busy = yes
+            out note("звезда: убраны все камни вида {kind}")
+        }
+        @trial = swapped(cells, a, index)
+        (group.count(finder.runs(trial, width, height)) == 0) {
+            out note("так ряда нет")
+        }
+        cells = trial
+        last = index
+        moves = moves - 1
+        chain = 0
+        busy = yes
+        out none
+    }
+
+    skill clear_marks(marks) {
+        @gone = []
+        @queue = marks
+        @head = 0
+        drum (width * height * 2) {
+            (head >= group.count(queue)) {
+                leave
+            }
+            @index = group.get(queue, head)
+            head = head + 1
+            ((group.contains(gone, index) == no) ○ (group.get(cells, index) >= 0)) {
+                gone = group.add(gone, index)
+                @power = power_of(group.get(cells, index))
+                (power == LINE_ROW) {
+                    @row = index / width
+                    drum (width) {
+                        queue = group.add(queue, row * width + beat)
+                    }
+                }
+                (power == LINE_COLUMN) {
+                    @column = index % width
+                    drum (height) {
+                        queue = group.add(queue, beat * width + column)
+                    }
+                }
+            }
+        }
+        drum (gone) {
+            cells = group.replaced(cells, beat, runs.EMPTY)
+        }
+        @gained = group.count(gone) * POINTS * chain
+        score = score + gained
+        out gained
+    }
+
+    skill fall() {
+        drum (width) {
+            @column = beat
+            @kept = []
+            drum (height) {
+                @value = group.get(cells, (height - 1 - beat) * width + column)
+                (value >= 0) {
+                    kept = group.add(kept, value)
+                }
+            }
+            drum (height) {
+                @row = height - 1 - beat
+                @value = dice.below(KINDS)
+                (beat < group.count(kept)) {
+                    value = group.get(kept, beat)
+                }
+                cells = group.replaced(cells, row * width + column, value)
+            }
+        }
+        out none
+    }
+
+    skill settle() {
+        (busy == no) {
+            out no
+        }
+        @empty = no
+        drum (cells) {
+            (beat < 0) {
+                empty = yes
+            }
+        }
+        (empty == yes) {
+            fall()
+            out yes
+        }
+        @found = finder.runs(cells, width, height)
+        (group.count(found) == 0) {
+            busy = no
+            chain = 0
+            (score >= target) {
+                note("уровень {level} пройден: {score} очков")
+                level = level + 1
+                begin_level()
+                out yes
+            }
+            (moves <= 0) {
+                score = start_score
+                note("ходы кончились — уровень {level} заново")
+                begin_level()
+                out yes
+            }
+            (group.count(possible()) == 0) {
+                cells = filled()
+                note("ходов нет — поле перемешано")
+            }
+            out yes
+        }
+        chain = chain + 1
+        @marks = []
+        @specials = []
+        drum (found) {
+            marks = group.concat(marks, beat)
+            @length = group.count(beat)
+            (length >= 4) {
+                @keep = group.get(beat, length / 2)
+                (group.contains(beat, last) == yes) {
+                    keep = last
+                }
+                @kind = kind_of(group.get(cells, keep))
+                @power = LINE_ROW
+                ((group.get(beat, 1) - group.get(beat, 0)) == width) {
+                    power = LINE_COLUMN
+                }
+                (length >= 5) {
+                    power = STAR
+                }
+                specials = group.add(specials, [keep, kind + power * runs.POWER_STEP])
+            }
+        }
+        @gained = clear_marks(marks)
+        drum (specials) {
+            cells = group.replaced(cells, group.get(beat, 0), group.get(beat, 1))
+        }
+        last = -1
+        @word = ""
+        (chain > 1) {
+            word = " · цепочка ×{chain}"
+        }
+        note("ряды: +{gained}{word}")
+        drum (specials) {
+            @power = power_of(group.get(beat, 1))
+            pick {
+                (power == STAR) {
+                    note("собрано пять — звезда")
+                }
+                {
+                    note("собрано четыре — луч")
+                }
+            }
+        }
+        out yes
+    }
+}

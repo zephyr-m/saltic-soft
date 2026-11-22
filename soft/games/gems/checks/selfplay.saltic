@@ -1,0 +1,84 @@
+-- selfplay — «Самоцветы» без окна: бот делает ходы по подсказке possible(),
+-- каскады идут до покоя; проверяет, что ряды находятся верно, очки растут,
+-- уровни сменяются и поле всегда без готовых рядов и пустот.
+--
+-- program() — проверки, итог «пройдено N, провалено M»
+-- TURNS — ходов бота; SEED — засев
+
+use io
+use core.group
+use soft.games.gems.board
+use soft.games.gems.board.runs
+
+TURNS = 200
+SEED = 7
+
+skill verdict(title, value, good) {
+    @mark = "ok"
+    (good == no) {
+        mark = "ПРОВАЛ"
+    }
+    io.show("{title} -> {value}  [{mark}]")
+    out good
+}
+
+skill settled(game) {
+    drum (500) {
+        (game.settle() == no) {
+            leave
+        }
+    }
+    out none
+}
+
+program() {
+    @finder = runs.Finder {}
+    @row = [0, 0, 0, 1, 2, 3, 3, 3]
+    @found = finder.runs(group.concat(row, [4, 4, 4, 4, 5, 5, 5, 5]), 8, 2)
+    @passed = 0
+    @failed = 0
+    @results = []
+    results = group.add(results, verdict("ряды в строках находятся", group.count(found), (group.count(found) == 4)))
+    @game = board.Board {}
+    game.fresh(SEED)
+    results = group.add(results, verdict("новое поле без готовых рядов", group.count(finder.runs(game.cells, 8, 8)), (group.count(finder.runs(game.cells, 8, 8)) == 0)))
+    @broken = 0
+    @played = 0
+    drum (TURNS) {
+        @move = game.possible()
+        (group.count(move) == 2) {
+            game.touch(group.get(move, 0))
+            game.touch(group.get(move, 1))
+            settled(game)
+            played = played + 1
+        }
+        (group.count(finder.runs(game.cells, 8, 8)) > 0) {
+            broken = broken + 1
+        }
+        drum (game.cells) {
+            (beat < 0) {
+                broken = broken + 1
+            }
+        }
+        ((played % 40) == 0) {
+            io.show("ход {played}: уровень {game.level}, очки {game.score} из {game.target}, ходов {game.moves}")
+        }
+    }
+    results = group.add(results, verdict("бот сделал ходы", played, (played > 100)))
+    results = group.add(results, verdict("поле в покое без рядов и пустот", broken, (broken == 0)))
+    results = group.add(results, verdict("уровни сменяются", game.level, (game.level > 1)))
+    drum (results) {
+        pick {
+            (beat == yes) {
+                passed = passed + 1
+            }
+            {
+                failed = failed + 1
+            }
+        }
+    }
+    drum (game.log) {
+        io.show("журнал: {beat}")
+    }
+    io.show("итог: пройдено {passed}, провалено {failed}")
+}

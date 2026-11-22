@@ -1,0 +1,72 @@
+-- panel — интерфейс «Самоцветов» из жителей закрытой библиотеки UIEngine:
+-- шапка (уровень, очки из цели, ходы), место под поле (box с id FIELD — его
+-- рисует Stones, не UIEngine), справа цель и силы с кнопками «подсказка» и
+-- «заново», снизу журнал — последние события сверху вниз. Щелчки — по id:
+-- hint, new.
+--
+-- Panel {} — page(game) -> JTML всего окна; game — board.Board
+--     head(game) / side(game) / tape(game) -> JTML частей
+--     clicked(id, button) -> box с id вокруг жителя — цель щелчка
+-- FIELD — id места поля; SIDE_WIDTH — ширина правой панели
+
+use tarantul.uiengine.jtml.calls
+use core.group
+
+FIELD = "field"
+SIDE_WIDTH = 300
+
+Panel = Box {
+    skill page(game) {
+        @top = head(game)
+        @right = side(game)
+        @bottom = tape(game)
+        @field = "\{\"box\": \{\"id\": \"{FIELD}\", \"grow\": 1, \"fill\": \"well\", \"radius\": 12, \"gap\": 0\}\}"
+        @body = "\{\"box\": \{\"flow\": \"row\", \"grow\": 1, \"gap\": 12, \"padding\": [12, 12, 0, 12], \"children\": [{field}, {right}]\}\}"
+        out "\{\"box\": \{\"fill\": \"ground\", \"grow\": 1, \"gap\": 0, \"children\": [{top}, {body}, {bottom}]\}\}"
+    }
+
+    skill head(game) {
+        @title = calls.call("headline", [["text", calls.quoted("Самоцветы")], ["grow", "1"]])
+        @level = calls.call("chip", [["text", calls.quoted("Уровень {game.level}")], ["fill", calls.quoted("panel")], ["tone", calls.quoted("ink")]])
+        @score = calls.call("gold-pill", [["icon", calls.quoted("gem")], ["text", calls.quoted("{game.score} / {game.target}")]])
+        @moves = calls.call("chip", [["text", calls.quoted("Ходов {game.moves}")], ["fill", calls.quoted("panel")], ["tone", calls.quoted("accent")]])
+        @row = "\{\"box\": \{\"flow\": \"row\", \"gap\": 14, \"align\": \"center\", \"children\": [{title}, {level}, {score}, {moves}]\}\}"
+        out calls.call("top-bar", [["height", "64"], ["children", calls.listed([row])]])
+    }
+
+    skill side(game) {
+        @goal_title = calls.call("section-title", [["text", calls.quoted("Цель")]])
+        @need = game.target - game.score
+        (need < 0) {
+            need = 0
+        }
+        @goal = calls.call("hint", [["text", calls.quoted("набрать ещё {need} за {game.moves} ходов")]])
+        @powers_title = calls.call("section-title", [["text", calls.quoted("Силы")]])
+        @line = calls.call("hint", [["text", calls.quoted("4 в ряд — луч: чистит свою линию")]])
+        @star = calls.call("hint", [["text", calls.quoted("5 в ряд — звезда: обменяй с камнем,")]])
+        @star_tail = calls.call("hint", [["text", calls.quoted("уйдут все камни его вида")]])
+        @chain = calls.call("hint", [["text", calls.quoted("цепочка умножает очки")]])
+        @tip = clicked("hint", calls.call("button", [["text", calls.quoted("подсказка")], ["fill", calls.quoted("panel")], ["tone", calls.quoted("accent")]]))
+        @again = clicked("new", calls.call("button", [["text", calls.quoted("заново")], ["fill", calls.quoted("panel")], ["tone", calls.quoted("ink")]]))
+        @buttons = "\{\"box\": \{\"flow\": \"row\", \"gap\": 10, \"children\": [{tip}, {again}]\}\}"
+        out calls.call("side-plate", [["width", "{SIDE_WIDTH}"], ["children", calls.listed([goal_title, goal, powers_title, line, star, star_tail, chain, buttons])]])
+    }
+
+    skill tape(game) {
+        @rows = []
+        @count = group.count(game.log)
+        drum (count) {
+            @when = "раньше"
+            (beat == 0) {
+                when = "сейчас"
+            }
+            rows = group.add(rows, calls.call("event-row", [["time", calls.quoted(when)], ["text", calls.quoted(group.get(game.log, count - 1 - beat))]]))
+        }
+        @lines = calls.listed(rows)
+        out "\{\"box\": \{\"padding\": [10, 16, 10, 16], \"gap\": 2, \"children\": {lines}\}\}"
+    }
+
+    skill clicked(id, button) {
+        out "\{\"box\": \{\"id\": \"{id}\", \"gap\": 0, \"children\": [{button}]\}\}"
+    }
+}
