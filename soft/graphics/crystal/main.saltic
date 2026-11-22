@@ -1,0 +1,165 @@
+-- main — вход «Кристалла» (soft/graphics/crystal): огранённый кристалл со
+-- стеклом, преломлением и полным внутренним отражением, трассировкой лучей
+-- на дробных, в окне Wayland. У кристалла SIDES одинаковых сторон: поворот на
+-- 1/SIDES круга совпадает с началом, поэтому FRAMES кадров на этот угол
+-- крутятся бесшовно. Сначала кадры считаются по ROWS строк за ход и
+-- проявляются на экране, потом крутятся с частотой FPS. «×» окна — выход.
+--
+-- Window { canvas, link, reader, carver, frame, colors, frames, current, row,
+--     started, shown, packet, hold, joined } — окно и всё долгое; frames —
+--     готовые кадры (буферы номеров цветов), current — считаемый, row — его
+--     следующая строка, shown — номер показанного кадра
+--     open() — окно, палитра, первый кадр в работу; NoWindow
+--     aim(index) — огранить кристалл под кадр index и поставить его в работу
+--     draw_rows(pixels, first, count) — строки кадра в окно, каждая точка SCALE × SCALE
+--     step() — следующие ROWS строк; кадр готов — в frames, следующий в работу
+--     play() — показать кадр по часам
+--     turn() -> no, когда пора выходить
+-- program() — вход
+
+use io
+use core.u32
+use core.mem
+use core.usize
+use core.address
+use core.bytes
+use core.group
+use core.socket
+use core.time
+use core.fraction
+use tarantul.wayland.wayland.screen
+use tarantul.graphics.graphics
+use tarantul.input.gestures
+use soft.graphics.crystal.cutter
+use soft.graphics.crystal.stage
+use soft.graphics.crystal.tracer
+use soft.graphics.crystal.picture
+
+TITLE = "Кристалл"
+SCALE = 2
+FRAMES = 24
+FPS = 24
+ROWS = 30
+TICK = 4
+
+Window = Box {
+    canvas = graphics.Screen {},
+    link = screen.Link {},
+    reader = gestures.Reader {},
+    carver = cutter.Cutter {},
+    frame = picture.Picture {},
+    colors = [],
+    frames = [],
+    current = bytes.new(1),
+    row = 0,
+    started = 0,
+    shown = -1,
+    packet = bytes.new(8192),
+    hold = bytes.new(4096),
+    joined = bytes.new(12288)
+
+    skill open() {
+        @host = screen.sized(TITLE, frame.width * SCALE, frame.height * SCALE)
+        (group.count(host) == 0) {
+            out error.NoWindow
+        }
+        canvas = group.get(host, 0)
+        link = group.get(host, 1)
+        drum (frame.palette()) {
+            colors = group.add(colors, graphics.color(canvas, group.get(beat, 0), group.get(beat, 1), group.get(beat, 2)))
+        }
+        graphics.fill(canvas, 0, 0, canvas.width, canvas.height, graphics.color(canvas, 0, 0, 0))
+        out aim(0)
+    }
+
+    skill aim(index) {
+        carver.spin = 0.3 + fraction.from(index) * 2.0 * fraction.PI / fraction.from(carver.sides * FRAMES)
+        frame.light = tracer.Tracer {
+            jewel = carver.cut(),
+            scene = stage.lit()
+        }
+        current = bytes.new(frame.width * frame.height)
+        row = 0
+        out none
+    }
+
+    skill draw_rows(pixels, first, count) {
+        @memory = address.from(canvas.memory)
+        @line = canvas.stride * graphics.PIXEL_BYTES
+        drum (count) {
+            @y = first + beat
+            (y < frame.height) {
+                drum (frame.width) {
+                    @value = u32.from(group.get(colors, bytes.get(pixels, y * frame.width + beat)))
+                    @at = (y * SCALE * canvas.stride + beat * SCALE) * graphics.PIXEL_BYTES
+                    mem.store32(memory, usize.from(at), value)
+                    mem.store32(memory, usize.from(at + graphics.PIXEL_BYTES), value)
+                    mem.store32(memory, usize.from(at + line), value)
+                    mem.store32(memory, usize.from(at + line + graphics.PIXEL_BYTES), value)
+                }
+            }
+        }
+        out none
+    }
+
+    skill step() {
+        frame.render_rows(current, row, ROWS)
+        draw_rows(current, row, ROWS)
+        row = row + ROWS
+        (row < frame.height) {
+            out none
+        }
+        frames = group.add(frames, current)
+        @done = group.count(frames)
+        io.show("кристалл: кадр {done} из {FRAMES}")
+        (done == FRAMES) {
+            started = time.now()
+            out none
+        }
+        out aim(done)
+    }
+
+    skill play() {
+        @spent = time.now() - started
+        (spent < 0) {
+            spent = spent + time.DAY_MILLISECONDS
+        }
+        @index = (spent * FPS / 1000) % FRAMES
+        (index == shown) {
+            out none
+        }
+        shown = index
+        out draw_rows(group.get(frames, index), 0, frame.height)
+    }
+
+    skill turn() {
+        ((link.way_closed == yes) ○○ (link.way_failed == yes)) {
+            out no
+        }
+        screen.pump(link, packet, hold, joined)
+        @drained = reader.drain(link.way_events)
+        link.way_events = drained.core
+        pick {
+            (group.count(frames) < FRAMES) {
+                step()
+            }
+            {
+                play()
+            }
+        }
+        screen.present(link)
+        socket.sleep(TICK)
+        out yes
+    }
+}
+
+program() {
+    @window = Window {}
+    window.open()
+    always {
+        (window.turn() == no) {
+            leave
+        }
+    }
+    out none
+}

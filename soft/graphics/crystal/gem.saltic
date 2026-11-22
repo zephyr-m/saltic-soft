@@ -1,0 +1,82 @@
+-- gem — кристалл целиком: грани и ближнее попадание луча. Грань — группа
+-- [a, ab, ac, normal]: вершина, два ребра и нормаль длины 1. Попадание — по
+-- Мёллеру — Трумбору. Сначала луч проверяется по описанному шару: мимо шара
+-- — мимо всех граней.
+--
+-- Gem { faces, center, reach, math } — reach — радиус описанного шара, math —
+--     space.Space
+--     nearest(origin, direction) -> [t, normal] ближней грани; мимо — [FAR, []]
+--     hit(sides, origin, direction) -> расстояние до грани sides или MISS
+--     misses(origin, direction) -> yes, если луч снаружи шара и мимо него
+-- FAR — «не попал»; MISS — мимо грани; FLAT — луч почти вдоль грани; NEAR —
+-- ближе этого попадание не считается (луч только что вышел с грани)
+
+use core.group
+use soft.graphics.crystal.space
+
+FAR = 1000000.0
+MISS = -1.0
+FLAT = 0.0000001
+NEAR = 0.0001
+
+Gem = Box {
+    faces = [],
+    center = [0.0, 0.0, 0.0],
+    reach = 0.0,
+    math = space.Space {}
+
+    skill nearest(origin, direction) {
+        @best = FAR
+        @normal = []
+        (misses(origin, direction) == yes) {
+            out [best, normal]
+        }
+        drum (faces) {
+            @t = hit(beat, origin, direction)
+            ((t > 0.0) ○ (t < best)) {
+                best = t
+                normal = group.get(beat, 3)
+            }
+        }
+        out [best, normal]
+    }
+
+    skill hit(sides, origin, direction) {
+        @ab = group.get(sides, 1)
+        @ac = group.get(sides, 2)
+        @side = math.cross(direction, ac)
+        @det = math.dot(ab, side)
+        ((det < FLAT) ○ (det > (0.0 - FLAT))) {
+            out MISS
+        }
+        @inverse = 1.0 / det
+        @from = math.minus(origin, group.get(sides, 0))
+        @u = math.dot(from, side) * inverse
+        ((u < 0.0) ○○ (u > 1.0)) {
+            out MISS
+        }
+        @across = math.cross(from, ab)
+        @v = math.dot(direction, across) * inverse
+        ((v < 0.0) ○○ ((u + v) > 1.0)) {
+            out MISS
+        }
+        @t = math.dot(ac, across) * inverse
+        (t < NEAR) {
+            out MISS
+        }
+        out t
+    }
+
+    skill misses(origin, direction) {
+        @from = math.minus(origin, center)
+        @along = 0.0 + math.dot(from, direction)
+        @rest = math.dot(from, from) - reach * reach
+        (rest < 0.0) {
+            out no
+        }
+        (along > 0.0) {
+            out yes
+        }
+        out ((along * along) < rest)
+    }
+}

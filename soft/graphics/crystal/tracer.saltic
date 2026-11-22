@@ -1,0 +1,84 @@
+-- tracer — луч сквозь кристалл: на каждой грани луч делится по Френелю
+-- (приближение Шлика) на отражённый и преломлённый (закон Снеллиуса); если
+-- преломиться нельзя — полное внутреннее отражение. Внутри стекло чуть
+-- поглощает свет. Ветки слабее CUT не трассируются, глубина — до depth.
+-- Цвет один — яркость; бирюзу даёт палитра картинки.
+--
+-- Tracer { jewel, scene, math } — jewel — gem.Gem, scene — stage.Stage, math —
+--     space.Space
+--     trace(origin, direction, inside, depth, weight) -> яркость; inside — луч
+--         внутри стекла; weight — доля этой ветки в пикселе
+--     outside(origin, direction) -> свет снаружи: небо и пол
+-- IOR — показатель преломления; EPS — отступ от грани; CUT — порог ветки;
+-- TINT — сколько света проходит внутри стекла за отрезок
+
+use core.group
+use core.fraction
+use soft.graphics.crystal.space
+use soft.graphics.crystal.gem
+use soft.graphics.crystal.stage
+
+IOR = 2.2
+EPS = 0.0005
+CUT = 0.02
+TINT = 0.9
+
+Tracer = Box {
+    jewel = gem.Gem {},
+    scene = stage.Stage {},
+    math = space.Space {}
+
+    skill outside(origin, direction) {
+        out scene.sky(direction) + scene.floor(origin, direction)
+    }
+
+    skill trace(origin, direction, inside, depth, weight) {
+        @touch = jewel.nearest(origin, direction)
+        @distance = math.part(touch, 0)
+        (distance > (gem.FAR - 1.0)) {
+            out outside(origin, direction)
+        }
+        (depth == 0) {
+            out 0.0
+        }
+        @point = math.along(origin, direction, distance)
+        @normal = group.get(touch, 1)
+        @cos_in = 0.0 - math.dot(direction, normal)
+        (cos_in < 0.0) {
+            normal = math.scaled(normal, -1.0)
+            cos_in = 0.0 - cos_in
+        }
+        @eta = 1.0 / IOR
+        (inside == yes) {
+            eta = IOR
+        }
+        @left = 1.0 - eta * eta * (1.0 - cos_in * cos_in)
+        @base = (1.0 - IOR) / (1.0 + IOR)
+        @edge = 1.0 - cos_in
+        @edge_two = edge * edge
+        @fresnel = base * base + (1.0 - base * base) * edge_two * edge_two * edge
+        (left < 0.0) {
+            fresnel = 1.0
+        }
+        @result = 0.0
+        ((weight * fresnel) > CUT) {
+            @bounce = math.along(direction, normal, 2.0 * cos_in)
+            @lifted = math.along(point, normal, EPS)
+            result = fresnel * trace(lifted, math.unit(bounce), inside, depth - 1, weight * fresnel)
+        }
+        @pass = 1.0 - fresnel
+        ((left > 0.0) ○ ((weight * pass) > CUT)) {
+            @through = math.along(math.scaled(direction, eta), normal, eta * cos_in - fraction.sqrt(left))
+            @sunk = math.along(point, normal, 0.0 - EPS)
+            @crossed = yes
+            (inside == yes) {
+                crossed = no
+            }
+            result = result + pass * trace(sunk, math.unit(through), crossed, depth - 1, weight * pass)
+        }
+        (inside == yes) {
+            result = result * TINT
+        }
+        out result
+    }
+}

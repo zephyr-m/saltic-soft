@@ -1,0 +1,76 @@
+-- stage — свет вокруг кристалла. Фон в кадре чёрный: источники стоят там,
+-- куда камера не смотрит, и видны только через грани. Ключевой свет — сверху
+-- спереди слева, контровой — справа сзади, боковой — слева, верхний — над
+-- кристаллом, слабая подсветка — сверху сзади.
+-- Под кристаллом — пол со световой лужицей: ярче у центра, тише к краю.
+--
+-- Stage { key, rim, side, math } — key, rim, side — направления света длины 1
+--     sky(direction) -> яркость дальнего света по направлению луча
+--     floor(origin, direction) -> яркость пола там, где в него упёрся луч; 0.0,
+--         если луч не вниз
+-- lit() -> Stage
+-- KEY, RIM, SIDE — направления; FLOOR — высота пола; GLOW — яркость лужицы в центре;
+-- SPREAD — как быстро она гаснет
+
+use soft.graphics.crystal.space
+
+KEY = [-0.45, 0.75, -0.5]
+RIM = [0.85, 0.25, 0.45]
+SIDE = [-0.9, 0.1, 0.35]
+FLOOR = -2.05
+GLOW = 1.6
+SPREAD = 2.2
+
+Stage = Box {
+    key = [],
+    rim = [],
+    side = [],
+    math = space.Space {}
+
+    skill sky(direction) {
+        @value = 0.0
+        @toward_key = math.dot(direction, key)
+        (toward_key > 0.82) {
+            value = value + (toward_key - 0.82) * 30.0
+        }
+        @toward_rim = math.dot(direction, rim)
+        (toward_rim > 0.88) {
+            value = value + (toward_rim - 0.88) * 30.0
+        }
+        @toward_side = math.dot(direction, side)
+        (toward_side > 0.9) {
+            value = value + (toward_side - 0.9) * 25.0
+        }
+        @up = math.part(direction, 1)
+        (up > 0.75) {
+            value = value + (up - 0.75) * 12.0
+        }
+        ((math.part(direction, 1) > 0.35) ○ (math.part(direction, 2) < 0.2)) {
+            value = value + 0.35
+        }
+        out value
+    }
+
+    skill floor(origin, direction) {
+        @down = math.part(direction, 1)
+        (down > -0.001) {
+            out 0.0
+        }
+        @t = (FLOOR - math.part(origin, 1)) / down
+        (t < 0.0) {
+            out 0.0
+        }
+        @x = math.part(origin, 0) + math.part(direction, 0) * t
+        @z = math.part(origin, 2) + math.part(direction, 2) * t
+        out GLOW / (1.0 + SPREAD * (x * x + z * z))
+    }
+}
+
+skill lit() {
+    @math = space.Space {}
+    out Stage {
+        key = math.unit(KEY),
+        rim = math.unit(RIM),
+        side = math.unit(SIDE)
+    }
+}

@@ -1,0 +1,85 @@
+-- cutter — огранщик: режет кристалл из колец точек. Сверху — вершина и
+-- корона (кольцо со сдвигом в полшага), посередине — пояс, ниже — павильон
+-- (кольцо со сдвигом) и нижняя вершина. Между кольцами — ромбы из двух
+-- треугольников, у вершин — веер.
+--
+-- Cutter { sides, spin, math } — sides — граней по кругу, spin — поворот
+--     вокруг оси, math — space.Space
+--     cut() -> gem.Gem
+--     face_of(a, b, c) -> грань [a, ab, ac, normal]
+--     ring(height, radius, shift) -> группа точек [x, y, z] по кругу; shift — сдвиг
+--         в долях шага
+--     band(upper, lower) -> грани между кольцами; fan(apex, points) -> веер
+-- TOP, CROWN, GIRDLE, PAVILION, BOTTOM — [высота, радиус] частей; REACH —
+-- радиус описанного шара; CENTER_Y — его центр
+
+use core.fraction
+use core.group
+use soft.graphics.crystal.space
+use soft.graphics.crystal.gem
+
+TOP = [2.2, 0.0]
+CROWN = [1.0, 0.44]
+GIRDLE = [0.35, 0.74]
+PAVILION = [-0.55, 0.5]
+BOTTOM = [-1.95, 0.0]
+REACH = 2.25
+CENTER_Y = 0.12
+
+Cutter = Box {
+    sides = 8,
+    spin = 0.3,
+    math = space.Space {}
+
+    skill cut() {
+        @top = [0.0, math.part(TOP, 0), 0.0]
+        @bottom = [0.0, math.part(BOTTOM, 0), 0.0]
+        @crown = ring(math.part(CROWN, 0), math.part(CROWN, 1), 0.5)
+        @girdle = ring(math.part(GIRDLE, 0), math.part(GIRDLE, 1), 0.0)
+        @pavilion = ring(math.part(PAVILION, 0), math.part(PAVILION, 1), 0.5)
+        @all = group.concat(fan(top, crown), band(crown, girdle))
+        all = group.concat(all, band(pavilion, girdle))
+        all = group.concat(all, fan(bottom, pavilion))
+        out gem.Gem {
+            faces = all,
+            center = [0.0, CENTER_Y, 0.0],
+            reach = REACH
+        }
+    }
+
+    skill ring(height, radius, shift) {
+        @points = []
+        drum (sides) {
+            @angle = (fraction.from(beat) + shift) * 2.0 * fraction.PI / fraction.from(sides) + spin
+            points = group.add(points, [radius * fraction.cos(angle), height, radius * fraction.sin(angle)])
+        }
+        out points
+    }
+
+    skill band(upper, lower) {
+        @made = []
+        drum (sides) {
+            @next = (beat + 1) % sides
+            @here = group.get(upper, beat)
+            @there = group.get(upper, next)
+            @low = group.get(lower, next)
+            made = group.add(made, face_of(here, group.get(lower, beat), low))
+            made = group.add(made, face_of(here, there, low))
+        }
+        out made
+    }
+
+    skill face_of(a, b, c) {
+        @ab = math.minus(b, a)
+        @ac = math.minus(c, a)
+        out [a, ab, ac, math.unit(math.cross(ab, ac))]
+    }
+
+    skill fan(apex, points) {
+        @made = []
+        drum (sides) {
+            made = group.add(made, face_of(apex, group.get(points, beat), group.get(points, (beat + 1) % sides)))
+        }
+        out made
+    }
+}

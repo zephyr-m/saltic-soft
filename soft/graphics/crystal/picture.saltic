@@ -1,0 +1,87 @@
+-- picture — кадр кристалла: камера смотрит вдоль z, на каждый пиксель —
+-- луч через tracer, яркость — номер цвета палитры «чёрный → глубокая
+-- бирюза → бирюза → белый». Ход — в консоль каждые EVERY строк.
+--
+-- Picture { light, width, height, zoom, eye, math } — light — tracer.Tracer,
+--     eye — место камеры [x, y, z], math — space.Space
+--     render_rows(pixels, first, count) — строки first…first+count-1 в буфер
+--         core.bytes номеров цветов pixels (width × height)
+--     shade(value) -> номер цвета 0…255 по яркости (корень — мягче к тёмному)
+--     palette() -> группа [r, g, b] из 256 цветов
+--     blend(from, to, part, whole) -> [r, g, b] на part/whole пути от from к to
+-- DEPTH — глубина луча; BRIGHT — яркость, что становится белым; BLACK, DEEP, CYAN, WHITE — опорные цвета палитры
+
+use core.num
+use core.bytes
+use core.group
+use core.fraction
+use soft.graphics.crystal.space
+use soft.graphics.crystal.tracer
+
+DEPTH = 7
+BRIGHT = 1.1
+BLACK = [0, 0, 0]
+DEEP = [0, 62, 88]
+CYAN = [38, 196, 232]
+WHITE = [236, 253, 255]
+
+Picture = Box {
+    light = tracer.Tracer {},
+    width = 360,
+    height = 480,
+    zoom = 0.9,
+    eye = [0.0, 0.15, -6.5],
+    math = space.Space {}
+
+    skill render_rows(pixels, first, count) {
+        @wide = fraction.from(width)
+        @high = fraction.from(height)
+        drum (count) {
+            @row = first + beat
+            (row < height) {
+                @y = (high / 2.0 - fraction.from(row)) / high * zoom
+                drum (width) {
+                    @x = (fraction.from(beat) - wide / 2.0) / high * zoom
+                    @value = light.trace(eye, math.unit([x, y, 1.0]), no, DEPTH, 1.0)
+                    bytes.set(pixels, row * width + beat, shade(value))
+                }
+            }
+        }
+        out none
+    }
+
+    skill shade(value) {
+        @part = value / BRIGHT
+        (part < 0.0) {
+            out 0
+        }
+        (part > 1.0) {
+            out 255
+        }
+        out num.round_school(fraction.sqrt(part) * 255.0)
+    }
+
+    skill palette() {
+        @colors = []
+        drum (256) {
+            @color = blend(DEEP, CYAN, beat - 102, 102)
+            (beat < 102) {
+                color = blend(BLACK, DEEP, beat, 102)
+            }
+            (beat > 204) {
+                color = blend(CYAN, WHITE, beat - 204, 51)
+            }
+            colors = group.add(colors, color)
+        }
+        out colors
+    }
+
+    skill blend(from, to, part, whole) {
+        @mixed = []
+        drum (3) {
+            @start = group.get(from, beat)
+            mixed = group.add(mixed, start + (group.get(to, beat) - start) * part / whole)
+        }
+        out mixed
+    }
+}
