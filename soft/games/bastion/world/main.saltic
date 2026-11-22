@@ -15,11 +15,16 @@
 -- World { wave, gold, lives, lives_most, columns, rows, path, spots, towers,
 --     enemies, spawned, spawn_wait, rest, damage_level, speed_level,
 --     income_level, carry, earned, cleared, played, paused, away_gold,
---     away_minutes, first, news, master_wait }
+--     away_minutes, first, news, selected, master_wait } — selected — номер
+--     выбранной башни (−1 — нет)
 --     fresh() — новая дорожка и места под башни; step(ms) — время вперёд
 --     cover(spot) -> сколько клеток дорожки видно с места; ranked(spots) -> по cover
 --     at(step) -> [x, y] точки дорожки; income() -> золото в секунду
 --     strength() -> здоровье врага этой волны (босс — ×10)
+--     tower_at(column, row) -> номер башни на клетке или −1; is_spot(column,
+--         row) -> место ли под башню; free_spot() -> первое свободное место
+--         (лучшие первыми) или []; touch(column, row) — щелчок по полю: выбрать
+--         башню, щёлкнуть свободное место — переехать, ещё раз — снять выбор
 --     damage_of(tower) -> урон выстрела с улучшениями; firepower() -> урон всех
 --         башен в секунду
 --     Покупки, улучшения и мастер — shop.Shop; news — что вышло у последней
@@ -69,6 +74,7 @@ World = Box {
     away_minutes = 0,
     first = yes,
     news = "",
+    selected = -1,
     master_wait = 1000
 
     skill fresh() {
@@ -257,6 +263,60 @@ World = Box {
             spawned = 0
             rest = REST
         }
+        out none
+    }
+
+    skill tower_at(column, row) {
+        drum (group.count(towers)) {
+            @here = group.get(towers, beat)
+            ((here.column == column) ○ (here.row == row)) {
+                out beat
+            }
+        }
+        out -1
+    }
+
+    skill is_spot(column, row) {
+        drum (spots) {
+            ((group.get(beat, 0) == column) ○ (group.get(beat, 1) == row)) {
+                out yes
+            }
+        }
+        out no
+    }
+
+    skill free_spot() {
+        drum (spots) {
+            (tower_at(group.get(beat, 0), group.get(beat, 1)) < 0) {
+                out beat
+            }
+        }
+        out []
+    }
+
+    skill touch(column, row) {
+        @there = tower_at(column, row)
+        (selected < 0) {
+            selected = there
+            out none
+        }
+        (there == selected) {
+            selected = -1
+            out none
+        }
+        (there >= 0) {
+            selected = there
+            out none
+        }
+        (is_spot(column, row) == yes) {
+            @moving = group.get(towers, selected)
+            moving.column = column
+            moving.row = row
+            towers = group.replaced(towers, selected, moving)
+            @name = moving.title()
+            news = "{name} переехала"
+        }
+        selected = -1
         out none
     }
 

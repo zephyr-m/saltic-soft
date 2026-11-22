@@ -1,9 +1,9 @@
 -- shop — лавка «Бастиона»: цены башен (×1,5 за каждую такую же) и улучшений
 -- (×1,6 за уровень), покупки по щелчку панели и мастер — работает всегда, игра
--- идёт сама: раз в MASTER_GAP мс берёт самое дешёвое из
--- башен и улучшений, если хватает золота; когда места у дорожки заняты —
--- поднимает уровень самой слабой башни. Мир — realm (world.World); что вышло —
--- realm.news.
+-- идёт сама: раз в MASTER_GAP мс берёт то, что даёт больше урона в секунду
+-- на монету (новая башня, уровень любой башни, урон, скорость), и копит на
+-- это, если не хватает; доход — когда он не дороже четверти кошелька. Мир —
+-- realm (world.World); что вышло — realm.news.
 --
 -- Shop:
 --     press(realm, id) — щелчок: buy-archer, buy-cannon, buy-frost, up-damage,
@@ -14,15 +14,18 @@
 --     bought_upgrade(realm, price, which) / bought_tower(realm, code)
 --     weakest(realm) -> номер самой слабой башни (меньший уровень, первая)
 --     tower_up_price(realm) -> цена её следующего уровня; tower_up_title(realm);
---     raised_tower(realm) — поднять её уровень
+--     raised_tower(realm, at) — поднять уровень башни номер at
+--     dps_of(realm, tower) -> урон башни в секунду; level_price(tower) -> цена её
+--         следующего уровня; spoken(realm) — подписать новость мастером
+-- WORTH — множитель «урон в секунду на монету» (целые числа)
 
-use core.str
 use core.group
 use soft.games.bastion.world
 use soft.games.bastion.world.tower
 use soft.games.bastion.shop.offer
 
 MASTER_GAP = 1000
+WORTH = 1000000
 
 Shop = Box {
     skill tend(realm, ms) {
@@ -31,30 +34,82 @@ Shop = Box {
             out none
         }
         realm.master_wait = MASTER_GAP
-        @cheapest = ""
-        @lowest = -1
-        @room = (group.count(realm.towers) < group.count(realm.spots))
+        @income_price = upgrade_price(300, realm.income_level)
+        ((income_price * 4) <= realm.gold) {
+            press(realm, "up-income")
+            out spoken(realm)
+        }
+        @best = ""
+        @target = -1
+        @best_price = 0
+        @best_worth = -1
+        @free = (group.count(realm.free_spot()) > 0)
         @ids = ["buy-archer", "buy-cannon", "buy-frost"]
-        drum (3) {
-            @price = tower_price(realm, beat)
-            ((room == yes) ○ ((lowest < 0) ○○ (price < lowest))) {
-                cheapest = group.get(ids, beat)
-                lowest = price
+        (free == yes) {
+            drum (3) {
+                @sample = tower.tower_of(beat, 0, 0, 1)
+                @price = tower_price(realm, beat)
+                @worth = dps_of(realm, sample) * WORTH / price
+                (worth > best_worth) {
+                    best = group.get(ids, beat)
+                    best_price = price
+                    best_worth = worth
+                }
             }
         }
-        drum (upgrades(realm)) {
-            (((beat.done == no) ○ (str.bytes(beat.id) > 0)) ○ ((lowest < 0) ○○ (beat.price < lowest))) {
-                cheapest = beat.id
-                lowest = beat.price
+        drum (group.count(realm.towers)) {
+            @standing = group.get(realm.towers, beat)
+            @price = level_price(standing)
+            @worth = dps_of(realm, standing) / standing.level * WORTH / price
+            (worth > best_worth) {
+                best = "up-tower"
+                target = beat
+                best_price = price
+                best_worth = worth
             }
         }
-        ((lowest < 0) ○○ (realm.gold < lowest)) {
+        @fire = realm.firepower()
+        @damage_price = upgrade_price(200, realm.damage_level)
+        @damage_worth = fire * world.DAMAGE_STEP / (100 + realm.damage_level * world.DAMAGE_STEP) * WORTH / damage_price
+        (damage_worth > best_worth) {
+            best = "up-damage"
+            best_price = damage_price
+            best_worth = damage_worth
+        }
+        @speed_price = upgrade_price(150, realm.speed_level)
+        @speed_worth = fire * world.SPEED_STEP / (100 + realm.speed_level * world.SPEED_STEP) * WORTH / speed_price
+        (speed_worth > best_worth) {
+            best = "up-speed"
+            best_price = speed_price
+            best_worth = speed_worth
+        }
+        ((best_worth < 0) ○○ (realm.gold < best_price)) {
             out none
         }
-        press(realm, cheapest)
+        pick {
+            (best == "up-tower") {
+                raised_tower(realm, target)
+            }
+            {
+                press(realm, best)
+            }
+        }
+        out spoken(realm)
+    }
+
+    skill spoken(realm) {
         @said = realm.news
         realm.news = "мастер — {said}"
         out none
+    }
+
+    skill dps_of(realm, shooter) {
+        @haste = 100 + realm.speed_level * world.SPEED_STEP
+        out realm.damage_of(shooter) * 1000 * haste / 100 / shooter.pause()
+    }
+
+    skill level_price(standing) {
+        out upgrade_price(group.get([100, 400, 800], standing.code()), standing.level)
     }
 
     skill count_of(realm, code) {
@@ -121,7 +176,7 @@ Shop = Box {
                 price = upgrade_price(300, realm.income_level)
             }
         ]
-        ((group.count(realm.towers) < group.count(realm.spots)) ○○ (group.count(realm.towers) == 0)) {
+        (group.count(realm.towers) == 0) {
             out offers
         }
         out group.add(offers, offer.Offer {
@@ -147,8 +202,7 @@ Shop = Box {
         (group.count(realm.towers) == 0) {
             out 0
         }
-        @chosen = group.get(realm.towers, weakest(realm))
-        out upgrade_price(group.get([100, 400, 800], chosen.code()), chosen.level)
+        out level_price(group.get(realm.towers, weakest(realm)))
     }
 
     skill tower_up_title(realm) {
@@ -161,14 +215,13 @@ Shop = Box {
         out "{name} → ур. {next}"
     }
 
-    skill raised_tower(realm) {
-        @price = tower_up_price(realm)
+    skill raised_tower(realm, at) {
+        @chosen = group.get(realm.towers, at)
+        @price = level_price(chosen)
         (realm.gold < price) {
             realm.news = "мало золота: уровень башни стоит {price}"
             out none
         }
-        @at = weakest(realm)
-        @chosen = group.get(realm.towers, at)
         chosen.level = chosen.level + 1
         realm.towers = group.replaced(realm.towers, at, chosen)
         realm.gold = realm.gold - price
@@ -197,7 +250,7 @@ Shop = Box {
             out bought_upgrade(realm, upgrade_price(300, realm.income_level), "income")
         }
         (id == "up-tower") {
-            out raised_tower(realm)
+            out raised_tower(realm, weakest(realm))
         }
         @ids = ["buy-archer", "buy-cannon", "buy-frost"]
         drum (3) {
@@ -233,11 +286,11 @@ Shop = Box {
             realm.news = "мало золота: башня стоит {price}"
             out none
         }
-        (group.count(realm.towers) >= group.count(realm.spots)) {
+        @spot = realm.free_spot()
+        (group.count(spot) == 0) {
             realm.news = "мест под башни больше нет"
             out none
         }
-        @spot = group.get(realm.spots, group.count(realm.towers))
         realm.gold = realm.gold - price
         @built = tower.tower_of(code, group.get(spot, 0), group.get(spot, 1), 1)
         realm.towers = group.add(realm.towers, built)

@@ -3,7 +3,8 @@
 -- пикселями (Field) поверх места box с id field. Мир живёт по часам
 -- (time.now): шаг не длиннее STEP_MOST мс, поле рисуется каждый кадр, панель —
 -- раз в PANEL_EVERY мс и после щелчка, сохранение — раз в SAVE_EVERY мс и
--- при выходе. «×» окна — выход. Пока только Linux.
+-- при выходе. Щелчок по полю — выбрать башню, по свободному месту — передвинуть
+-- её туда. «×» окна — выход. Пока только Linux.
 --
 -- Window { canvas, link, palette, runtime, reader, realm, board, ground,
 --     keeper, store, area, clock, panel_wait, save_wait, packet, hold, joined } —
@@ -134,6 +135,12 @@ Window = Box {
             (beat.kind == gestures.Kind.CLICK) {
                 @hit = jtml.hit(runtime, beat.x, beat.y)
                 pick {
+                    (hit.id == panel.FIELD) {
+                        @spot = ground.cell_of(realm, beat.x, beat.y)
+                        (group.count(spot) == 2) {
+                            realm.touch(group.get(spot, 0), group.get(spot, 1))
+                        }
+                    }
                     (hit.found == yes) {
                         store.press(realm, hit.id)
                         io.show("бастион: щелчок {beat.x},{beat.y} — {hit.id}: {realm.news}")

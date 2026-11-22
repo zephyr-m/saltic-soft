@@ -10,7 +10,9 @@
 -- Field { cell, left, top } — размер клетки и угол поля после place
 --     place(realm, x, y, width, height) — клетка и угол под место
 --     paint(canvas, palette, realm, x, y, width, height) — всё поле
---     paint_path / paint_core / paint_towers / paint_enemies(canvas, palette, realm)
+--     paint_path / paint_core / paint_towers / paint_choice / paint_enemies(canvas,
+--         palette, realm) — paint_choice: выбранная башня и свободные места
+--     cell_of(realm, x, y) -> [столбец, строка] под точкой экрана или []
 --     colour(palette, name) -> пиксель цвета палитры
 
 use core.group
@@ -39,12 +41,41 @@ Field = Box {
         out none
     }
 
+    skill cell_of(realm, x, y) {
+        ((x < left) ○○ (y < top)) {
+            out []
+        }
+        @column = (x - left) / cell
+        @row = (y - top) / cell
+        ((column >= realm.columns) ○○ (row >= realm.rows)) {
+            out []
+        }
+        out [column, row]
+    }
+
+    skill paint_choice(canvas, palette, realm) {
+        (realm.selected < 0) {
+            out none
+        }
+        @mark = colour(palette, "mustard")
+        drum (realm.spots) {
+            @column = group.get(beat, 0)
+            @row = group.get(beat, 1)
+            (realm.tower_at(column, row) < 0) {
+                shapes.ring(canvas, left + column * cell + 8, top + row * cell + 8, cell - 16, cell - 16, 8, 2, mark)
+            }
+        }
+        @chosen = group.get(realm.towers, realm.selected)
+        out shapes.ring(canvas, left + chosen.column * cell + 2, top + chosen.row * cell + 2, cell - 4, cell - 4, (cell - 4) / 2, 4, mark)
+    }
+
     skill paint(canvas, palette, realm, x, y, width, height) {
         place(realm, x, y, width, height)
         shapes.shape(canvas, x, y, width, height, 12, colour(palette, "well"))
         paint_path(canvas, palette, realm)
         paint_core(canvas, palette, realm)
         paint_towers(canvas, palette, realm)
+        paint_choice(canvas, palette, realm)
         paint_enemies(canvas, palette, realm)
         out none
     }
