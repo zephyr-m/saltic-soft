@@ -1,0 +1,91 @@
+-- studio — мастерская кадров «Кристалла»: огранка (раз), поза кадра, расчёт
+-- кадра и кеш на диске. Кадр — буфер номеров цветов picture; файл —
+-- FOLDER/<KIND>-<номер>.bin, пишется через .part и переименование, чтобы
+-- окно не взяло недописанный. Её берут и окно, и работники.
+--
+-- Studio { carver, base, turn, frame } — base — кристалл, огранённый раз;
+--     turn — rotation.Rotation; frame — picture.Picture
+--     prepare() — огранить; pose(index) -> кватернион кадра (поворот на
+--         1/SIDES круга за цикл, покачивание наклоном TILT)
+--     index_of(text) -> номер кадра из десятичной записи
+--     path(index) -> файл кадра; cached(index) -> буфер или []
+--     render(index) -> буфер кадра; save(index) — посчитать и записать
+-- FRAMES — кадров в цикле; TILT — наклон; FOLDER, KIND — где лежит кеш (KIND
+-- меняется вместе с видом кадра, старый кеш тогда не подходит)
+
+use io
+use io.file
+use core.str
+use core.num
+use core.bytes
+use core.process
+use core.fraction
+use tarantul.rotation.rotation
+use soft.graphics.crystal.gem
+use soft.graphics.crystal.cutter
+use soft.graphics.crystal.stage
+use soft.graphics.crystal.tracer
+use soft.graphics.crystal.picture
+
+FRAMES = 24
+TILT = 0.12
+FOLDER = ".cache/crystal"
+KIND = "v2-720x960-smooth"
+
+Studio = Box {
+    carver = cutter.Cutter {},
+    base = gem.Gem {},
+    turn = rotation.Rotation {},
+    frame = picture.Picture {}
+
+    skill prepare() {
+        base = carver.cut()
+        out none
+    }
+
+    skill pose(index) {
+        @phase = fraction.from(index) / fraction.from(FRAMES)
+        @spin = 0.3 + phase * 2.0 * fraction.PI / fraction.from(carver.sides)
+        @tilt = TILT * fraction.sin(phase * 2.0 * fraction.PI)
+        out turn.product(turn.around([1.0, 0.0, 0.0], tilt), turn.around([0.0, 1.0, 0.0], spin))
+    }
+
+    skill index_of(text) {
+        @value = 0
+        drum (str.bytes(text)) {
+            value = value * 10 + num.digit_value(str.get(text, beat))
+        }
+        out value
+    }
+
+    skill path(index) {
+        out "{FOLDER}/{KIND}-{index}.bin"
+    }
+
+    skill cached(index) {
+        @found = file.read_bytes(path(index)) rescue |err| {
+            out []
+        }
+        ((bytes.count(found) == (frame.width * frame.height)) == no) {
+            out []
+        }
+        out [found]
+    }
+
+    skill render(index) {
+        frame.light = tracer.Tracer {
+            jewel = base.posed(pose(index)),
+            scene = stage.lit()
+        }
+        out frame.render_frame()
+    }
+
+    skill save(index) {
+        @target = path(index)
+        @part = "{target}.part"
+        process.run(["mkdir", "-p", FOLDER], "", [])
+        file.write_bytes(part, render(index))
+        process.run(["mv", part, target], "", [])
+        out io.show("кристалл: кадр {index} готов — {target}")
+    }
+}

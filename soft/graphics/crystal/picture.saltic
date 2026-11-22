@@ -4,12 +4,15 @@
 --
 -- Picture { light, width, height, zoom, eye, math } — light — tracer.Tracer,
 --     eye — место камеры [x, y, z], math — vector.Vector
---     render_rows(pixels, first, count) — строки first…first+count-1 в буфер
---         core.bytes номеров цветов pixels (width × height)
+--     sample(x, y) -> яркость луча через точку экрана (дробные координаты)
+--     render_frame() -> буфер core.bytes номеров цветов width × height, края
+--         сглажены; edge(pixels, x, y) -> yes на краю; apart(a, b) -> далеки ли
 --     shade(value) -> номер цвета 0…255 по яркости (корень — мягче к тёмному)
 --     palette() -> группа [r, g, b] из 256 цветов
 --     between(from, to, part, whole) -> [r, g, b] на part/whole пути от from к to
--- DEPTH — глубина луча; BRIGHT — яркость, что становится белым; BLACK, DEEP, CYAN, WHITE — опорные цвета палитры
+-- DEPTH — глубина луча; EDGE — разница цветов, с которой пиксель — край;
+-- QUARTER — сдвиг лучей сглаживания; BRIGHT — яркость, что становится белым;
+-- BLACK, DEEP, CYAN, WHITE — опорные цвета палитры
 
 use core.num
 use core.bytes
@@ -19,6 +22,8 @@ use tarantul.vector.vector
 use soft.graphics.crystal.tracer
 
 DEPTH = 7
+EDGE = 12
+QUARTER = 0.25
 BRIGHT = 1.1
 BLACK = [0, 0, 0]
 DEEP = [0, 62, 88]
@@ -27,27 +32,76 @@ WHITE = [236, 253, 255]
 
 Picture = Box {
     light = tracer.Tracer {},
-    width = 360,
-    height = 480,
+    width = 720,
+    height = 960,
     zoom = 0.9,
     eye = [0.0, 0.15, -6.5],
     math = vector.Vector {}
 
-    skill render_rows(pixels, first, count) {
-        @wide = fraction.from(width)
+    skill sample(x, y) {
         @high = fraction.from(height)
-        drum (count) {
-            @row = first + beat
-            (row < height) {
-                @y = (high / 2.0 - fraction.from(row)) / high * zoom
-                drum (width) {
-                    @x = (fraction.from(beat) - wide / 2.0) / high * zoom
-                    @value = light.trace(eye, math.unit([x, y, 1.0]), no, DEPTH, 1.0)
-                    bytes.set(pixels, row * width + beat, shade(value))
-                }
+        @across = (x - fraction.from(width) / 2.0) / high * zoom
+        @up = (high / 2.0 - y) / high * zoom
+        out light.trace(eye, math.unit([across, up, 1.0]), no, DEPTH, 1.0)
+    }
+
+    skill render_frame() {
+        @pixels = bytes.new(width * height)
+        drum (height) {
+            @row = beat
+            drum (width) {
+                bytes.set(pixels, row * width + beat, shade(sample(fraction.from(beat), fraction.from(row))))
             }
         }
-        out none
+        @smooth = bytes.new(width * height)
+        drum (height) {
+            @row = beat
+            drum (width) {
+                @at = row * width + beat
+                @value = bytes.get(pixels, at)
+                (edge(pixels, beat, row) == yes) {
+                    @x = fraction.from(beat)
+                    @y = fraction.from(row)
+                    @sum = sample(x - QUARTER, y - QUARTER) + sample(x + QUARTER, y - QUARTER) + sample(x - QUARTER, y + QUARTER) + sample(x + QUARTER, y + QUARTER)
+                    value = shade(sum / 4.0)
+                }
+                bytes.set(smooth, at, value)
+            }
+        }
+        out smooth
+    }
+
+    skill edge(pixels, x, y) {
+        @here = bytes.get(pixels, y * width + x)
+        (x > 0) {
+            (apart(here, bytes.get(pixels, y * width + x - 1)) == yes) {
+                out yes
+            }
+        }
+        ((x + 1) < width) {
+            (apart(here, bytes.get(pixels, y * width + x + 1)) == yes) {
+                out yes
+            }
+        }
+        (y > 0) {
+            (apart(here, bytes.get(pixels, (y - 1) * width + x)) == yes) {
+                out yes
+            }
+        }
+        ((y + 1) < height) {
+            (apart(here, bytes.get(pixels, (y + 1) * width + x)) == yes) {
+                out yes
+            }
+        }
+        out no
+    }
+
+    skill apart(a, b) {
+        @gap = a - b
+        (gap < 0) {
+            gap = 0 - gap
+        }
+        out (gap > EDGE)
     }
 
     skill shade(value) {

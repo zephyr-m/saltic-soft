@@ -1,65 +1,52 @@
 -- main — вход «Кристалла» (soft/graphics/crystal): огранённый кристалл со
 -- стеклом, преломлением и полным внутренним отражением, трассировкой лучей
--- на дробных, в окне Wayland. У кристалла SIDES одинаковых сторон: поворот на
--- 1/SIDES круга совпадает с началом, поэтому FRAMES кадров на этот угол
--- крутятся бесшовно. Сначала кадры считаются по ROWS строк за ход и
--- проявляются на экране, потом крутятся с частотой FPS. «×» окна — выход.
+-- на дробных, в окне Wayland. Кадры считают работники — та же программа,
+-- запущенная с номерами кадров (/proc/self/exe "3 11 19"): процессы, каждый
+-- на своём ядре, без общей памяти — как работники PHP-FPM. Готовые кадры
+-- лежат в кеше (studio): следующий запуск крутит сразу. Окно крутит готовые
+-- по мере появления, все FRAMES — бесшовной петлёй с частотой FPS.
 --
--- Window { canvas, link, reader, carver, base, turn, frame, colors, frames,
---     current, row, started, shown, packet, hold, joined } — окно и всё долгое;
---     base — кристалл, огранённый один раз; turn — rotation.Rotation; frames —
---     готовые кадры (буферы номеров цветов), current — считаемый, row — его
---     следующая строка, shown — номер показанного кадра
---     open() — окно, палитра, первый кадр в работу; NoWindow
---     pose(index) -> кватернион кадра: поворот на 1/SIDES круга за цикл и
---         покачивание наклоном TILT, к концу цикла — снова ноль
---     aim(index) — повернуть кристалл под кадр index и поставить кадр в работу
---     draw_rows(pixels, first, count) — строки кадра в окно, каждая точка SCALE × SCALE
---     step() — следующие ROWS строк; кадр готов — в frames, следующий в работу
---     play() — показать кадр по часам
+-- Window { canvas, link, reader, workshop, colors, frames, waiting, started,
+--     shown, packet, hold, joined } — окно и всё долгое; frames — кадры
+--     по номерам ([] — ещё нет); waiting — сколько кадров ещё не готово
+--     open() — окно, палитра, кеш, работники на недостающие кадры; NoWindow
+--     hire() — запустить WORKERS работников на кадры, которых нет в кеше
+--     collect() — подобрать кадры, которые работники дописали
+--     draw(pixels) — кадр в окно; play() — показать кадр по часам
 --     turn() -> no, когда пора выходить
--- program() — вход
+-- program(task) — task "" — окно; иначе — работник: номера кадров через пробел
+-- WORKERS — сколько работников; FPS — кадров в секунду; TICK — пауза хода
 
 use io
 use core.u32
 use core.mem
+use core.str
 use core.usize
 use core.address
 use core.bytes
 use core.group
 use core.socket
 use core.time
-use core.fraction
+use core.process
 use tarantul.wayland.wayland.screen
 use tarantul.graphics.graphics
 use tarantul.input.gestures
-use tarantul.rotation.rotation
-use soft.graphics.crystal.gem
-use soft.graphics.crystal.cutter
-use soft.graphics.crystal.stage
-use soft.graphics.crystal.tracer
-use soft.graphics.crystal.picture
+use soft.graphics.crystal.studio
 
 TITLE = "Кристалл"
-SCALE = 2
-FRAMES = 24
+WORKERS = 8
 FPS = 24
-ROWS = 30
-TICK = 4
-TILT = 0.12
+TICK = 10
+SELF = "/proc/self/exe"
 
 Window = Box {
     canvas = graphics.Screen {},
     link = screen.Link {},
     reader = gestures.Reader {},
-    carver = cutter.Cutter {},
-    base = gem.Gem {},
-    turn = rotation.Rotation {},
-    frame = picture.Picture {},
+    workshop = studio.Studio {},
     colors = [],
     frames = [],
-    current = bytes.new(1),
-    row = 0,
+    waiting = 0,
     started = 0,
     shown = -1,
     packet = bytes.new(8192),
@@ -67,84 +54,102 @@ Window = Box {
     joined = bytes.new(12288)
 
     skill open() {
-        @host = screen.sized(TITLE, frame.width * SCALE, frame.height * SCALE)
+        @host = screen.sized(TITLE, workshop.frame.width, workshop.frame.height)
         (group.count(host) == 0) {
             out error.NoWindow
         }
         canvas = group.get(host, 0)
         link = group.get(host, 1)
-        drum (frame.palette()) {
+        @look = workshop.frame
+        drum (look.palette()) {
             colors = group.add(colors, graphics.color(canvas, group.get(beat, 0), group.get(beat, 1), group.get(beat, 2)))
         }
         graphics.fill(canvas, 0, 0, canvas.width, canvas.height, graphics.color(canvas, 0, 0, 0))
-        base = carver.cut()
-        out aim(0)
-    }
-
-    skill pose(index) {
-        @phase = fraction.from(index) / fraction.from(FRAMES)
-        @spin = 0.3 + phase * 2.0 * fraction.PI / fraction.from(carver.sides)
-        @tilt = TILT * fraction.sin(phase * 2.0 * fraction.PI)
-        out turn.product(turn.around([1.0, 0.0, 0.0], tilt), turn.around([0.0, 1.0, 0.0], spin))
-    }
-
-    skill aim(index) {
-        frame.light = tracer.Tracer {
-            jewel = base.posed(pose(index)),
-            scene = stage.lit()
+        started = time.now()
+        drum (studio.FRAMES) {
+            frames = group.add(frames, [])
         }
-        current = bytes.new(frame.width * frame.height)
-        row = 0
+        collect()
+        (waiting > 0) {
+            hire()
+        }
         out none
     }
 
-    skill draw_rows(pixels, first, count) {
-        @memory = address.from(canvas.memory)
-        @line = canvas.stride * graphics.PIXEL_BYTES
-        drum (count) {
-            @y = first + beat
-            (y < frame.height) {
-                drum (frame.width) {
-                    @value = u32.from(group.get(colors, bytes.get(pixels, y * frame.width + beat)))
-                    @at = (y * SCALE * canvas.stride + beat * SCALE) * graphics.PIXEL_BYTES
-                    mem.store32(memory, usize.from(at), value)
-                    mem.store32(memory, usize.from(at + graphics.PIXEL_BYTES), value)
-                    mem.store32(memory, usize.from(at + line), value)
-                    mem.store32(memory, usize.from(at + line + graphics.PIXEL_BYTES), value)
+    skill hire() {
+        @lists = []
+        drum (WORKERS) {
+            lists = group.add(lists, "")
+        }
+        drum (studio.FRAMES) {
+            (group.count(group.get(frames, beat)) == 0) {
+                @slot = beat % WORKERS
+                @list = group.get(lists, slot)
+                lists = group.replaced(lists, slot, "{list} {beat}")
+            }
+        }
+        drum (lists) {
+            (str.bytes(beat) > 0) {
+                process.open(SELF, [SELF, beat], "", no, process.environment_with([]), no)
+            }
+        }
+        @folder = studio.FOLDER
+        out io.show("кристалл: считают {WORKERS} работников, кадров {waiting} — кеш в {folder}")
+    }
+
+    skill collect() {
+        waiting = 0
+        drum (studio.FRAMES) {
+            (group.count(group.get(frames, beat)) == 0) {
+                @found = workshop.cached(beat)
+                pick {
+                    (group.count(found) > 0) {
+                        frames = group.replaced(frames, beat, found)
+                    }
+                    {
+                        waiting = waiting + 1
+                    }
                 }
             }
         }
         out none
     }
 
-    skill step() {
-        frame.render_rows(current, row, ROWS)
-        draw_rows(current, row, ROWS)
-        row = row + ROWS
-        (row < frame.height) {
-            out none
+    skill draw(pixels) {
+        @memory = address.from(canvas.memory)
+        @wide = workshop.frame.width
+        drum (workshop.frame.height) {
+            @y = beat
+            @line = y * canvas.stride * graphics.PIXEL_BYTES
+            drum (wide) {
+                @value = u32.from(group.get(colors, bytes.get(pixels, y * wide + beat)))
+                mem.store32(memory, usize.from(line + beat * graphics.PIXEL_BYTES), value)
+            }
         }
-        frames = group.add(frames, current)
-        @done = group.count(frames)
-        io.show("кристалл: кадр {done} из {FRAMES}")
-        (done == FRAMES) {
-            started = time.now()
-            out none
-        }
-        out aim(done)
+        out none
     }
 
     skill play() {
+        @ready = []
+        drum (frames) {
+            (group.count(beat) > 0) {
+                ready = group.add(ready, group.get(beat, 0))
+            }
+        }
+        (group.count(ready) == 0) {
+            out none
+        }
         @spent = time.now() - started
         (spent < 0) {
             spent = spent + time.DAY_MILLISECONDS
         }
-        @index = (spent * FPS / 1000) % FRAMES
+        @index = (spent * FPS / 1000) % group.count(ready)
         (index == shown) {
             out none
         }
         shown = index
-        out draw_rows(group.get(frames, index), 0, frame.height)
+        draw(group.get(ready, index))
+        out screen.present(link)
     }
 
     skill turn() {
@@ -154,22 +159,33 @@ Window = Box {
         screen.pump(link, packet, hold, joined)
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
-        pick {
-            (group.count(frames) < FRAMES) {
-                step()
-            }
-            {
-                play()
+        (waiting > 0) {
+            @before = waiting
+            collect()
+            ((waiting == before) == no) {
+                shown = -1
+                @done = studio.FRAMES - waiting
+                @total = studio.FRAMES
+                io.show("кристалл: готово кадров {done} из {total}")
             }
         }
-        screen.present(link)
+        play()
         socket.sleep(TICK)
         out yes
     }
 }
 
-program() {
+program(task) {
+    @workshop = studio.Studio {}
+    workshop.prepare()
+    (str.bytes(task) > 0) {
+        drum (str.split(task, " ")) {
+            workshop.save(workshop.index_of(beat))
+        }
+        out none
+    }
     @window = Window {}
+    window.workshop = workshop
     window.open()
     always {
         (window.turn() == no) {
