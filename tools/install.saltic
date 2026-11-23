@@ -1,24 +1,20 @@
 -- install — поставить программу saltic-soft на этот ноут, `just install <имя>`:
 -- компилятор и язык — из дома Saltic (SALTIC_HOME, по умолчанию ../saltic);
--- собрать, положить бинарник в ~/.local/bin, нарисовать свою иконку 64×64 PNG
--- (значок Lucide из ICONS белым по плитке цвета программы, сглаженный по 2×2
--- пробам; у SalticIDE — логотип языка `<>`), записать визитку .desktop в меню приложений и ярлык на рабочий
+-- собрать, положить бинарник в ~/.local/bin, положить иконку — цветной SVG
+-- Fluent Color из ICONS (Microsoft, MIT, лицензия рядом); у SalticIDE — свой
+-- логотип языка `<>` PNG 64×64, записать визитку .desktop в меню приложений и ярлык на рабочий
 -- стол (стандарт freedesktop: KDE, GNOME). Программа запускается в корне
 -- проекта (Path=), чтобы видеть его файлы. Печатает ход по шагам.
 --
--- PROGRAMS — [имя, исходник, название, описание, категории, значок, [r, g, b],
---     аргументы запуска из меню ("" — без них)]
+-- PROGRAMS — [имя, исходник, название, описание, категории, значок (имя SVG
+--     в ICONS или "logo"), аргументы запуска из меню ("" — без них)]
 -- program(name) — поставить программу name; нет такой — список доступных
 -- Внутри: entry(name) -> запись PROGRAMS или []; variable(key) -> значение
 --     переменной окружения; folder_of(command) -> вывод команды без «\n»;
 --     covered(px, py, line) / painted(px, py, lines) -> yes, если точка у отрезка
 --     (толщина пера PEN); logo() -> буфер точек иконки; visiting(…) -> текст
 --     визитки; must(code, what) — провал шага → InstallFailed; refresh() — меню KDE
---     whole(text) -> целое из цифр; strokes(name) -> отрезки значка [ax, ay, bx,
---     by] в четвертях точки иконки; near(qx, qy, line) -> yes, если проба у
---     отрезка (полутолщина REACH); glyph(lines) -> буфер точек 0…4 (доля
---     покрытия); tints(color) -> палитра от цвета плитки к белому; picture_of(
---     found) -> [точки, палитра]
+--     picture(found, icons, name) -> путь поставленной иконки
 
 use io
 use io.file
@@ -26,29 +22,24 @@ use core.str
 use core.group
 use core.bytes
 use core.process
-use core.num
 use workbench.check.view.png
 
 PROGRAMS = [
-    ["salticide", "soft/development/salticide/linux/main.saltic", "SalticIDE", "IDE языка Saltic", "Development;", "logo", [47, 38, 33], ""],
-    ["jtmlview", "soft/development/jtmlview/main.saltic", "jtml-view", "Жители UIEngine настоящим движком", "Development;", "layout-grid", [122, 92, 196], ""],
-    ["polygon", "soft/development/polygon/main.saltic", "Полигон Saltic", "Сборки и железо — экран на жителях UIEngine", "Development;", "blocks", [208, 98, 63], ""],
-    ["scene", "soft/graphics/scene/main.saltic", "Сцена", "Оболочка 3D-редактора на жителях UIEngine — образец, движка ещё нет", "Graphics;", "box", [15, 149, 176], ""],
-    ["crystal", "soft/graphics/crystal/main.saltic", "Кристалл", "Гранёный кристалл с трассировкой лучей: вращается, свет преломляется в гранях", "Graphics;", "sparkles", [24, 150, 140], "window"],
-    ["mail", "soft/communication/mail/main.saltic", "Почта", "Почтовый клиент на жителях UIEngine — образец, почта не подключена", "Network;Email;", "mail", [214, 160, 48], ""],
-    ["bastion", "soft/games/bastion/main.saltic", "Бастион", "Оборона башнями: мастер строит и улучшает сам, игра идёт без тебя", "Game;", "castle", [196, 64, 82], ""],
-    ["gems", "soft/games/gems/main.saltic", "Самоцветы", "Три в ряд: камни, лучи, звёзды и цепочки", "Game;", "gem", [64, 120, 214], ""],
-    ["catcher", "soft/learning/catcher/main.saltic", "Ловец", "Нейросеть учится ловить мяч у тебя на глазах — DQN с нуля", "Education;", "brain", [150, 90, 200], ""],
-    ["serpent", "soft/learning/serpent/main.saltic", "Змея учится", "Нейросеть учится играть в «Змейку» у тебя на глазах — DQN с нуля", "Education;", "worm", [60, 160, 90], ""]
+    ["salticide", "soft/development/salticide/linux/main.saltic", "SalticIDE", "IDE языка Saltic", "Development;", "logo", ""],
+    ["jtmlview", "soft/development/jtmlview/main.saltic", "jtml-view", "Жители UIEngine настоящим движком", "Development;", "apps", ""],
+    ["polygon", "soft/development/polygon/main.saltic", "Полигон Saltic", "Сборки и железо — экран на жителях UIEngine", "Development;", "toolbox", ""],
+    ["scene", "soft/graphics/scene/main.saltic", "Сцена", "Оболочка 3D-редактора на жителях UIEngine — образец, движка ещё нет", "Graphics;", "image", ""],
+    ["crystal", "soft/graphics/crystal/main.saltic", "Кристалл", "Гранёный кристалл с трассировкой лучей: вращается, свет преломляется в гранях", "Graphics;", "weather-snowflake", "window"],
+    ["mail", "soft/communication/mail/main.saltic", "Почта", "Почтовый клиент на жителях UIEngine — образец, почта не подключена", "Network;Email;", "mail", ""],
+    ["bastion", "soft/games/bastion/main.saltic", "Бастион", "Оборона башнями: мастер строит и улучшает сам, игра идёт без тебя", "Game;", "shield", ""],
+    ["gems", "soft/games/gems/main.saltic", "Самоцветы", "Три в ряд: камни, лучи, звёзды и цепочки", "Game;", "premium", ""],
+    ["catcher", "soft/learning/catcher/main.saltic", "Ловец", "Нейросеть учится ловить мяч у тебя на глазах — DQN с нуля", "Education;", "bot", ""],
+    ["serpent", "soft/learning/serpent/main.saltic", "Змея учится", "Нейросеть учится играть в «Змейку» у тебя на глазах — DQN с нуля", "Education;", "bot-sparkle", ""]
 ]
 HEAP = "268435456"
 SIZE = 64
 PEN = 49
-ICONS = "tarantul/icons/lucide/icons.txt"
-UNITS = 384
-BOX = 44
-EDGE = 10
-REACH = 8
+ICONS = "tools/icons/fluent"
 INK = [[47, 38, 33], [233, 128, 95], [63, 166, 184]]
 CORAL = [[20, 6, 6, 20], [6, 20, 20, 34]]
 TEAL = [[36, 6, 50, 20], [50, 20, 36, 34]]
@@ -99,96 +90,16 @@ skill painted(px, py, lines) {
     out no
 }
 
-skill whole(text) {
-    @value = 0
-    drum (str.bytes(text)) {
-        value = value * 10 + num.digit_value(str.get(text, beat))
-    }
-    out value
-}
-
-skill strokes(name) {
-    @head = "{name}|"
-    @lines = []
-    drum (str.lines(file.read(ICONS))) {
-        (str.starts_with(beat, head) == yes) {
-            drum (str.split(str.slice(beat, str.bytes(head), str.bytes(beat)), ";")) {
-                @dots = str.split(str.slice(beat, 2, str.bytes(beat)), " ")
-                drum (group.count(dots) - 1) {
-                    @from = str.split(group.get(dots, beat), ",")
-                    @to = str.split(group.get(dots, beat + 1), ",")
-                    @scale = BOX * 4
-                    lines = group.add(lines, [whole(group.get(from, 0)) * scale / UNITS, whole(group.get(from, 1)) * scale / UNITS, whole(group.get(to, 0)) * scale / UNITS, whole(group.get(to, 1)) * scale / UNITS])
-                }
-            }
-            out lines
-        }
-    }
-    io.show("ошибка: значка «{name}» нет в {ICONS}")
-    out error.InstallFailed
-}
-
-skill near(qx, qy, line) {
-    @ax = group.get(line, 0)
-    @ay = group.get(line, 1)
-    @abx = group.get(line, 2) - ax
-    @aby = group.get(line, 3) - ay
-    @apx = qx - ax
-    @apy = qy - ay
-    @dot = apx * abx + apy * aby
-    @length = abx * abx + aby * aby
-    @reach = REACH * REACH
-    (dot <= 0) {
-        out ((apx * apx + apy * apy) <= reach)
-    }
-    (dot >= length) {
-        @bx = qx - group.get(line, 2)
-        @by = qy - group.get(line, 3)
-        out ((bx * bx + by * by) <= reach)
-    }
-    @cross = apx * aby - apy * abx
-    out ((cross * cross) <= (reach * length))
-}
-
-skill glyph(lines) {
-    @pixels = bytes.new(SIZE * SIZE)
-    drum (SIZE * SIZE) {
-        @px = beat % SIZE - EDGE
-        @py = beat / SIZE - EDGE
-        @hits = 0
-        drum (4) {
-            @qx = px * 4 + 1 + (beat % 2) * 2
-            @qy = py * 4 + 1 + (beat / 2) * 2
-            drum (lines) {
-                (near(qx, qy, beat) == yes) {
-                    hits = hits + 1
-                    leave
-                }
-            }
-        }
-        bytes.set(pixels, beat, hits)
-    }
-    out pixels
-}
-
-skill tints(color) {
-    @palette = []
-    drum (5) {
-        @share = beat
-        @mixed = []
-        drum (color) {
-            mixed = group.add(mixed, (beat * (4 - share) + 255 * share) / 4)
-        }
-        palette = group.add(palette, mixed)
-    }
-    out palette
-}
-
-skill picture_of(found) {
+skill picture(found, icons, name) {
     (group.get(found, 5) == "logo") {
-        out [logo(), INK]
+        @drawn = "{icons}/saltic-{name}.png"
+        file.write_bytes(drawn, png.encode(logo(), SIZE, SIZE, INK))
+        out drawn
     }
-    out [glyph(strokes(group.get(found, 5))), tints(group.get(found, 6))]
+    @icon = group.get(found, 5)
+    @placed = "{icons}/saltic-{name}.svg"
+    must(process.run(["install", "-Dm644", "{ICONS}/{icon}.svg", placed], "", []), "иконка {ICONS}/{icon}.svg")
+    out placed
 }
 
 skill logo() {
@@ -204,12 +115,12 @@ skill logo() {
     out pixels
 }
 
-skill visiting(title, comment, binary, root, picture, kinds, arguments) {
+skill visiting(title, comment, binary, root, face, kinds, arguments) {
     @extra = ""
     (str.bytes(arguments) > 0) {
         extra = " {arguments}"
     }
-    @lines = ["[Desktop Entry]", "Type=Application", "Name={title}", "Comment={comment}", "Exec={binary}{extra}", "Path={root}", "Icon={picture}", "Terminal=false", "Categories={kinds}"]
+    @lines = ["[Desktop Entry]", "Type=Application", "Name={title}", "Comment={comment}", "Exec={binary}{extra}", "Path={root}", "Icon={face}", "Terminal=false", "Categories={kinds}"]
     out str.concat(str.join(lines, "\n"), "\n")
 }
 
@@ -244,7 +155,6 @@ program(name) {
     @built = ".cache/build/{name}"
     @binary = "{home}/.local/bin/{name}"
     @icons = "{home}/.local/share/icons"
-    @picture = "{icons}/saltic-{name}.png"
     @menu = "{home}/.local/share/applications"
     @card = "{menu}/saltic-{name}.desktop"
     @desk = folder_of(["xdg-user-dir", "DESKTOP"])
@@ -256,12 +166,11 @@ program(name) {
     must(process.run(["{saltic}/bootstrap/saltic", source, built, HEAP, "x86_64"], "", []), "сборка")
     io.show("2/5 кладу бинарник в {binary}")
     must(process.run(["install", "-Dm755", built, binary], "", []), "копирование бинарника")
-    io.show("3/5 рисую иконку {picture}")
+    io.show("3/5 ставлю иконку в {icons}")
     must(process.run(["mkdir", "-p", icons, menu, desk], "", []), "папки")
-    @drawn = picture_of(found)
-    file.write_bytes(picture, png.encode(group.get(drawn, 0), SIZE, SIZE, group.get(drawn, 1)))
+    @shown = picture(found, icons, name)
     io.show("4/5 пишу визитку {card} и ярлык на рабочий стол")
-    @text = visiting(title, group.get(found, 3), binary, root, picture, group.get(found, 4), group.get(found, 7))
+    @text = visiting(title, group.get(found, 3), binary, root, shown, group.get(found, 4), group.get(found, 6))
     file.write(card, text)
     @shortcut = "{desk}/saltic-{name}.desktop"
     file.write(shortcut, text)
