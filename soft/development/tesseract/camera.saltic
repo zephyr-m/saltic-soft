@@ -1,0 +1,94 @@
+-- camera — глаз Tesseract: поворот (yaw) и наклон (pitch) — дробные радианы,
+-- синус и косинус считаются раз на поворот и хранятся целыми ×SCALE; сама
+-- проекция — в целых: мир — тысячные доли единицы, экран — точки.
+--
+-- Camera { yaw, pitch, distance, pan_x, pan_y, center_x, center_y, focal,
+--     cos_yaw, sin_yaw, cos_pitch, sin_pitch } — distance — до центра, ×1000
+--     aimed(width, height) — центр и фокус по размеру окна
+--     turned() — пересчитать синусы после поворота
+--     dragged_by(dx, dy) — тяга левой: вправо — поворот, вниз — наклон вверх
+--     moved_by(dx, dy) — тяга средней: сдвиг картинки
+--     zoomed(steps) — колесо: вниз — дальше, вверх — ближе
+--     seen(x, y, z) -> [экранный x, экранный y, глубина ×1000]
+-- SCALE — множитель целых синусов; TURN — радиан на точку тяги; NEAREST,
+--     FARTHEST — пределы расстояния
+
+use core.num
+use core.fraction
+
+SCALE = 4096
+TURN = 0.008
+NEAREST = 2400
+FARTHEST = 9000
+
+Camera = Box {
+    yaw = -0.3,
+    pitch = 0.3,
+    distance = 5200,
+    pan_x = 0,
+    pan_y = 0,
+    center_x = 0,
+    center_y = 0,
+    focal = 0,
+    cos_yaw = 4096,
+    sin_yaw = 0,
+    cos_pitch = 4096,
+    sin_pitch = 0
+
+    skill aimed(width, height) {
+        center_x = width * 60 / 100
+        center_y = height * 47 / 100
+        focal = height * 95 / 100
+        (width < height) {
+            focal = width * 95 / 100
+        }
+        turned()
+    }
+
+    skill turned() {
+        @scale = fraction.from(SCALE)
+        cos_yaw = num.round_school(fraction.cos(yaw) * scale)
+        sin_yaw = num.round_school(fraction.sin(yaw) * scale)
+        cos_pitch = num.round_school(fraction.cos(pitch) * scale)
+        sin_pitch = num.round_school(fraction.sin(pitch) * scale)
+    }
+
+    skill dragged_by(dx, dy) {
+        yaw = yaw + fraction.from(dx) * TURN
+        pitch = pitch - fraction.from(dy) * TURN
+        (pitch > 1.4) {
+            pitch = 1.4
+        }
+        (pitch < -1.4) {
+            pitch = -1.4
+        }
+        turned()
+    }
+
+    skill moved_by(dx, dy) {
+        pan_x = pan_x + dx
+        pan_y = pan_y + dy
+    }
+
+    skill zoomed(steps) {
+        distance = distance * (10 + steps) / 10
+        (distance < NEAREST) {
+            distance = NEAREST
+        }
+        (distance > FARTHEST) {
+            distance = FARTHEST
+        }
+    }
+
+    skill seen(x, y, z) {
+        @x1 = (x * cos_yaw - z * sin_yaw) / SCALE
+        @z1 = (x * sin_yaw + z * cos_yaw) / SCALE
+        @y2 = (y * cos_pitch - z1 * sin_pitch) / SCALE
+        @z2 = (y * sin_pitch + z1 * cos_pitch) / SCALE
+        @depth = distance + z2
+        (depth < 300) {
+            depth = 300
+        }
+        out [center_x + pan_x + x1 * focal / depth, center_y + pan_y - y2 * focal / depth, depth]
+    }
+}

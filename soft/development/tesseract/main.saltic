@@ -1,0 +1,96 @@
+-- tesseract — скелет машины в окне Wayland: N измерений в проекции на 3D
+-- (сейчас три — этаж, сектор, время), слои пирога и клетки-кубики, пакетов
+-- пока нет. Тянуть левой — повернуть, средней — сдвинуть, колесо — ближе и
+-- дальше, «1» — оси по кругу, «2» — X и Z местами, Esc или «×» — выход. Под
+-- указателем — карточка клетки. Кадр рисуется заново, только когда что-то
+-- поменялось. Черновик того же вида в браузере — docs/site/private/TESSERACT.html
+-- языка.
+--
+-- program() — вход; TITLE, WIDE, HIGH — окно
+
+use core.bytes
+use core.group
+use core.socket
+use io.file
+use tarantul.fonts.fonts
+use tarantul.input.gestures
+use tarantul.wayland.wayland.screen
+use tarantul.uiengine.draw.typeface
+use soft.development.tesseract.skeleton
+use soft.development.tesseract.camera
+use soft.development.tesseract.painter
+
+TITLE = "Tesseract"
+WIDE = 1400
+HIGH = 900
+
+program() {
+    @host = screen.sized(TITLE, WIDE, HIGH)
+    (group.count(host) == 0) {
+        out none
+    }
+    @canvas = group.get(host, 0)
+    @link = group.get(host, 1)
+    @shape = skeleton.Skeleton {}
+    @eye = camera.Camera {}
+    eye.aimed(canvas.width, canvas.height)
+    @picture = painter.Painter {
+        canvas = canvas,
+        shape = shape,
+        eye = eye,
+        words = typeface.from_bytes(file.read_bytes(fonts.REGULAR)),
+        digits = typeface.from_bytes(file.read_bytes(fonts.MONO))
+    }
+    picture.painted()
+    screen.present(link)
+    @reader = gestures.Reader {}
+    @packet = bytes.new(8192)
+    @hold = bytes.new(4096)
+    @joined = bytes.new(12288)
+    always {
+        (link.way_closed == yes) {
+            leave
+        }
+        (link.way_failed == yes) {
+            leave
+        }
+        screen.pump(link, packet, hold, joined)
+        @drained = reader.drain(link.way_events)
+        link.way_events = drained.core
+        @changed = no
+        drum (drained.gestures) {
+            (beat.kind == gestures.Kind.DRAG) {
+                (beat.text == "left") {
+                    eye.dragged_by(beat.dx, beat.dy)
+                }
+                (beat.text == "middle") {
+                    eye.moved_by(beat.dx, beat.dy)
+                }
+                changed = yes
+            }
+            (beat.kind == gestures.Kind.WHEEL) {
+                eye.zoomed(beat.amount)
+                changed = yes
+            }
+            (beat.kind == gestures.Kind.TYPE) {
+                (beat.text == "1") {
+                    shape.rotated()
+                    changed = yes
+                }
+                (beat.text == "2") {
+                    shape.swapped()
+                    changed = yes
+                }
+            }
+        }
+        (picture.hovered(reader.x, reader.y) == yes) {
+            changed = yes
+        }
+        (changed == yes) {
+            picture.painted()
+            screen.present(link)
+        }
+        socket.sleep(16)
+    }
+    out none
+}

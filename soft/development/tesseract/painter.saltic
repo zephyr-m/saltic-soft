@@ -1,0 +1,312 @@
+-- painter — рисует скелет Tesseract на холсте: слои пирога (полупрозрачные
+-- плиты, чем выше — светлее, подвал — горчичный край), клетки-кубики, подписи
+-- осей, шапку и карточку клетки под указателем. Мир — тысячные доли единицы,
+-- цвет — только по смыслу (docs/design/LANGUAGE.md языка).
+--
+-- Painter { canvas, shape, eye, words, digits, centers, taken, hover } — shape —
+--     skeleton.Skeleton, eye — camera.Camera, words / digits — шрифты слов и
+--     моноширинный; centers — [x, y, по X, по Y, по Z] клеток прошлого кадра;
+--     taken — места подписей кадра; hover — клетка под указателем или []
+--     painted() — весь кадр; hovered(x, y) -> yes, если под указателем другая клетка
+--     axis_spread(axis, index) / axis_step(axis) -> место значения и шаг сетки
+--     box_seen(x, y, z, hx, hy, hz) -> 8 углов на экране: низ 0–3, верх 4–7
+--     box_lines(corners, value, alpha) — 12 рёбер
+--     slabs_drawn / cells_drawn / labels_drawn / title_drawn / card_drawn — части кадра
+--     side_labels(axis, base) — подписи одной оси вдоль ребра
+--     text_at(face, x, y, text, size, ink) -> x после строки; label_fits(x, y, width,
+--     height) -> yes, если место свободно (и занимает его); rgb(red, green, blue) -> точка
+-- STRETCH — полудлины осей ×1000; CELL — полкубика в процентах шага; SIGNS,
+--     EDGES — углы и рёбра коробки
+
+use core.group
+use core.str
+use tarantul.graphics.graphics
+use tarantul.uiengine.draw.typeface
+use soft.development.tesseract.skeleton
+use soft.development.tesseract.camera
+
+STRETCH = [1700, 1350, 800]
+CELL = 30
+SIGNS = [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1], [-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1]]
+EDGES = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]
+
+Painter = Box {
+    canvas = graphics.Screen {},
+    shape = skeleton.Skeleton {},
+    eye = camera.Camera {},
+    words = typeface.Typeface {},
+    digits = typeface.Typeface {},
+    centers = [],
+    taken = [],
+    hover = []
+
+    skill rgb(red, green, blue) {
+        out graphics.color(canvas, red, green, blue)
+    }
+
+    skill axis_spread(axis, index) {
+        @size = shape.dimension_size(shape.on_axis(axis))
+        @stretch = group.get(STRETCH, axis)
+        (size == 1) {
+            out 0
+        }
+        out index * 2 * stretch / (size - 1) - stretch
+    }
+
+    skill axis_step(axis) {
+        @size = shape.dimension_size(shape.on_axis(axis))
+        @stretch = group.get(STRETCH, axis)
+        (size == 1) {
+            out stretch
+        }
+        out 2 * stretch / (size - 1)
+    }
+
+    skill box_seen(x, y, z, hx, hy, hz) {
+        @corners = []
+        drum (SIGNS) {
+            corners = group.add(corners, eye.seen(x + group.get(beat, 0) * hx, y + group.get(beat, 1) * hy, z + group.get(beat, 2) * hz))
+        }
+        out corners
+    }
+
+    skill box_lines(corners, value, alpha) {
+        drum (EDGES) {
+            @a = group.get(corners, group.get(beat, 0))
+            @b = group.get(corners, group.get(beat, 1))
+            graphics.canvas_line(canvas, group.get(a, 0), group.get(a, 1), group.get(b, 0), group.get(b, 1), value, alpha)
+        }
+    }
+
+    skill text_at(face, x, y, text, size, ink) {
+        @brush = typeface.Brush {
+            size = size,
+            ink = ink,
+            fade = ink,
+            spacing = 0
+        }
+        out typeface.paint(canvas, face, x, y, text, brush)
+    }
+
+    skill label_fits(x, y, width, height) {
+        drum (taken) {
+            @apart = ((x + width < group.get(beat, 0)) ○○ (group.get(beat, 2) < x))
+            @away = ((y + height < group.get(beat, 1)) ○○ (group.get(beat, 3) < y))
+            ((apart == no) ○ (away == no)) {
+                out no
+            }
+        }
+        taken = group.add(taken, [x, y, x + width, y + height])
+        out yes
+    }
+
+    skill slabs_drawn() {
+        @floor = shape.on_axis(1)
+        @size = shape.dimension_size(floor)
+        @xs = group.get(STRETCH, 0) + axis_step(0) / 2
+        @zs = group.get(STRETCH, 2) + axis_step(2) / 2
+        @half = axis_step(1) * 42 / 100
+        drum (size) {
+            @level = beat * 100 / (size - 1)
+            @corners = box_seen(0, axis_spread(1, beat), 0, xs, half, zs)
+            @tone = rgb(24 + level * 46 / 100, 30 + level * 52 / 100, 42 + level * 62 / 100)
+            @rim = rgb(51, 64, 90)
+            @rim_alpha = 240
+            (shape.cellar(floor, beat) == yes) {
+                tone = rgb(40 + beat * 6, 34 + beat * 5, 18 + beat * 2)
+                rim = rgb(228, 183, 64)
+                rim_alpha = 110
+            }
+            graphics.canvas_polygon(canvas, [group.get(corners, 4), group.get(corners, 5), group.get(corners, 6), group.get(corners, 7)], tone, 26)
+            graphics.canvas_polygon(canvas, [group.get(corners, 0), group.get(corners, 1), group.get(corners, 2), group.get(corners, 3)], tone, 26)
+            box_lines(corners, rim, rim_alpha)
+        }
+    }
+
+    skill cells_drawn() {
+        @hx = axis_step(0) * CELL / 100
+        @hy = axis_step(1) * CELL / 100
+        @hz = axis_step(2) * CELL / 100
+        @ink = rgb(139, 148, 164)
+        @wide = shape.dimension_size(shape.on_axis(0))
+        @high = shape.dimension_size(shape.on_axis(1))
+        @deep = shape.dimension_size(shape.on_axis(2))
+        centers = []
+        drum (high) {
+            @iy = beat
+            drum (wide) {
+                @ix = beat
+                drum (deep) {
+                    @x = axis_spread(0, ix)
+                    @y = axis_spread(1, iy)
+                    @z = axis_spread(2, beat)
+                    @middle = eye.seen(x, y, z)
+                    @alpha = 75 * 5200 / group.get(middle, 2)
+                    (alpha > 90) {
+                        alpha = 90
+                    }
+                    (alpha < 25) {
+                        alpha = 25
+                    }
+                    box_lines(box_seen(x, y, z, hx, hy, hz), ink, alpha)
+                    centers = group.add(centers, [group.get(middle, 0), group.get(middle, 1), ix, iy, beat])
+                }
+            }
+        }
+        (group.count(hover) == 3) {
+            @x = axis_spread(0, group.get(hover, 0))
+            @y = axis_spread(1, group.get(hover, 1))
+            @z = axis_spread(2, group.get(hover, 2))
+            @lit = box_seen(x, y, z, hx, hy, hz)
+            graphics.canvas_polygon(canvas, [group.get(lit, 4), group.get(lit, 5), group.get(lit, 6), group.get(lit, 7)], rgb(76, 205, 255), 40)
+            box_lines(lit, rgb(76, 205, 255), 255)
+        }
+    }
+
+    skill side_labels(axis, base) {
+        @dimension = shape.on_axis(axis)
+        @ink = rgb(196, 202, 214)
+        @ground = rgb(7, 9, 13)
+        drum (shape.dimension_size(dimension)) {
+            @at = [axis_spread(0, beat), group.get(base, 1), group.get(base, 2)]
+            (axis == 2) {
+                at = [group.get(base, 0), group.get(base, 1), axis_spread(2, beat)]
+            }
+            @spot = eye.seen(group.get(at, 0), group.get(at, 1), group.get(at, 2))
+            @text = shape.value_label(dimension, beat)
+            @width = typeface.measure(digits, text, 13, 0)
+            @left = group.get(spot, 0) - width / 2
+            @top = group.get(spot, 1)
+            (label_fits(left - 4, top - 2, width + 8, 20) == yes) {
+                graphics.blend(canvas, left - 4, top - 2, width + 8, 20, ground, 210)
+                text_at(digits, left, top, text, 13, ink)
+            }
+        }
+    }
+
+    skill labels_drawn() {
+        @floor = shape.on_axis(1)
+        @size = shape.dimension_size(floor)
+        @xs = group.get(STRETCH, 0) + axis_step(0) / 2
+        @zs = group.get(STRETCH, 2) + axis_step(2) / 2
+        @half = axis_step(1) * 42 / 100
+        drum (size) {
+            @corners = box_seen(0, axis_spread(1, beat), 0, xs, half, zs)
+            @low = 0
+            drum (4) {
+                (group.get(group.get(corners, beat), 0) < group.get(group.get(corners, low), 0)) {
+                    low = beat
+                }
+            }
+            @bottom = group.get(corners, low)
+            @top = group.get(corners, low + 4)
+            @text = shape.value_label(floor, beat)
+            @width = typeface.measure(digits, text, 15, 0)
+            @ink = rgb(150 + beat * 100 / size, 155 + beat * 100 / size, 165 + beat * 90 / size)
+            (shape.cellar(floor, beat) == yes) {
+                ink = rgb(228, 183, 64)
+            }
+            text_at(digits, group.get(bottom, 0) - 14 - width, (group.get(bottom, 1) + group.get(top, 1)) / 2 - 9, text, 15, ink)
+        }
+        @ground = 0 - group.get(STRETCH, 1) - axis_step(1) * 6 / 10
+        @z_edge = group.get(STRETCH, 2) + axis_step(2) * 6 / 10
+        @x_edge = group.get(STRETCH, 0) + axis_step(0) * 6 / 10
+        @near_z = z_edge
+        (group.get(eye.seen(0, ground, z_edge), 2) > group.get(eye.seen(0, ground, 0 - z_edge), 2)) {
+            near_z = 0 - z_edge
+        }
+        @near_x = x_edge
+        (group.get(eye.seen(x_edge, ground, 0), 2) > group.get(eye.seen(0 - x_edge, ground, 0), 2)) {
+            near_x = 0 - x_edge
+        }
+        taken = []
+        side_labels(0, [0, ground, near_z])
+        side_labels(2, [near_x, ground, 0])
+        @accent = rgb(76, 205, 255)
+        @x_title = shape.dimension_title(shape.on_axis(0))
+        @z_title = shape.dimension_title(shape.on_axis(2))
+        @y_title = shape.dimension_title(floor)
+        @x_spot = eye.seen(0, ground, near_z)
+        text_at(words, group.get(x_spot, 0) - 40, group.get(x_spot, 1) + 26, "X · {x_title}", 15, accent)
+        @z_spot = eye.seen(near_x, ground, 0)
+        text_at(words, group.get(z_spot, 0) + 30, group.get(z_spot, 1) + 26, "Z · {z_title}", 15, accent)
+        @roof = box_seen(0, axis_spread(1, size - 1), 0, xs, half, zs)
+        @corner = group.get(roof, 4)
+        drum (4) {
+            (group.get(group.get(roof, beat + 4), 0) < group.get(corner, 0)) {
+                corner = group.get(roof, beat + 4)
+            }
+        }
+        @y_text = "Y · {y_title}"
+        text_at(words, group.get(corner, 0) - 14 - typeface.measure(words, y_text, 15, 0), group.get(corner, 1) - 40, y_text, 15, accent)
+    }
+
+    skill title_drawn() {
+        @cells = shape.dimension_size(0) * shape.dimension_size(1) * shape.dimension_size(2)
+        graphics.blend(canvas, 16, 16, 430, 128, rgb(17, 23, 35), 235)
+        @ink = rgb(238, 241, 246)
+        @quiet = rgb(139, 148, 164)
+        text_at(words, 32, 28, "Tesseract", 26, ink)
+        text_at(digits, 32, 66, "скелет машины · клеток {cells} · пакетов пока нет", 12, quiet)
+        text_at(digits, 32, 90, "тянуть — повернуть · средняя — сдвинуть · колесо — ближе", 12, quiet)
+        text_at(digits, 32, 112, "1 — оси по кругу · 2 — X и Z местами · Esc — выход", 12, quiet)
+    }
+
+    skill card_drawn() {
+        (group.count(hover) == 0) {
+            out none
+        }
+        @left = canvas.width - 16 - 380
+        graphics.blend(canvas, left, 16, 380, 196, rgb(24, 32, 48), 245)
+        text_at(words, left + 16, 26, "Пустая клетка — сюда сядут пакеты", 15, rgb(238, 241, 246))
+        drum (3) {
+            @dimension = shape.on_axis(beat)
+            @index = group.get(hover, beat)
+            @top = 58 + beat * 50
+            text_at(digits, left + 16, top, shape.dimension_title(dimension), 11, rgb(93, 102, 117))
+            text_at(words, left + 110, top - 2, shape.value_label(dimension, index), 14, rgb(238, 241, 246))
+            text_at(words, left + 110, top + 20, shape.value_about(dimension, index), 12, rgb(139, 148, 164))
+        }
+    }
+
+    skill hovered(x, y) {
+        @found = []
+        @best = 16
+        drum (centers) {
+            @dx = group.get(beat, 0) - x
+            @dy = group.get(beat, 1) - y
+            (dx < 0) {
+                dx = 0 - dx
+            }
+            (dy < 0) {
+                dy = 0 - dy
+            }
+            (dx + dy < best) {
+                best = dx + dy
+                found = [group.get(beat, 2), group.get(beat, 3), group.get(beat, 4)]
+            }
+        }
+        (group.count(found) == group.count(hover)) {
+            @same = yes
+            drum (group.count(found)) {
+                ((group.get(found, beat) == group.get(hover, beat)) == no) {
+                    same = no
+                }
+            }
+            (same == yes) {
+                out no
+            }
+        }
+        hover = found
+        out yes
+    }
+
+    skill painted() {
+        graphics.fill(canvas, 0, 0, canvas.width, canvas.height, rgb(7, 9, 13))
+        slabs_drawn()
+        cells_drawn()
+        labels_drawn()
+        title_drawn()
+        card_drawn()
+    }
+}

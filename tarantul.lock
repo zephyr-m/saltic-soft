@@ -1,5 +1,5 @@
 {
-  "catalog": {"from": "git@github.com:zephyr-m/saltic-registry.git", "commit": "c16c086f62774012c051b5c731ed62ab398f1519"},
+  "catalog": {"from": "git@github.com:zephyr-m/saltic-registry.git", "commit": "640501ee032a4bb4d4ed502ce237292fbb52ed9c"},
   "packages": {
     "i2c_esp32": {"version": "1", "source": "registry/adapters/esp32/i2c", "fingerprint": "crc32 98e40745", "required_by": "project"},
     "ssd1306": {"version": "3", "source": "registry/adapters/esp32/ssd1306", "fingerprint": "crc32 7896751c", "required_by": "project"},
@@ -12,23 +12,26 @@
     "camera": {"version": "4", "source": "registry/adapters/uefi_x86_64/camera", "fingerprint": "crc32 c3a24e39", "required_by": "project"},
     "pointer": {"version": "3", "source": "registry/adapters/uefi_x86_64/pointer", "fingerprint": "crc32 9050e96f", "required_by": "project"},
     "firmware": {"version": "1", "source": "registry/adapters/uefi_x86_64/firmware", "fingerprint": "crc32 83c20d02", "required_by": "project"},
-    "graphics": {"version": "1", "source": "registry/libraries/graphics", "fingerprint": "crc32 5db66765", "required_by": "project"},
+    "graphics": {"version": "2", "source": "registry/libraries/graphics", "fingerprint": "crc32 d7e37f42", "required_by": "project"},
     "gop": {"version": "1", "source": "registry/adapters/uefi_x86_64/gop", "fingerprint": "crc32 b71329cf", "required_by": "project"},
     "fonts": {"version": "2", "source": "registry/libraries/fonts", "fingerprint": "crc32 82d57044", "required_by": "project"},
     "icons": {"version": "2", "source": "registry/libraries/icons", "fingerprint": "crc32 d542abb3", "required_by": "project"},
-    "input": {"version": "3", "source": "registry/libraries/input", "fingerprint": "crc32 f6a77121", "required_by": "project"},
+    "input": {"version": "4", "source": "registry/libraries/input", "fingerprint": "crc32 0d62ad41", "required_by": "project"},
     "lettering": {"version": "3", "source": "registry/libraries/lettering", "fingerprint": "crc32 fd5cb743", "required_by": "project"},
     "net": {"version": "1", "source": "registry/adapters/uefi_x86_64/net", "fingerprint": "crc32 3f87d97b", "required_by": "project"},
     "files": {"version": "1", "source": "registry/adapters/uefi_x86_64/files", "fingerprint": "crc32 df5151bc", "required_by": "project"},
     "ink": {"version": "1", "source": "registry/libraries/ink", "fingerprint": "crc32 e009c5e0", "required_by": "project"},
     "qemu_virt": {"version": "1", "source": "registry/adapters/qemu_virt", "fingerprint": "crc32 a46a6bb2", "required_by": "project"},
     "clib": {"version": "1", "source": "registry/adapters/android/clib", "fingerprint": "crc32 e19f50c0", "required_by": "project"},
-    "wayland": {"version": "1", "source": "registry/adapters/linux/wayland", "fingerprint": "crc32 75740738", "required_by": "project"},
+    "wayland": {"version": "2", "source": "registry/adapters/linux/wayland", "fingerprint": "crc32 35fd402a", "required_by": "project"},
     "vector": {"version": "2", "source": "registry/libraries/vector", "fingerprint": "crc32 422abf36", "required_by": "project"},
     "rotation": {"version": "2", "source": "registry/libraries/rotation", "fingerprint": "crc32 760dae6b", "required_by": "project"},
     "random": {"version": "1", "source": "registry/libraries/random", "fingerprint": "crc32 079ffc95", "required_by": "project"},
     "exponent": {"version": "2", "source": "registry/libraries/exponent", "fingerprint": "crc32 3cf048bb", "required_by": "project"},
+    "tcp": {"version": "2", "source": "registry/libraries/tcp", "fingerprint": "crc32 a87df88e", "required_by": "project"},
     "graph": {"version": "1", "source": "registry/libraries/graph", "fingerprint": "crc32 d65ef369", "required_by": "uiengine"},
-    "statistics": {"version": "1", "source": "registry/libraries/statistics", "fingerprint": "crc32 5e6f70a8", "required_by": "random"}
+    "statistics": {"version": "1", "source": "registry/libraries/statistics", "fingerprint": "crc32 5e6f70a8", "required_by": "random"},
+    "wire": {"version": "1", "source": "registry/libraries/wire", "fingerprint": "crc32 f5ff06ac", "required_by": "tcp"},
+    "hex": {"version": "1", "source": "registry/libraries/hex", "fingerprint": "crc32 f60254d8", "required_by": "tcp"}
   }
 }
