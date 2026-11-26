@@ -1,5 +1,5 @@
 {
-  "catalog": {"from": "git@github.com:zephyr-m/saltic-registry.git", "commit": "640501ee032a4bb4d4ed502ce237292fbb52ed9c"},
+  "catalog": {"from": "git@github.com:zephyr-m/saltic-registry.git", "commit": "fef59b569c706cab9368434246f2b704ec1a33f9"},
   "packages": {
     "i2c_esp32": {"version": "1", "source": "registry/adapters/esp32/i2c", "fingerprint": "crc32 98e40745", "required_by": "project"},
     "ssd1306": {"version": "3", "source": "registry/adapters/esp32/ssd1306", "fingerprint": "crc32 7896751c", "required_by": "project"},
@@ -12,7 +12,7 @@
     "camera": {"version": "4", "source": "registry/adapters/uefi_x86_64/camera", "fingerprint": "crc32 c3a24e39", "required_by": "project"},
     "pointer": {"version": "3", "source": "registry/adapters/uefi_x86_64/pointer", "fingerprint": "crc32 9050e96f", "required_by": "project"},
     "firmware": {"version": "1", "source": "registry/adapters/uefi_x86_64/firmware", "fingerprint": "crc32 83c20d02", "required_by": "project"},
-    "graphics": {"version": "2", "source": "registry/libraries/graphics", "fingerprint": "crc32 d7e37f42", "required_by": "project"},
+    "graphics": {"version": "4", "source": "registry/libraries/graphics", "fingerprint": "crc32 d82a91c5", "required_by": "project"},
     "gop": {"version": "1", "source": "registry/adapters/uefi_x86_64/gop", "fingerprint": "crc32 b71329cf", "required_by": "project"},
     "fonts": {"version": "2", "source": "registry/libraries/fonts", "fingerprint": "crc32 82d57044", "required_by": "project"},
     "icons": {"version": "2", "source": "registry/libraries/icons", "fingerprint": "crc32 d542abb3", "required_by": "project"},
@@ -23,7 +23,7 @@
     "ink": {"version": "1", "source": "registry/libraries/ink", "fingerprint": "crc32 e009c5e0", "required_by": "project"},
     "qemu_virt": {"version": "1", "source": "registry/adapters/qemu_virt", "fingerprint": "crc32 a46a6bb2", "required_by": "project"},
     "clib": {"version": "1", "source": "registry/adapters/android/clib", "fingerprint": "crc32 e19f50c0", "required_by": "project"},
-    "wayland": {"version": "2", "source": "registry/adapters/linux/wayland", "fingerprint": "crc32 35fd402a", "required_by": "project"},
+    "wayland": {"version": "3", "source": "registry/adapters/linux/wayland", "fingerprint": "crc32 5ae735b9", "required_by": "project"},
     "vector": {"version": "2", "source": "registry/libraries/vector", "fingerprint": "crc32 422abf36", "required_by": "project"},
     "rotation": {"version": "2", "source": "registry/libraries/rotation", "fingerprint": "crc32 760dae6b", "required_by": "project"},
     "random": {"version": "1", "source": "registry/libraries/random", "fingerprint": "crc32 079ffc95", "required_by": "project"},

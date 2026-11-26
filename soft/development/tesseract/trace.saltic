@@ -1,0 +1,215 @@
+-- trace — кадр в движении без стирания экрана, как в wire: рядом с холстом —
+-- слой отметок того же размера, по числу на точку. Новые отрезки кадра пишутся
+-- с отметкой кадра, потом старые отрезки гаснут только там, где отметка не
+-- свежая: горящую точку не трогают, пустого экрана не бывает. Места «навсегда»
+-- (шапка, график) отрезки не задевают. Цвета — сплошные: полупрозрачное чисто
+-- не погасить.
+--
+-- Trace { canvas, marks, stamp, old, fresh, places } — canvas — куда рисовать;
+--     marks — слой отметок того же stride, что canvas; old / fresh — отрезки
+--     [x0, y0, x1, y1] и крестики [x, y] прошлого и этого кадра; places — места
+--     «навсегда» [x, y, ширина, высота]
+--     began() — новый кадр; line(x0, y0, x1, y1, value) — отрезок с отметкой
+--     dot(x, y, value) — крестик в 5 точек с отметкой
+--     finished(background) — погасить старое фоном
+--     forgot() — прошлого кадра нет: все отметки в ноль, места «навсегда» заново
+--     kept(x, y, width, height) — место «навсегда»
+--     walk(x0, y0, x1, y1, value, lit) / cross(x, y, value, lit) / touch(x, y,
+--     value, lit) — отрезок, крестик, точка: lit — зажечь, иначе погасить
+-- canvas_of(name, width, height, format) -> graphics.Screen в своей памяти (memfd);
+--     CanvasFailed — память не дали
+-- put(from, to, x, y) — холст from целиком на холст to в (x, y), за краем — ничего
+-- FOREVER — отметка «навсегда»; FIRST — отметка первого кадра; CROSS — точки крестика
+
+use core.mem
+use core.num
+use core.u32
+use core.usize
+use core.group
+use core.socket
+use core.address
+use tarantul.graphics.graphics
+
+FOREVER = 1
+FIRST = 2
+CROSS = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]]
+
+Trace = Box {
+    canvas = graphics.Screen {},
+    marks = graphics.Screen {},
+    stamp = FIRST,
+    old = [],
+    fresh = [],
+    places = []
+
+    skill began() {
+        stamp = stamp + 1
+        fresh = []
+    }
+
+    skill line(x0, y0, x1, y1, value) {
+        fresh = group.add(fresh, [x0, y0, x1, y1])
+        walk(x0, y0, x1, y1, value, yes)
+    }
+
+    skill dot(x, y, value) {
+        fresh = group.add(fresh, [x, y])
+        cross(x, y, value, yes)
+    }
+
+    skill cross(x, y, value, lit) {
+        drum (CROSS) {
+            touch(x + group.get(beat, 0), y + group.get(beat, 1), value, lit)
+        }
+    }
+
+    skill touch(x, y, value, lit) {
+        ((x < 0) ○○ (y < 0)) {
+            out none
+        }
+        ((x >= canvas.width) ○○ (y >= canvas.height)) {
+            out none
+        }
+        @at = usize.from((y * canvas.stride + x) * graphics.PIXEL_BYTES)
+        @field = address.from(marks.memory)
+        @was = num.from(mem.load32(field, at))
+        (was == FOREVER) {
+            out none
+        }
+        (lit == yes) {
+            mem.store32(field, at, u32.from(stamp))
+            mem.store32(address.from(canvas.memory), at, u32.from(value))
+            out none
+        }
+        ((was == stamp) ○○ (was == 0)) {
+            out none
+        }
+        mem.store32(field, at, u32.from(0))
+        mem.store32(address.from(canvas.memory), at, u32.from(value))
+    }
+
+    skill finished(background) {
+        drum (old) {
+            (group.count(beat) == 2) {
+                cross(group.get(beat, 0), group.get(beat, 1), background, no)
+            }
+            (group.count(beat) == 4) {
+                walk(group.get(beat, 0), group.get(beat, 1), group.get(beat, 2), group.get(beat, 3), background, no)
+            }
+        }
+        old = fresh
+        fresh = []
+    }
+
+    skill forgot() {
+        graphics.fill(marks, 0, 0, marks.width, marks.height, 0)
+        drum (places) {
+            graphics.fill(marks, group.get(beat, 0), group.get(beat, 1), group.get(beat, 2), group.get(beat, 3), FOREVER)
+        }
+        old = []
+        fresh = []
+    }
+
+    skill kept(x, y, width, height) {
+        places = group.add(places, [x, y, width, height])
+        graphics.fill(marks, x, y, width, height, FOREVER)
+    }
+
+    skill walk(x0, y0, x1, y1, value, lit) {
+        @dx = x1 - x0
+        @step_x = 1
+        (dx < 0) {
+            dx = 0 - dx
+            step_x = -1
+        }
+        @dy = y1 - y0
+        @step_y = 1
+        (dy < 0) {
+            dy = 0 - dy
+            step_y = -1
+        }
+        @count = dx + 1
+        (dy > dx) {
+            count = dy + 1
+        }
+        @x = x0
+        @y = y0
+        @error = dx - dy
+        @base = address.from(canvas.memory)
+        @field = address.from(marks.memory)
+        @point = u32.from(value)
+        @mark = u32.from(stamp)
+        @blank = u32.from(0)
+        drum (count) {
+            @inside = (((x >= 0) ○ (y >= 0)) ○ ((x < canvas.width) ○ (y < canvas.height)))
+            (inside == yes) {
+                @at = usize.from((y * canvas.stride + x) * graphics.PIXEL_BYTES)
+                @was = num.from(mem.load32(field, at))
+                (lit == yes) {
+                    ((was == FOREVER) == no) {
+                        mem.store32(field, at, mark)
+                        mem.store32(base, at, point)
+                    }
+                }
+                (lit == no) {
+                    ((((was == FOREVER) ○○ (was == stamp)) ○○ (was == 0)) == no) {
+                        mem.store32(field, at, blank)
+                        mem.store32(base, at, point)
+                    }
+                }
+            }
+            @twice = error * 2
+            (twice > 0 - dy) {
+                error = error - dy
+                x = x + step_x
+            }
+            (twice < dx) {
+                error = error + dx
+                y = y + step_y
+            }
+        }
+    }
+}
+
+skill canvas_of(name, width, height, format) {
+    @bytes = width * height * graphics.PIXEL_BYTES
+    @fd = socket.memory(name)
+    (fd < 0) {
+        out error.CanvasFailed
+    }
+    (socket.resize(fd, bytes) < 0) {
+        out error.CanvasFailed
+    }
+    @memory = socket.map(fd, bytes)
+    (memory < 0) {
+        out error.CanvasFailed
+    }
+    out graphics.Screen {
+        width = width,
+        height = height,
+        stride = width,
+        format = format,
+        frame = 0,
+        memory = memory,
+        accel = [],
+        vsync = no
+    }
+}
+
+skill put(from, to, x, y) {
+    @source = address.from(from.memory)
+    @target = address.from(to.memory)
+    drum (from.height) {
+        @row = beat
+        @ty = y + row
+        ((ty >= 0) ○ (ty < to.height)) {
+            drum (from.width) {
+                @tx = x + beat
+                ((tx >= 0) ○ (tx < to.width)) {
+                    @value = mem.load32(source, usize.from((row * from.stride + beat) * graphics.PIXEL_BYTES))
+                    mem.store32(target, usize.from((ty * to.stride + tx) * graphics.PIXEL_BYTES), value)
+                }
+            }
+        }
+    }
+}

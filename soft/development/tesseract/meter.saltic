@@ -1,0 +1,120 @@
+-- meter — график кадров Tesseract на своём холсте WIDE × HIGH: сколько миллисекунд
+-- ушло на кадр (столбики последних SPAN кадров, черта — 60 к/с), на сколько
+-- кадров в секунду хватило бы рисования и сколько кадров реально показано за
+-- прошлую секунду. Время — core.time, миллисекунды.
+--
+-- Meter { spent, second, frames, rate } — spent — мс последних кадров; second —
+--     начало текущей секунды; frames — кадров в ней; rate — кадров за прошлую
+--     finished(start) — записать кадр, начатый в start (time.now())
+--     average() -> среднее последних кадров в десятых долях мс
+--     drawn(canvas, face) — панель с числами и графиком в (0, 0) холста
+-- SPAN — кадров в графике; CEILING — мс на верх графика; WIDE, HIGH — панель;
+--     BAR — ширина столбика; GRAPH — высота графика; RECENT — кадров в среднем
+
+use core.group
+use core.time
+use tarantul.graphics.graphics
+use tarantul.uiengine.draw.typeface
+
+SPAN = 120
+CEILING = 50
+WIDE = 264
+HIGH = 116
+BAR = 2
+GRAPH = 60
+RECENT = 30
+
+Meter = Box {
+    spent = [],
+    second = 0,
+    frames = 0,
+    rate = 0
+
+    skill finished(start) {
+        @now = time.now()
+        @took = now - start
+        (took < 0) {
+            took = took + time.DAY_MILLISECONDS
+        }
+        (group.count(spent) == SPAN) {
+            @kept = []
+            drum (SPAN - 1) {
+                kept = group.add(kept, group.get(spent, beat + 1))
+            }
+            spent = kept
+        }
+        spent = group.add(spent, took)
+        frames = frames + 1
+        @passed = now - second
+        (passed < 0) {
+            passed = passed + time.DAY_MILLISECONDS
+        }
+        (passed >= 1000) {
+            rate = frames * 1000 / passed
+            frames = 0
+            second = now
+        }
+    }
+
+    skill average() {
+        @count = group.count(spent)
+        (count == 0) {
+            out 0
+        }
+        @tail = RECENT
+        (count < tail) {
+            tail = count
+        }
+        @sum = 0
+        drum (tail) {
+            sum = sum + group.get(spent, count - 1 - beat)
+        }
+        out sum * 10 / tail
+    }
+
+    skill drawn(canvas, face) {
+        @left = 0
+        @top = 0
+        graphics.fill(canvas, 0, 0, WIDE, HIGH, graphics.color(canvas, 17, 23, 35))
+        @tenths = average()
+        @whole = tenths / 10
+        @part = tenths % 10
+        @enough = "больше 1000"
+        (tenths > 0) {
+            @fast = 10000 / tenths
+            enough = "{fast}"
+        }
+        @brush = typeface.Brush {
+            size = 12,
+            ink = graphics.color(canvas, 196, 202, 214),
+            fade = graphics.color(canvas, 196, 202, 214),
+            spacing = 0
+        }
+        typeface.paint(canvas, face, left + 12, top + 10, "кадр {whole}.{part} мс · хватит на {enough} к/с", brush)
+        typeface.paint(canvas, face, left + 12, top + 28, "показано {rate} к/с", brush)
+        @base = top + HIGH - 10
+        @mark = base - 1667 * GRAPH / (CEILING * 100)
+        graphics.fill(canvas, left + 12, mark, SPAN * BAR, 1, graphics.color(canvas, 93, 102, 117))
+        @good = graphics.color(canvas, 76, 205, 255)
+        @slow = graphics.color(canvas, 228, 183, 64)
+        @bad = graphics.color(canvas, 235, 87, 87)
+        drum (group.count(spent)) {
+            @took = group.get(spent, beat)
+            @height = took * GRAPH / CEILING
+            (height > GRAPH) {
+                height = GRAPH
+            }
+            (height < 1) {
+                height = 1
+            }
+            @ink = good
+            (took > 16) {
+                ink = slow
+            }
+            (took > 33) {
+                ink = bad
+            }
+            graphics.fill(canvas, left + 12 + beat * BAR, base - height, BAR - 1, height, ink)
+        }
+    }
+}

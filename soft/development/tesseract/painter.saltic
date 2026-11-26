@@ -3,11 +3,19 @@
 -- осей, шапку и карточку клетки под указателем. Мир — тысячные доли единицы,
 -- цвет — только по смыслу (docs/design/LANGUAGE.md языка).
 --
--- Painter { canvas, shape, eye, words, digits, centers, taken, hover } — shape —
---     skeleton.Skeleton, eye — camera.Camera, words / digits — шрифты слов и
---     моноширинный; centers — [x, y, по X, по Y, по Z] клеток прошлого кадра;
---     taken — места подписей кадра; hover — клетка под указателем или []
---     painted() — весь кадр; hovered(x, y) -> yes, если под указателем другая клетка
+-- Painter { canvas, screen, back, panel, delta, tracing, shape, eye, words, digits,
+--     centers, taken, hover, rough, pulse } — canvas — куда рисуют части кадра;
+--     screen — экран окна; back — полный кадр за кадром, на экран целиком;
+--     panel — свой холст графика; delta — trace.Trace; tracing — экран держит
+--     кадр движения; shape — skeleton.Skeleton, eye — camera.Camera, words /
+--     digits — шрифты слов и моноширинный; centers — [x, y, по X, по Y, по Z]
+--     клеток прошлого кадра; taken — места подписей кадра; hover — клетка под
+--     указателем или []; rough — yes в движении; pulse — meter.Meter
+--     prepared() — холсты и места «навсегда» после того, как дан canvas
+--     painted() — кадр: в покое полный за кадром, в движении — traced() дельтой
+--     traced() — рамки плит и крестики клеток сплошными цветами через delta
+--     hovered(x, y) -> yes, если под указателем другая клетка
+--     framed(start) — кадр, начатый в start, — в график
 --     axis_spread(axis, index) / axis_step(axis) -> место значения и шаг сетки
 --     box_seen(x, y, z, hx, hy, hz) -> 8 углов на экране: низ 0–3, верх 4–7
 --     box_lines(corners, value, alpha) — 12 рёбер
@@ -24,6 +32,8 @@ use tarantul.graphics.graphics
 use tarantul.uiengine.draw.typeface
 use soft.development.tesseract.skeleton
 use soft.development.tesseract.camera
+use soft.development.tesseract.meter
+use soft.development.tesseract.trace
 
 STRETCH = [1700, 1350, 800]
 CELL = 30
@@ -32,13 +42,20 @@ EDGES = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4],
 
 Painter = Box {
     canvas = graphics.Screen {},
+    screen = graphics.Screen {},
+    back = graphics.Screen {},
+    panel = graphics.Screen {},
+    delta = trace.Trace {},
+    tracing = no,
     shape = skeleton.Skeleton {},
     eye = camera.Camera {},
     words = typeface.Typeface {},
     digits = typeface.Typeface {},
     centers = [],
     taken = [],
-    hover = []
+    hover = [],
+    rough = no,
+    pulse = meter.Meter {}
 
     skill rgb(red, green, blue) {
         out graphics.color(canvas, red, green, blue)
@@ -301,12 +318,93 @@ Painter = Box {
         out yes
     }
 
+    skill prepared() {
+        screen = canvas
+        back = trace.canvas_of("tesseract-back", screen.width, screen.height, screen.format)
+        panel = trace.canvas_of("tesseract-meter", meter.WIDE, meter.HIGH, screen.format)
+        delta.marks = trace.canvas_of("tesseract-marks", screen.width, screen.height, screen.format)
+        delta.kept(16, 16, 430, 128)
+        delta.kept(screen.width - 16 - meter.WIDE, screen.height - 16 - meter.HIGH, meter.WIDE, meter.HIGH)
+    }
+
     skill painted() {
-        graphics.fill(canvas, 0, 0, canvas.width, canvas.height, rgb(7, 9, 13))
-        slabs_drawn()
-        cells_drawn()
-        labels_drawn()
-        title_drawn()
-        card_drawn()
+        @ground = rgb(7, 9, 13)
+        @meter_x = screen.width - 16 - meter.WIDE
+        @meter_y = screen.height - 16 - meter.HIGH
+        (rough == no) {
+            canvas = back
+            graphics.fill(back, 0, 0, back.width, back.height, ground)
+            slabs_drawn()
+            cells_drawn()
+            labels_drawn()
+            title_drawn()
+            card_drawn()
+            pulse.drawn(panel, digits)
+            trace.put(panel, back, meter_x, meter_y)
+            trace.put(back, screen, 0, 0)
+            tracing = no
+            out none
+        }
+        @start = (tracing == no)
+        (start == yes) {
+            canvas = back
+            graphics.fill(back, 0, 0, back.width, back.height, ground)
+            title_drawn()
+            delta.canvas = back
+            delta.forgot()
+        }
+        delta.began()
+        traced()
+        delta.finished(ground)
+        pulse.drawn(panel, digits)
+        trace.put(panel, delta.canvas, meter_x, meter_y)
+        (start == yes) {
+            trace.put(back, screen, 0, 0)
+            delta.canvas = screen
+            tracing = yes
+        }
+    }
+
+    skill traced() {
+        @floor = shape.on_axis(1)
+        @size = shape.dimension_size(floor)
+        @xs = group.get(STRETCH, 0) + axis_step(0) / 2
+        @zs = group.get(STRETCH, 2) + axis_step(2) / 2
+        @half = axis_step(1) * 42 / 100
+        @ground = rgb(7, 9, 13)
+        @plain = rgb(51, 64, 90)
+        @cellar = graphics.mix(ground, rgb(228, 183, 64), 110)
+        drum (size) {
+            @corners = box_seen(0, axis_spread(1, beat), 0, xs, half, zs)
+            @rim = plain
+            (shape.cellar(floor, beat) == yes) {
+                rim = cellar
+            }
+            drum (EDGES) {
+                @a = group.get(corners, group.get(beat, 0))
+                @b = group.get(corners, group.get(beat, 1))
+                delta.line(group.get(a, 0), group.get(a, 1), group.get(b, 0), group.get(b, 1), rim)
+            }
+        }
+        @ink = graphics.mix(ground, rgb(139, 148, 164), 60)
+        @wide = shape.dimension_size(shape.on_axis(0))
+        @high = shape.dimension_size(shape.on_axis(1))
+        @deep = shape.dimension_size(shape.on_axis(2))
+        centers = []
+        drum (high) {
+            @iy = beat
+            drum (wide) {
+                @ix = beat
+                drum (deep) {
+                    @middle = eye.seen(axis_spread(0, ix), axis_spread(1, iy), axis_spread(2, beat))
+                    delta.dot(group.get(middle, 0), group.get(middle, 1), ink)
+                    centers = group.add(centers, [group.get(middle, 0), group.get(middle, 1), ix, iy, beat])
+                }
+            }
+        }
+    }
+
+    skill framed(start) {
+        pulse.finished(start)
     }
 }

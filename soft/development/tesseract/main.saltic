@@ -3,14 +3,18 @@
 -- пока нет. Тянуть левой — повернуть, средней — сдвинуть, колесо — ближе и
 -- дальше, «1» — оси по кругу, «2» — X и Z местами, Esc или «×» — выход. Под
 -- указателем — карточка клетки. Кадр рисуется заново, только когда что-то
--- поменялось. Черновик того же вида в браузере — docs/site/private/TESSERACT.html
--- языка.
+-- поменялось. В движении — кадр-дельта без стирания экрана (trace): рамки плит и
+-- крестики клеток; полный кадр рисуется за кадром и ложится целиком, когда
+-- кнопки отпущены и прошло SETTLE тихих кругов. Спим только без кадра.
+-- Справа внизу — график кадров (meter).
+-- Черновик того же вида в браузере — docs/site/private/TESSERACT.html языка.
 --
--- program() — вход; TITLE, WIDE, HIGH — окно
+-- program() — вход; TITLE, WIDE, HIGH — окно; SETTLE — тихих кругов до полного кадра
 
 use core.bytes
 use core.group
 use core.socket
+use core.time
 use io.file
 use tarantul.fonts.fonts
 use tarantul.input.gestures
@@ -23,6 +27,7 @@ use soft.development.tesseract.painter
 TITLE = "Tesseract"
 WIDE = 1400
 HIGH = 900
+SETTLE = 8
 
 program() {
     @host = screen.sized(TITLE, WIDE, HIGH)
@@ -41,12 +46,14 @@ program() {
         words = typeface.from_bytes(file.read_bytes(fonts.REGULAR)),
         digits = typeface.from_bytes(file.read_bytes(fonts.MONO))
     }
+    picture.prepared()
     picture.painted()
     screen.present(link)
     @reader = gestures.Reader {}
     @packet = bytes.new(8192)
     @hold = bytes.new(4096)
     @joined = bytes.new(12288)
+    @quiet = 0
     always {
         (link.way_closed == yes) {
             leave
@@ -58,6 +65,7 @@ program() {
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
         @changed = no
+        @moved = no
         drum (drained.gestures) {
             (beat.kind == gestures.Kind.DRAG) {
                 (beat.text == "left") {
@@ -66,31 +74,48 @@ program() {
                 (beat.text == "middle") {
                     eye.moved_by(beat.dx, beat.dy)
                 }
-                changed = yes
+                moved = yes
             }
             (beat.kind == gestures.Kind.WHEEL) {
                 eye.zoomed(beat.amount)
-                changed = yes
+                moved = yes
             }
             (beat.kind == gestures.Kind.TYPE) {
                 (beat.text == "1") {
                     shape.rotated()
-                    changed = yes
+                    moved = yes
                 }
                 (beat.text == "2") {
                     shape.swapped()
-                    changed = yes
+                    moved = yes
                 }
+            }
+        }
+        (moved == yes) {
+            picture.rough = yes
+            quiet = 0
+            changed = yes
+        }
+        ((moved == no) ○ (picture.rough == yes)) {
+            quiet = quiet + 1
+            @free = ((reader.left_held == no) ○ (reader.middle_held == no))
+            ((quiet >= SETTLE) ○ (free == yes)) {
+                picture.rough = no
+                changed = yes
             }
         }
         (picture.hovered(reader.x, reader.y) == yes) {
             changed = yes
         }
         (changed == yes) {
+            @start = time.now()
             picture.painted()
             screen.present(link)
+            picture.framed(start)
         }
-        socket.sleep(16)
+        (changed == no) {
+            socket.sleep(16)
+        }
     }
     out none
 }
