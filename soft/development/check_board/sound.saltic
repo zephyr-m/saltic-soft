@@ -1,0 +1,180 @@
+-- sound — звуки пульта, как в docs/site/private/CHECK-LOOK.html: шаг подготовки —
+-- низкий клац с подъёмом, ветки пошли разом — взлёт, случай прошёл — стеклянный
+-- пинг из пентатоники (частые сливаются в мелодию), провал — низкое дрожание двух
+-- близких тонов, итог — восходящий аккорд или нисходящий. Синтез свой (WebAudio
+-- нет): тоны — синус (две параболы), треугольник, пила, квадрат с атакой 8 мс и
+-- затуханием; 16 бит, моно, RATE Гц, файлы WAV в FOLDER — один раз, потом с
+-- диска. Играет pw-play в фоне (bash … &), пульт не ждёт.
+--
+-- Sound { on, last_ping } — prepare() — сделать файлы, которых нет;
+--     play(name) — один звук; pings(count) — до PINGS пингов подряд со сдвигом
+--     GAP мс; toggle() — вкл/выкл
+-- Тон — [вид, частота, конечная частота (0 — та же), начало мс, длина мс,
+--     громкость ‰]; частоты — в сотых герца
+-- Внутри: wave(kind, phase) -> −32768…32768; tone(store, spec) — сложить тон в
+--     накопитель; render(tones, length) -> буфер WAV; put(buffer, at, value,
+--     width) — число little-endian; SOUNDS — что звучит
+
+use core.str
+use core.group
+use core.bytes
+use core.process
+use io.file
+
+FOLDER = ".cache/check-board/sounds"
+RATE = 22050
+BIAS = 1073741824
+PINGS = 4
+GAP = 110
+SINE = "sine"
+TRIANGLE = "triangle"
+SAW = "saw"
+SQUARE = "square"
+PENTA = [52325, 58733, 65925, 78399, 88000, 104650, 117466, 131850]
+SOUNDS = [
+    ["prep", 400, [[SINE, 19600, 29400, 0, 350, 270], [TRIANGLE, 39200, 0, 20, 200, 120]]],
+    ["launch", 1000, [[SINE, 16000, 64000, 0, 700, 210], [TRIANGLE, 39200, 0, 250, 600, 135], [TRIANGLE, 52325, 0, 310, 600, 135], [TRIANGLE, 65925, 0, 370, 600, 135]]],
+    ["fail", 600, [[SAW, 11000, 0, 0, 550, 110], [SAW, 11650, 0, 0, 550, 110]]],
+    ["win", 1300, [[TRIANGLE, 52325, 0, 0, 900, 210], [TRIANGLE, 65925, 0, 90, 820, 210], [TRIANGLE, 78399, 0, 180, 740, 210], [TRIANGLE, 104650, 0, 270, 660, 210], [TRIANGLE, 131850, 0, 360, 580, 210]]],
+    ["lose", 1200, [[SQUARE, 39200, 0, 0, 500, 70], [SQUARE, 34923, 0, 160, 500, 70], [SQUARE, 29366, 0, 320, 500, 70], [SQUARE, 22000, 0, 480, 500, 70]]]
+]
+
+skill put(buffer, at, value, width) {
+    @left = value
+    drum (width) {
+        bytes.set(buffer, at + beat, left % 256)
+        left = left / 256
+    }
+    out none
+}
+
+skill take(buffer, at) {
+    out bytes.get(buffer, at) + bytes.get(buffer, at + 1) * 256 + bytes.get(buffer, at + 2) * 65536 + bytes.get(buffer, at + 3) * 16777216
+}
+
+skill wave(kind, phase) {
+    (kind == TRIANGLE) {
+        (phase < 32768) { out phase * 2 - 32768 }
+        out (65535 - phase) * 2 - 32768
+    }
+    (kind == SAW) { out phase - 32768 }
+    (kind == SQUARE) {
+        (phase < 32768) { out 32767 }
+        out -32767
+    }
+    @half = phase % 32768
+    @lift = (4 * half * (32768 - half)) / 32768
+    (phase < 32768) { out lift }
+    out 0 - lift
+}
+
+skill tone(store, spec) {
+    @kind = group.get(spec, 0)
+    @from = group.get(spec, 1)
+    @to = group.get(spec, 2)
+    (to == 0) { to = from }
+    @first = group.get(spec, 3) * RATE / 1000
+    @count = group.get(spec, 4) * RATE / 1000
+    @volume = group.get(spec, 5)
+    @attack = RATE * 8 / 1000
+    @turn = 100 * RATE
+    @phase = 0
+    drum (count) {
+        @at = first + beat
+        @frequency = from + ((to - from) * beat) / count
+        phase = (phase + frequency * 65536) % (65536 * turn)
+        @rest = ((count - beat) * 1000) / count
+        @envelope = (rest * rest / 1000) * rest / 1000
+        (beat < attack) { envelope = envelope * beat / attack }
+        @value = (wave(kind, phase / turn) * volume / 1000) * envelope / 1000
+        @slot = at * 4
+        put(store, slot, take(store, slot) + value, 4)
+    }
+    out none
+}
+
+skill render(tones, length) {
+    @count = length * RATE / 1000
+    @store = bytes.new(count * 4)
+    drum (count) { put(store, beat * 4, BIAS, 4) }
+    drum (tones) { tone(store, beat) }
+    @made = bytes.new(44 + count * 2)
+    @head = "RIFF....WAVEfmt "
+    drum (16) { bytes.set(made, beat, str.byte(head, beat)) }
+    put(made, 4, 36 + count * 2, 4)
+    put(made, 16, 16, 4)
+    put(made, 20, 1, 2)
+    put(made, 22, 1, 2)
+    put(made, 24, RATE, 4)
+    put(made, 28, RATE * 2, 4)
+    put(made, 32, 2, 2)
+    put(made, 34, 16, 2)
+    @data = "data"
+    drum (4) { bytes.set(made, 36 + beat, str.byte(data, beat)) }
+    put(made, 40, count * 2, 4)
+    drum (count) {
+        @value = take(store, beat * 4) - BIAS
+        (value > 32767) { value = 32767 }
+        (value < -32767) { value = -32767 }
+        (value < 0) { value = value + 65536 }
+        put(made, 44 + beat * 2, value, 2)
+    }
+    out made
+}
+
+Sound = Box {
+    on = yes,
+    ready = no,
+    last_ping = 0
+
+    skill path(name) {
+        out "{FOLDER}/{name}.wav"
+    }
+
+    skill missing(name) {
+        @there = file.read_bytes(path(name)) rescue |err| { out yes }
+        out no
+    }
+
+    skill prepare() {
+        process.run(["mkdir", "-p", FOLDER], "", [])
+        drum (SOUNDS) {
+            @name = group.get(beat, 0)
+            (missing(name) == yes) { file.write_bytes(path(name), render(group.get(beat, 2), group.get(beat, 1))) }
+        }
+        drum (group.count(PENTA)) {
+            @note = group.get(PENTA, beat)
+            (missing("ping-{beat}") == yes) { file.write_bytes(path("ping-{beat}"), render([[TRIANGLE, note, 0, 0, 220, 105], [SINE, note * 2, 0, 0, 120, 36]], 260)) }
+        }
+        ready = yes
+        out none
+    }
+
+    skill play(name) {
+        (on == no) { out none }
+        (ready == no) { out none }
+        process.run(["bash", "-c", "pw-play \"$0\" &", path(name)], "", [])
+        out none
+    }
+
+    skill pings(count) {
+        (on == no) { out none }
+        (ready == no) { out none }
+        @shown = count
+        (shown > PINGS) { shown = PINGS }
+        @script = ""
+        drum (shown) {
+            last_ping = (last_ping * 5 + 3) % group.count(PENTA)
+            @wait = beat * GAP
+            @wav = path("ping-{last_ping}")
+            script = "{script}(sleep 0.{wait}; pw-play {wav}) & "
+        }
+        process.run(["bash", "-c", script], "", [])
+        out none
+    }
+
+    skill toggle() {
+        on = (on == no)
+        out none
+    }
+}

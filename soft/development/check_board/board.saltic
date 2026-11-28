@@ -1,0 +1,411 @@
+-- board — доска пульта: ветки global-check, их случаи и проверки по журналам в
+-- ../saltic/.cache/build/workbench. Знание о ветках — копия из
+-- workbench/check/global-check.saltic (решение автора 28.11.2026: пульт держит
+-- свою копию; поменялись ветки там — менять и здесь). Подготовка — каждый шаг
+-- отдельно (сборки проверок разом, потом лимиты канона, потом самосборка),
+-- потом ветки разом. Окно журналы не ждёт (интерфейс первее проверок): ask
+-- запускает PROBE в фоне, ответ ложится в ANSWER с меткой «seq …», collect
+-- забирает его, когда он готов. Быстрая (just quick) — одна ветка: лимиты и случаи
+-- языка на x86-64 в одном журнале board.log. Журналы читает один вызов bash в секунду (PROBE): есть ли,
+-- сколько [ok] и FAIL], «случаи:», последний «случай:», последняя строка, код.
+-- Пульт не молчит (принцип 1): у каждой идущей ветки видна её последняя строка.
+--
+-- Step { name, marker, seen, since } — случай; since — мс, когда пульт его увидел
+-- Branch { name, proc, log, cases, steps, done, code, since, took, ok, bad, last } —
+--     ветка или шаг подготовки; ok / bad — строки [ok] и FAIL] её журнала
+-- Board { home, started, launched, expected, asked, pending, mode, ended, driver, prep, field } —
+--     expected — проверок в прошлом прогоне этого вида (EXPECTED), 0 — не знаю;
+--     mode — QUICK или GLOBAL (прошлый — в MODE); driver — журнал
+--     самого just global-check (board.log);
+--     lay(root) — разложить ветки; start(mode) — стереть журналы прошлого прогона и
+--     запустить just quick или just global-check с самым низким приоритетом (nice 19, ionice 3:
+--     первенство — у отрисовки для человека, HUMAN-CONTRACT); ask() — спросить журналы в
+--     фоне; collect() -> yes, когда ответ пришёл и разобран;
+--     state(branch) / step_state(branch, index) -> "wait" | "run" | "ok" | "fail" | "skip";
+--     step_took(branch, index) -> мс случая, -1 — не знаю; counts() -> [прошло,
+--     провал, идёт, ждёт] клеток; checks() -> [прошло, упало] проверок;
+--     phase() -> что идёт словами; running() -> идущие ветки;
+--     spent() -> мс прогона (кончился — замер на конце; -1 — не знаю); finished() -> yes, когда прогон кончился;
+--     tail(branch) -> хвост журнала без [ok]
+-- Внутри: since(moment) -> мс от moment; take(branch, fields) — строка PROBE;
+--     scan(branch) — шаги самосборки, кодировщиков и платы по строкам журнала
+
+use core.str
+use core.time
+use core.group
+use core.process
+use io.file
+
+WORK = ".cache/build/workbench"
+EXPECTED = "board-checks"
+ANSWER = "board-probe.txt"
+MODE = "board-mode"
+QUICK = "quick"
+GLOBAL = "global"
+DAY = 86400000
+TAIL = 10
+TOOLS = ["limits", "tests", "refresh", "refresh-qemu", "x86-encoder-golden", "arm64-encoder-golden", "esp32", "esp32-toolchain"]
+TESTS = [["rv32i", "all", "все тесты"], ["x86_64", "native", "все тесты"], ["x86_64", "os", "ОС"], ["x86_64", "cross", "чужие процессоры"], ["rv64", "all", "все тесты"], ["arm64", "all", "все тесты"], ["rv32i", "platforms", "платформы"]]
+GOLDEN = [["шаг 1:", "GNU as"], ["шаг 2:", "сборка команд"], ["шаг 3:", "сверка"]]
+ESP32 = [["шаг 1:", "плата или кодировщик"], ["шаг 2:", "сборка"], ["шаг 3:", "сверка"]]
+CASES = "случаи: "
+CASE = "случай: "
+PROBE = "for f in \"$@\"; do if [ -e \"$f\" ]; then ok=$(grep -ac '\\[ok\\]' \"$f\"); bad=$(grep -ac 'FAIL\\]' \"$f\"); cs=$(grep -a -m1 '^случаи: ' \"$f\"); c=$(grep -a '^случай: ' \"$f\" | tail -n1); l=$(grep -av '^[[:space:]]*$' \"$f\" | tail -n1 | tr '\\t' ' '); code=''; if [ -e \"$f.code\" ]; then code=$(head -c 8 \"$f.code\" | tr -dc '0-9'); fi; printf '%s\\t1\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' \"$f\" \"$ok\" \"$bad\" \"$code\" \"$cs\" \"$c\" \"$l\"; else printf '%s\\t0\\n' \"$f\"; fi; done"
+
+Step = Box {
+    name = "",
+    marker = "",
+    seen = no,
+    since = 0
+}
+
+Branch = Box {
+    name = "",
+    proc = "",
+    log = "",
+    cases = no,
+    steps = [],
+    done = no,
+    code = 0,
+    since = -1,
+    took = -1,
+    ok = 0,
+    bad = 0,
+    last = ""
+}
+
+Board = Box {
+    home = "../saltic",
+    started = 0,
+    launched = no,
+    expected = 0,
+    asked = 0,
+    pending = no,
+    mode = "global",
+    ended = -1,
+    driver = Branch {},
+    prep = [],
+    field = []
+
+    skill since(moment) {
+        @gone = time.now() - moment
+        (gone < 0) { gone = gone + DAY }
+        out gone
+    }
+
+    skill steps_of(pairs) {
+        @result = []
+        drum (pairs) { result = group.add(result, Step { name = group.get(beat, 1), marker = group.get(beat, 0) }) }
+        out result
+    }
+
+    skill self_steps(target) {
+        out steps_of([["собирает компилятор под {target}", "stage1"], ["компилятор {target} собирает себя", "stage2 и stage3"], ["проверяю fixed point", "fixed point"], ["сверяю с эталоном", "сверка с полкой"]])
+    }
+
+    skill number(text) {
+        @value = 0
+        drum (str.bytes(text)) {
+            @digit = str.byte(text, beat) - 48
+            (digit >= 0) {
+                (digit < 10) { value = value * 10 + digit }
+            }
+        }
+        out value
+    }
+
+    skill lay(root) {
+        home = root
+        pending = no
+        @work = "{home}/{WORK}"
+        @kept = file.read("{work}/{MODE}") rescue |err| { GLOBAL }
+        mode = GLOBAL
+        (str.starts_with(kept, QUICK) == yes) { mode = QUICK }
+        driver = Branch { name = "just {mode}", proc = "x86-64", log = "{work}/board.log" }
+        @known = file.read("{work}/{EXPECTED}-{mode}") rescue |err| { "" }
+        expected = number(known)
+        prep = []
+        field = []
+        (mode == QUICK) {
+            field = [Branch { name = "быстрая · случаи языка", proc = "x86-64", log = "{work}/board.log", cases = yes }]
+            out none
+        }
+        drum (TOOLS) { prep = group.add(prep, Branch { name = beat, proc = "x86-64", log = "{work}/build-{beat}.log" }) }
+        prep = group.add(prep, Branch { name = "лимиты канона", proc = "x86-64", log = "{work}/limits.log" })
+        prep = group.add(prep, Branch { name = "самосборка", proc = "x86-64", log = "{work}/refresh.log" })
+        drum (TESTS) {
+            @host = group.get(beat, 0)
+            @suites = group.get(beat, 1)
+            @proc = host
+            (host == "x86_64") { proc = "x86-64" }
+            field = group.add(field, Branch { name = group.get(beat, 2), proc = proc, log = "{work}/check-{host}-{suites}.log", cases = yes })
+        }
+        drum (["rv64", "arm64"]) { field = group.add(field, Branch { name = "самосборка", proc = beat, log = "{work}/check-{beat}-self.log", steps = self_steps(beat) }) }
+        field = group.add(field, Branch { name = "кодировщик", proc = "x86-64", log = "{work}/check-x86-golden.log", steps = steps_of(GOLDEN) })
+        field = group.add(field, Branch { name = "кодировщик", proc = "arm64", log = "{work}/check-arm64-golden.log", steps = steps_of(GOLDEN) })
+        field = group.add(field, Branch { name = "плата", proc = "esp32", log = "{work}/check-esp32.log", steps = steps_of(ESP32) })
+        field = group.add(field, Branch { name = "под Node", proc = "wasm", log = "{work}/check-wasm.log", cases = yes })
+        out none
+    }
+
+    skill start(wanted) {
+        file.write("{home}/{WORK}/{MODE}", "{wanted}\n")
+        lay(home)
+        @gone = []
+        drum (group.concat(prep, field)) {
+            gone = group.add(gone, beat.log)
+            gone = group.add(gone, "{beat.log}.code")
+        }
+        process.run(group.concat(["rm", "-f", "{home}/{WORK}/board.log", "{home}/{WORK}/board.log.code"], gone), "", [])
+        @recipe = "global-check"
+        (wanted == QUICK) { recipe = QUICK }
+        @wrapped = "nice -n 19 ionice -c 3 just {recipe} > \"$0\" 2>&1; echo $? > \"$0.code\""
+        @bash = process.locate("bash")
+        process.open(bash, ["bash", "-c", wrapped, "{WORK}/board.log"], home, no, process.environment_with(["SALTIC_PLAIN=1"]), no)
+        lay(home)
+        started = time.now()
+        ended = -1
+        launched = yes
+        out none
+    }
+
+    skill take(branch, fields) {
+        (group.get(fields, 1) == "0") { out none }
+        (branch.since < 0) { branch.since = time.now() }
+        @count = group.count(fields)
+        (count < 8) { out none }
+        branch.ok = number(group.get(fields, 2))
+        branch.bad = number(group.get(fields, 3))
+        branch.last = str.join(group.slice(fields, 7, count), " ")
+        (branch.cases == yes) {
+            @listed = group.get(fields, 5)
+            (group.count(branch.steps) == 0) {
+                (str.starts_with(listed, CASES) == yes) {
+                    drum (group.without(str.split(str.slice(listed, str.bytes(CASES), str.bytes(listed)), " "), "")) { branch.steps = group.add(branch.steps, Step { name = beat, marker = "{CASE}{beat}" }) }
+                }
+            }
+            @current = group.get(fields, 6)
+            @reached = -1
+            drum (group.count(branch.steps)) {
+                @item = group.get(branch.steps, beat)
+                (item.marker == current) { reached = beat }
+            }
+            drum (reached + 1) {
+                @item = group.get(branch.steps, beat)
+                (item.seen == no) {
+                    item.seen = yes
+                    item.since = time.now()
+                }
+            }
+        }
+        (branch.cases == no) { scan(branch) }
+        @code = group.get(fields, 4)
+        (str.bytes(code) > 0) {
+            branch.code = number(code)
+            branch.done = yes
+            (launched == yes) { branch.took = since(branch.since) }
+        }
+        out none
+    }
+
+    skill scan(branch) {
+        (group.count(branch.steps) == 0) { out none }
+        @text = file.read(branch.log) rescue |err| { out none }
+        drum (group.without(str.lines(text), "")) {
+            @line = beat
+            drum (branch.steps) {
+                (beat.seen == no) {
+                    (str.contains(line, beat.marker) == yes) {
+                        beat.seen = yes
+                        beat.since = time.now()
+                    }
+                }
+            }
+        }
+        out none
+    }
+
+    skill ask() {
+        (pending == yes) { out none }
+        @open_ones = []
+        drum (group.concat([driver], group.concat(prep, field))) {
+            (beat.done == no) { open_ones = group.add(open_ones, beat.log) }
+        }
+        (group.count(open_ones) == 0) { out none }
+        asked = time.now()
+        @script = "( echo \"seq $1\"; shift; {PROBE} ) > \"$0.part\" && mv -f \"$0.part\" \"$0\" &"
+        process.run(group.concat(["bash", "-c", script, "{home}/{WORK}/{ANSWER}", "{asked}"], open_ones), "", [])
+        pending = yes
+        out none
+    }
+
+    skill collect() {
+        (pending == no) { out no }
+        @text = file.read("{home}/{WORK}/{ANSWER}") rescue |err| { out no }
+        @lines = group.without(str.lines(text), "")
+        (group.count(lines) == 0) { out no }
+        ((group.get(lines, 0) == "seq {asked}") == no) { out no }
+        pending = no
+        drum (group.slice(lines, 1, group.count(lines))) {
+            @fields = str.split(beat, "\t")
+            @path = group.get(fields, 0)
+            drum (group.concat([driver], group.concat(prep, field))) {
+                (beat.done == no) {
+                    (beat.log == path) { take(beat, fields) }
+                }
+            }
+        }
+        (finished() == yes) {
+            (launched == yes) {
+                ended = since(started)
+                @made = checks()
+                @total = group.get(made, 0) + group.get(made, 1)
+                file.write("{home}/{WORK}/{EXPECTED}-{mode}", "{total}\n") rescue |err| { none }
+            }
+        }
+        out yes
+    }
+
+    skill state(branch) {
+        (branch.done == yes) {
+            ((branch.code == 0) == no) { out "fail" }
+            out "ok"
+        }
+        (branch.since < 0) { out "wait" }
+        out "run"
+    }
+
+    skill last_seen(branch) {
+        @result = -1
+        drum (group.count(branch.steps)) {
+            @item = group.get(branch.steps, beat)
+            (item.seen == yes) { result = beat }
+        }
+        out result
+    }
+
+    skill step_state(branch, index) {
+        @item = group.get(branch.steps, index)
+        (item.seen == no) {
+            (branch.done == yes) { out "skip" }
+            out "wait"
+        }
+        (index == last_seen(branch)) {
+            (branch.done == no) { out "run" }
+            ((branch.code == 0) == no) { out "fail" }
+        }
+        out "ok"
+    }
+
+    skill step_took(branch, index) {
+        (launched == no) { out -1 }
+        @item = group.get(branch.steps, index)
+        (item.seen == no) { out -1 }
+        drum (group.count(branch.steps) - index - 1) {
+            @later = group.get(branch.steps, index + 1 + beat)
+            (later.seen == yes) {
+                @gap = later.since - item.since
+                (gap < 0) { gap = gap + DAY }
+                out gap
+            }
+        }
+        (branch.done == yes) { out -1 }
+        out since(item.since)
+    }
+
+    skill counts() {
+        @tally = [0, 0, 0, 0]
+        drum (prep) {
+            @slot = 3
+            @state = state(beat)
+            (state == "ok") { slot = 0 }
+            (state == "fail") { slot = 1 }
+            (state == "run") { slot = 2 }
+            tally = group.replaced(tally, slot, group.get(tally, slot) + 1)
+        }
+        drum (field) {
+            @branch = beat
+            drum (group.count(branch.steps)) {
+                @slot = 3
+                @state = step_state(branch, beat)
+                (state == "ok") { slot = 0 }
+                (state == "fail") { slot = 1 }
+                (state == "run") { slot = 2 }
+                tally = group.replaced(tally, slot, group.get(tally, slot) + 1)
+            }
+        }
+        out tally
+    }
+
+    skill checks() {
+        @ok = 0
+        @bad = 0
+        drum (group.concat(prep, field)) {
+            ok = ok + beat.ok
+            bad = bad + beat.bad
+        }
+        out [ok, bad]
+    }
+
+    skill running() {
+        @result = []
+        drum (group.concat(prep, field)) {
+            (state(beat) == "run") { result = group.add(result, beat) }
+        }
+        out result
+    }
+
+    skill phase() {
+        (launched == no) { out "прошлый прогон ({mode}) с диска — «▶ быстрая» или «глобальная» запустит новый" }
+        (finished() == yes) {
+            @broken = 0
+            drum (group.concat(prep, field)) {
+                (state(beat) == "fail") { broken = broken + 1 }
+            }
+            @all = group.count(field)
+            (broken > 0) { out "итог · ✕ упало {broken} — щёлкни по красной ветке, там хвост журнала" }
+            out "итог · ✓ всё зелёное: {all} из {all} веток — проверка кончилась, время остановлено"
+        }
+        (mode == QUICK) {
+            @quick = group.get(field, 0)
+            (group.count(quick.steps) == 0) { out "быстрая · лимиты канона и сборка проверок" }
+            out "быстрая · случаи языка на x86-64"
+        }
+        @builds = 0
+        drum (group.count(TOOLS)) {
+            (state(group.get(prep, beat)) == "run") { builds = builds + 1 }
+        }
+        (builds > 0) { out "подготовка · собираю инструменты проверки: идёт {builds} из 8" }
+        (state(group.get(prep, 8)) == "run") { out "подготовка · лимиты канона" }
+        (state(group.get(prep, 9)) == "run") { out "подготовка · самосборка компилятора" }
+        @going = 0
+        drum (field) {
+            (state(beat) == "run") { going = going + 1 }
+        }
+        @all = group.count(field)
+        (going > 0) { out "ветки разом · идёт {going} из {all}" }
+        out "запуск just global-check: сборка самого global-check"
+    }
+
+    skill finished() {
+        (launched == no) { out yes }
+        out driver.done
+    }
+
+    skill spent() {
+        (launched == no) { out -1 }
+        (ended >= 0) { out ended }
+        out since(started)
+    }
+
+    skill tail(branch) {
+        @text = file.read(branch.log) rescue |err| { out [] }
+        @kept = []
+        drum (group.without(str.lines(text), "")) {
+            (str.contains(beat, "[ok]") == no) { kept = group.add(kept, beat) }
+        }
+        @start = group.count(kept) - TAIL
+        (start < 0) { start = 0 }
+        out group.slice(kept, start, group.count(kept))
+    }
+}

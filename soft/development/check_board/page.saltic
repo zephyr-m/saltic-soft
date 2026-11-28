@@ -1,0 +1,339 @@
+-- page — экран пульта текстом JTML (вид docs/site/private/CHECK-LOOK.html, язык
+-- вида docs/design/LANGUAGE.md): шапка — заголовок, главное число по центру
+-- (сколько проверок прошло и упало — строки [ok] и FAIL]; идёт — голубое,
+-- итог — зелёное или красное) и
+-- кнопки «▶ быстрая» (главная, горчичная) и «глобальная»; под ней счётчики прошло · провал · идёт · ждёт, полоса и
+-- часы; «сейчас» — фаза словами и последняя строка журнала каждой идущей
+-- ветки (пульт не молчит); разделы «подготовка — по очереди» и «ветки — разом»: панель ветки —
+-- имя, метка процессора, счёт; случаи — клетки с крутилкой (кольцо line, дуга
+-- «идёт» голубая, итог — галочка или крест) и временем. Справа — журнал: вкладка
+-- самого just и вкладка выбранной щелчком ветки, строки цветом вида, свежее
+-- внизу, фильтры «только провалы» · «без [ok]» · «всё», размер журнала.
+--
+-- Log { lines, filter, bytes, cost, fps } — что показывает журнал (окно читает
+--     его само); cost — мс последнего кадра, stages — его стадии (текст JTML,
+--     разбор, мерка текста, места, сверка, рисунок), painted — % экрана в кадре; fps — кадров за каждую из последних
+--     FPS_SECONDS секунд: график под журналом
+-- jtml(desk, first, picked, tick, shown, log, voiced) -> текст экрана; voiced —
+--     звук включён (кнопка «звук» нажата — рамка и текст голубые); shown — проверок на
+--     счётчике (окно ведёт его плавно); first — с какой ветки
+--     показывать поле (колесо), picked — [ветка] вкладки журнала или [] — журнал самого just,
+--     tick — угол крутилок в градусах (оборот за 800 мс)
+-- QUICK, AGAIN, SOUND, CLOSE, CELL, FILTER_* — цели щелчка (QUICK — быстрая, AGAIN —
+--     глобальная, CLOSE — вкладка самого just) (CELL + "ветка-случай")
+-- Внутри: text/row/column — атомы; spinner, cell, branch_panel, counter, top,
+--     meter, journal, tab — части экрана; line_tone(line) -> цвет вида строки; clock(ms) -> "м:сс.д"
+
+use core.str
+use core.group
+use tarantul.uiengine.jtml.calls
+use tarantul.uiengine.jtml.reader
+use soft.development.check_board.board
+
+AGAIN = "again"
+QUICK = "quick"
+SOUND = "sound"
+CLOSE = "close"
+CELL = "cell-"
+FILTER_FAILS = "filter-fails"
+FILTER_QUIET = "filter-quiet"
+FILTER_ALL = "filter-all"
+LOG_WIDE = 500
+LOG_LINES = 31
+FPS_SECONDS = 60
+
+Log = Box {
+    lines = [],
+    filter = "filter-quiet",
+    bytes = 0,
+    cost = 0,
+    stages = [0, 0, 0, 0, 0, 0],
+    painted = 0,
+    fps = []
+}
+WIDE = 1440
+PER_ROW = 8
+CELL_WIDE = 162
+HERO = 96
+
+skill text(value, size, tone, mono, bold) {
+    @pairs = [["value", calls.quoted(value)], ["size", "{size}"], ["tone", calls.quoted(tone)]]
+    (mono == yes) { pairs = group.add(pairs, ["mono", calls.quoted("yes")]) }
+    (bold == yes) { pairs = group.add(pairs, ["weight", calls.quoted("bold")]) }
+    out calls.call("text", pairs)
+}
+
+skill caption(value) {
+    out calls.call("text", [["value", calls.quoted(value)], ["caps", calls.quoted("yes")], ["tone", calls.quoted("quiet")]])
+}
+
+skill row(gap, align, children) {
+    out calls.call("box", [["flow", calls.quoted("row")], ["gap", "{gap}"], ["align", calls.quoted(align)], ["children", calls.listed(children)]])
+}
+
+skill column(gap, children) {
+    out calls.call("box", [["flow", calls.quoted("column")], ["gap", "{gap}"], ["children", calls.listed(children)]])
+}
+
+skill clock(ms) {
+    @tenths = ms / 100
+    @minutes = tenths / 600
+    @seconds = (tenths % 600) / 10
+    @part = tenths % 10
+    @pad = ""
+    (seconds < 10) { pad = "0" }
+    out "{minutes}:{pad}{seconds}.{part}"
+}
+
+skill spaced(value) {
+    @digits = "{value}"
+    @count = str.bytes(digits)
+    @result = ""
+    drum (count) {
+        ((beat > 0) == yes) {
+            ((count - beat) % 3 == 0) { result = "{result} " }
+        }
+        @one = str.slice(digits, beat, beat + 1)
+        result = "{result}{one}"
+    }
+    out result
+}
+
+skill quiet_line(value, size) {
+    out calls.call("text", [["value", calls.quoted(value)], ["size", "{size}"], ["mono", calls.quoted("yes")], ["tone", calls.quoted("quiet")], ["cut", calls.quoted("yes")], ["grow", "1"]])
+}
+
+skill now(desk, tick) {
+    @rows = [text(desk.phase(), 15, "ink", no, yes)]
+    @going = desk.running()
+    drum (going) {
+        @who = calls.call("text", [["value", calls.quoted("{beat.proc} · {beat.name}")], ["size", "12"], ["mono", calls.quoted("yes")], ["tone", calls.quoted("ink")], ["width", "230"], ["cut", calls.quoted("yes")]])
+        rows = group.add(rows, row(10, "center", [spinner("run", tick), who, quiet_line(reader.replaced(beat.last, "⏳", "…"), 12)]))
+    }
+    (group.count(going) == 0) {
+        @driver = desk.driver
+        (desk.launched == yes) { rows = group.add(rows, quiet_line(driver.last, 12)) }
+    }
+    out calls.call("box", [["flow", calls.quoted("column")], ["gap", "8"], ["padding", "[14, 16, 14, 16]"], ["radius", "16"], ["border", "1"], ["fill", calls.quoted("panel")], ["edge", calls.quoted("rim")], ["children", calls.listed(rows)]])
+}
+
+skill tone_of(state) {
+    (state == "ok") { out "up" }
+    (state == "fail") { out "down" }
+    (state == "run") { out "accent" }
+    out "gutter"
+}
+
+skill spinner(state, tick) {
+    (state == "run") {
+        @turn = tick % 360
+        @arc = calls.call("circle", [["size", "20"], ["border", "2"], ["edge", calls.quoted("accent")], ["sweep", "80"], ["start", "{turn}"]])
+        out calls.call("circle", [["size", "20"], ["border", "2"], ["edge", calls.quoted("line")], ["children", calls.listed([arc])]])
+    }
+    (state == "ok") { out calls.call("circle", [["size", "20"], ["border", "2"], ["edge", calls.quoted("up")], ["children", calls.listed([text("✓", 12, "up", no, yes)])]]) }
+    (state == "fail") { out calls.call("circle", [["size", "20"], ["border", "2"], ["edge", calls.quoted("down")], ["children", calls.listed([text("✕", 12, "down", no, yes)])]]) }
+    @dot = calls.call("circle", [["size", "4"], ["fill", calls.quoted("gutter")]])
+    out calls.call("circle", [["size", "20"], ["border", "2"], ["edge", calls.quoted("line")], ["children", calls.listed([dot])]])
+}
+
+skill cell(id, state, name, took, tick) {
+    @fill = "well"
+    @edge = "well"
+    (state == "run") {
+        fill = "accent_soft"
+        edge = "accent_rim"
+    }
+    (state == "fail") {
+        fill = "down_soft"
+        edge = "down_rim"
+    }
+    @tone = "ink"
+    (state == "wait") { tone = "quiet" }
+    (state == "skip") { tone = "gutter" }
+    @time = "·"
+    (took > 0) { time = clock(took) }
+    @time_tone = "quiet"
+    (state == "run") { time_tone = "accent" }
+    (state == "fail") { time_tone = "down" }
+    @name_text = calls.call("text", [["value", calls.quoted(name)], ["size", "12"], ["mono", calls.quoted("yes")], ["tone", calls.quoted(tone)], ["cut", calls.quoted("yes")], ["grow", "1"]])
+    out calls.call("box", [["id", calls.quoted(id)], ["flow", calls.quoted("row")], ["width", "{CELL_WIDE}"], ["gap", "8"], ["align", calls.quoted("center")], ["padding", "[7, 9, 7, 9]"], ["radius", "10"], ["border", "1"], ["fill", calls.quoted(fill)], ["edge", calls.quoted(edge)], ["children", calls.listed([spinner(state, tick), name_text, text(time, 11, time_tone, yes, no)])]])
+}
+
+skill branch_panel(desk, index, branch, tick) {
+    @state = desk.state(branch)
+    @count = group.count(branch.steps)
+    @finished = 0
+    drum (count) {
+        @one = desk.step_state(branch, beat)
+        (one == "ok") { finished = finished + 1 }
+        (one == "fail") { finished = finished + 1 }
+    }
+    @sum = "{finished} / {count}"
+    (branch.ok + branch.bad > 0) {
+        @made = spaced(branch.ok)
+        sum = "{sum} · {made} ✓"
+        (branch.bad > 0) { sum = "{sum} · {branch.bad} ✕" }
+    }
+    @proc = calls.call("badge", [["text", calls.quoted(branch.proc)], ["tone", calls.quoted("mustard")]])
+    @head = row(10, "center", [spinner(state, tick), text(branch.name, 15, "ink", no, yes), proc, calls.call("box", [["grow", "1"]]), text(sum, 12, tone_of(state), yes, no)])
+    @rows = [head]
+    (state == "run") { rows = group.add(rows, quiet_line(branch.last, 11)) }
+    @line = []
+    drum (count) {
+        @item = group.get(branch.steps, beat)
+        line = group.add(line, cell("{CELL}{index}-{beat}", desk.step_state(branch, beat), item.name, desk.step_took(branch, beat), tick))
+        (group.count(line) == PER_ROW) {
+            rows = group.add(rows, row(6, "start", line))
+            line = []
+        }
+    }
+    (group.count(line) > 0) { rows = group.add(rows, row(6, "start", line)) }
+    out calls.call("box", [["id", calls.quoted("{CELL}{index}")], ["flow", calls.quoted("column")], ["gap", "8"], ["padding", "14"], ["radius", "16"], ["border", "1"], ["fill", calls.quoted("panel")], ["edge", calls.quoted("rim")], ["children", calls.listed(rows)]])
+}
+
+skill counter(value, label, tone) {
+    out column(2, [text("{value}", 34, tone, yes, yes), caption(label)])
+}
+
+skill top(desk, shown, voiced) {
+    @made = desk.checks()
+    @done = spaced(shown)
+    @under = "проверок"
+    (desk.expected > 0) {
+        @was = spaced(desk.expected)
+        under = "из ≈{was} проверок (прошлый прогон)"
+    }
+    @hero_tone = "accent"
+    (desk.finished() == yes) {
+        hero_tone = "up"
+        (group.get(made, 1) > 0) { hero_tone = "down" }
+        @tally = desk.counts()
+        (group.get(tally, 1) > 0) { hero_tone = "down" }
+    }
+    @title = column(4, [text("Проверка всего", 26, "ink", no, yes), text("just {desk.mode} · ../saltic", 12, "gutter", yes, no)])
+    @hero = calls.call("box", [["flow", calls.quoted("column")], ["gap", "0"], ["align", calls.quoted("center")], ["children", calls.listed([text(done, HERO, hero_tone, yes, yes), text(under, 14, "quiet", yes, no)])]])
+    @quick = calls.call("box", [["id", calls.quoted(QUICK)], ["fill", calls.quoted("mustard")], ["radius", "9"], ["padding", "[8, 14, 8, 14]"], ["children", calls.listed([text("▶ быстрая", 13, "ground", no, yes)])]])
+    @whole = calls.call("box", [["id", calls.quoted(AGAIN)], ["fill", calls.quoted("raise")], ["edge", calls.quoted("line")], ["border", "1"], ["radius", "9"], ["padding", "[8, 14, 8, 14]"], ["children", calls.listed([text("глобальная", 13, "ink", no, no)])]])
+    @sound_edge = "line"
+    @sound_tone = "ink"
+    (voiced == yes) {
+        sound_edge = "accent"
+        sound_tone = "accent"
+    }
+    @voice = calls.call("box", [["id", calls.quoted(SOUND)], ["fill", calls.quoted("raise")], ["edge", calls.quoted(sound_edge)], ["border", "1"], ["radius", "9"], ["padding", "[8, 14, 8, 14]"], ["children", calls.listed([text("звук", 13, sound_tone, no, no)])]])
+    @again = row(8, "center", [voice, quick, whole])
+    @left = calls.call("box", [["flow", calls.quoted("row")], ["grow", "1"], ["children", calls.listed([title])]])
+    @right = calls.call("box", [["flow", calls.quoted("row")], ["grow", "1"], ["justify", calls.quoted("end")], ["children", calls.listed([again])]])
+    out row(24, "center", [left, hero, right])
+}
+
+skill meter(desk) {
+    @tally = desk.counts()
+    @total = group.get(tally, 0) + group.get(tally, 1) + group.get(tally, 2) + group.get(tally, 3)
+    (total == 0) { total = 1 }
+    @green = (group.get(tally, 0) * 1000) / total
+    @red = (group.get(tally, 1) * 1000) / total
+    @rest = 1000 - green - red
+    @bar = calls.call("box", [["flow", calls.quoted("row")], ["grow", "1"], ["height", "6"], ["radius", "3"], ["fill", calls.quoted("well")], ["gap", "0"], ["children", calls.listed([calls.call("box", [["grow", "{green}"], ["height", "6"], ["radius", "3"], ["fill", calls.quoted("up")]]), calls.call("box", [["grow", "{red}"], ["height", "6"], ["fill", calls.quoted("down")]]), calls.call("box", [["grow", "{rest}"], ["height", "6"]])])]])
+    @spent = desk.spent()
+    @shown = "—"
+    @label = "время прогона не знаю"
+    (spent >= 0) {
+        shown = clock(spent)
+        label = "прошло времени"
+        (desk.finished() == yes) { label = "прогон занял" }
+    }
+    @time = calls.call("box", [["flow", calls.quoted("column")], ["gap", "2"], ["align", calls.quoted("end")], ["children", calls.listed([text(shown, 22, "ink", yes, yes), caption(label)])]])
+    @parts = [counter(group.get(tally, 0), "прошло", "up"), counter(group.get(tally, 1), "провал", "down"), counter(group.get(tally, 2), "идёт", "accent"), counter(group.get(tally, 3), "ждёт", "gutter"), bar, time]
+    out calls.call("box", [["flow", calls.quoted("row")], ["gap", "26"], ["align", calls.quoted("center")], ["padding", "[16, 22, 16, 22]"], ["radius", "16"], ["border", "1"], ["fill", calls.quoted("panel")], ["edge", calls.quoted("rim")], ["children", calls.listed(parts)]])
+}
+
+skill prep_row(desk, tick) {
+    @rows = []
+    @cells = []
+    drum (group.count(desk.prep)) {
+        @branch = group.get(desk.prep, beat)
+        cells = group.add(cells, cell("{CELL}p-{beat}", desk.state(branch), branch.name, branch.took, tick))
+        (group.count(cells) == PER_ROW) {
+            rows = group.add(rows, row(6, "start", cells))
+            cells = []
+        }
+    }
+    (group.count(cells) > 0) { rows = group.add(rows, row(6, "start", cells)) }
+    out column(6, rows)
+}
+
+skill line_tone(line) {
+    (str.contains(line, "[ok]") == yes) { out "quiet" }
+    (str.contains(line, "FAIL") == yes) { out "down" }
+    (str.contains(line, "✗") == yes) { out "down" }
+    (str.contains(line, "ошибка") == yes) { out "down" }
+    (str.starts_with(line, "случай: ") == yes) { out "ink" }
+    (str.contains(line, "⏳") == yes) { out "accent" }
+    (str.contains(line, "✓") == yes) { out "up" }
+    out "quiet"
+}
+
+skill tab(id, value, current) {
+    @fill = "well"
+    @edge = "line"
+    @tone = "quiet"
+    (current == yes) {
+        fill = "raise"
+        edge = "accent"
+        tone = "accent"
+    }
+    out calls.call("box", [["id", calls.quoted(id)], ["fill", calls.quoted(fill)], ["edge", calls.quoted(edge)], ["border", "1"], ["radius", "9"], ["padding", "[6, 12, 6, 12]"], ["children", calls.listed([calls.call("text", [["value", calls.quoted(value)], ["size", "12"], ["mono", calls.quoted("yes")], ["tone", calls.quoted(tone)], ["cut", calls.quoted("yes")]])])]])
+}
+
+skill journal(desk, picked, log) {
+    @driver = desk.driver
+    @tabs = [tab(CLOSE, driver.name, group.count(picked) == 0)]
+    (group.count(picked) > 0) {
+        @index = group.get(picked, 0)
+        @branch = group.get(desk.field, index)
+        tabs = group.add(tabs, tab("{CELL}{index}", "{branch.proc} · {branch.name}", yes))
+    }
+    @lines = []
+    drum (log.lines) { lines = group.add(lines, calls.call("text", [["value", calls.quoted(reader.replaced(beat, "⏳", "…"))], ["size", "12"], ["mono", calls.quoted("yes")], ["tone", calls.quoted(line_tone(beat))], ["cut", calls.quoted("yes")]])) }
+    (group.count(lines) == 0) {
+        lines = [text("журнала пока нет — проверка его ещё не начала", 12, "gutter", yes, no)]
+        (log.bytes > 0) { lines = [text("✓ провалов нет", 12, "up", yes, no)] }
+    }
+    @screen = calls.call("box", [["flow", calls.quoted("column")], ["grow", "1"], ["gap", "3"], ["justify", calls.quoted("end")], ["padding", "[12, 14, 12, 14]"], ["radius", "12"], ["border", "1"], ["fill", calls.quoted("well")], ["edge", calls.quoted("line")], ["children", calls.listed(lines)]])
+    @live = "● прошлый прогон"
+    (desk.finished() == no) { live = "● живьём · раз в секунду" }
+    @kilo = log.bytes / 1024
+    @foot = row(8, "center", [text(live, 11, "quiet", yes, no), calls.call("box", [["grow", "1"]]), text("кадр {log.cost} мс · {kilo} КБ", 11, "quiet", yes, no)])
+    @bars = []
+    @last = 0
+    drum (log.fps) {
+        last = beat
+        @high = beat * 2
+        (high > 40) { high = 40 }
+        (high < 1) { high = 1 }
+        bars = group.add(bars, calls.call("box", [["width", "5"], ["height", "{high}"], ["radius", "1"], ["fill", calls.quoted("accent")]]))
+    }
+    @graph = calls.call("box", [["flow", calls.quoted("row")], ["grow", "1"], ["height", "40"], ["gap", "2"], ["align", calls.quoted("end")], ["children", calls.listed(bars)]])
+    @rate = column(2, [text("{last} к/с", 22, "ink", yes, yes), caption("кадров в секунду")])
+    @made = group.get(log.stages, 0)
+    @parse = group.get(log.stages, 1)
+    @fit = group.get(log.stages, 2)
+    @place = group.get(log.stages, 3)
+    @compare = group.get(log.stages, 4)
+    @paint = group.get(log.stages, 5)
+    @split = text("кадр {log.cost} мс: текст {made} · разбор {parse} · мерка {fit} · места {place} · сверка {compare} · рисунок {paint} ({log.painted}% экрана)", 11, "quiet", yes, no)
+    @frames = calls.call("box", [["flow", calls.quoted("row")], ["gap", "14"], ["align", calls.quoted("end")], ["padding", "[10, 14, 10, 14]"], ["radius", "12"], ["border", "1"], ["fill", calls.quoted("panel")], ["edge", calls.quoted("rim")], ["children", calls.listed([rate, graph])]])
+    @filters = row(6, "center", [tab(FILTER_FAILS, "только провалы", log.filter == FILTER_FAILS), tab(FILTER_QUIET, "без [ok]", log.filter == FILTER_QUIET), tab(FILTER_ALL, "всё", log.filter == FILTER_ALL)])
+    @body = [calls.call("section-title", [["text", calls.quoted("журнал")]]), row(6, "center", tabs), screen, foot, filters, frames, split]
+    out calls.call("box", [["flow", calls.quoted("column")], ["width", "{LOG_WIDE}"], ["gap", "10"], ["padding", "[22, 22, 22, 0]"], ["fill", calls.quoted("ground")], ["children", calls.listed(body)]])
+}
+
+skill jtml(desk, first, picked, tick, shown, log, voiced) {
+    @panels = []
+    drum (group.count(desk.field) - first) { panels = group.add(panels, branch_panel(desk, first + beat, group.get(desk.field, first + beat), tick)) }
+    @page = [top(desk, shown, voiced), meter(desk), calls.call("section-title", [["text", calls.quoted("сейчас")]]), now(desk, tick), calls.call("section-title", [["text", calls.quoted("подготовка — по очереди")]]), prep_row(desk, tick), calls.call("section-title", [["text", calls.quoted("ветки — разом · колесо листает")]])]
+    (group.count(desk.prep) == 0) { page = [top(desk, shown, voiced), meter(desk), calls.call("section-title", [["text", calls.quoted("сейчас")]]), now(desk, tick), calls.call("section-title", [["text", calls.quoted("случаи")]])] }
+    @content = calls.call("box", [["flow", calls.quoted("column")], ["grow", "1"], ["gap", "14"], ["padding", "22"], ["children", calls.listed(group.concat(page, panels))]])
+    out calls.call("box", [["flow", calls.quoted("row")], ["gap", "0"], ["fill", calls.quoted("ground")], ["align", calls.quoted("stretch")], ["children", calls.listed([content, journal(desk, picked, log)])]])
+}
