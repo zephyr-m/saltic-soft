@@ -28,7 +28,7 @@ PROGRAMS = [
     ["salticide", "soft/development/salticide/linux/main.saltic", "SalticIDE", "IDE языка Saltic", "Development;", "logo", ""],
     ["jtmlview", "soft/development/jtmlview/main.saltic", "jtml-view", "Жители UIEngine настоящим движком", "Development;", "apps", ""],
     ["polygon", "soft/development/polygon/main.saltic", "Полигон Saltic", "Сборки и железо — экран на жителях UIEngine", "Development;", "toolbox", ""],
-    ["check-board", "soft/development/check_board/main.saltic", "Проверка всего", "Пульт global-check: запускает проверку языка и показывает ветки и случаи живьём", "Development;", "shield", ""],
+    ["check-board", "soft/development/check_board/main.saltic", "Проверка всего", "Пульт global-check: запускает проверку языка и показывает ветки и случаи живьём", "Development;", "checkmark-circle", ""],
     ["tesseract", "soft/development/tesseract/main.saltic", "Tesseract", "Скелет машины: этажи, сектора и время — клетки-кубики в 3D", "Development;", "apps", ""],
     ["scene", "soft/graphics/scene/main.saltic", "Сцена", "Оболочка 3D-редактора на жителях UIEngine — образец, движка ещё нет", "Graphics;", "image", ""],
     ["crystal", "soft/graphics/crystal/main.saltic", "Кристалл", "Гранёный кристалл с трассировкой лучей: вращается, свет преломляется в гранях", "Graphics;", "weather-snowflake", "window"],
