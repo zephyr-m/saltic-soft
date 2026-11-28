@@ -49,7 +49,7 @@ skill keys() {
 }
 
 skill cell_text(model, x, y) {
-    drum (group.count(model.workers)) {
+    drum (model.workers) {
         @worker = group.get(model.workers, beat)
         (worker.x == x) {
             (worker.y == y) {
@@ -120,7 +120,7 @@ skill turn_once(desk) {
     (str.contains(pressed, "[C") == yes) { desk.x = clamp(desk.x + 1, colony.BOARD_COLUMNS) }
     (str.contains(pressed, "[D") == yes) { desk.x = clamp(desk.x - 1, colony.BOARD_COLUMNS) }
     (str.contains(pressed, " ") == yes) { colony.edit(model, desk.x, desk.y) }
-    drum (group.count(model.workers)) {
+    drum (model.workers) {
         colony.step_worker(model, group.get(model.workers, beat))
     }
     colony.grow(model)

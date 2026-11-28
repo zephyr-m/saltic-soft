@@ -95,7 +95,7 @@ Painter = Box {
 
     skill box_seen(x, y, z, hx, hy, hz) {
         @corners = []
-        drum (group.count(SIGNS)) {
+        drum (SIGNS) {
             @sign = group.get(SIGNS, beat)
             corners = group.add(corners, eye.seen(x + group.get(sign, 0) * hx, y + group.get(sign, 1) * hy, z + group.get(sign, 2) * hz))
         }
@@ -103,7 +103,7 @@ Painter = Box {
     }
 
     skill box_lines(corners, value, alpha) {
-        drum (group.count(EDGES)) {
+        drum (EDGES) {
             @edge = group.get(EDGES, beat)
             @a = group.get(corners, group.get(edge, 0))
             @b = group.get(corners, group.get(edge, 1))
@@ -201,7 +201,7 @@ Painter = Box {
             @y0 = group.get(group.get(lit, 0), 1)
             @x1 = x0
             @y1 = y0
-            drum (group.count(lit)) {
+            drum (lit) {
                 @entry = group.get(lit, beat)
                 (group.get(entry, 0) < x0) {
                     x0 = group.get(entry, 0)
@@ -463,7 +463,7 @@ Painter = Box {
             (shape.cellar(floor, beat) == yes) {
                 rim = cellar
             }
-            drum (group.count(EDGES)) {
+            drum (EDGES) {
                 @edge = group.get(EDGES, beat)
                 @a = group.get(corners, group.get(edge, 0))
                 @b = group.get(corners, group.get(edge, 1))

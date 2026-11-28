@@ -103,7 +103,7 @@ skill draw_bubble(screen, message, bottom, face) {
     }
     @top = bottom - height
     shapes.rounded(screen, x, top, wide, height, 12, fill, canvas.PAPER)
-    drum (group.count(lines)) {
+    drum (lines) {
         fonts.draw_bytes(screen, x + BUBBLE_PADDING, top + BUBBLE_PADDING + beat * face.line, group.get(lines, beat), ink, face)
     }
     out height
@@ -151,7 +151,7 @@ skill draw_header(screen, chat) {
 }
 
 skill hear(chat, screen, packets) {
-    drum (group.count(packets)) {
+    drum (packets) {
         @packet = group.get(packets, beat)
         (str.starts_with(packet.text, SAY) == yes) {
             chat.peer = packet

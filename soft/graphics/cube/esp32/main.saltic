@@ -108,7 +108,7 @@ program() {
         @points = []
         @low = 127
         @high = 0
-        drum (group.count(CORNERS)) {
+        drum (CORNERS) {
             @corner_2 = group.get(CORNERS, beat)
             @point = corner(corner_2, turn)
             points = group.add(points, point)
@@ -117,7 +117,7 @@ program() {
         }
         (low < 0) { low = 0 }
         (high > 127) { high = 127 }
-        drum (group.count(EDGES)) {
+        drum (EDGES) {
             @edge = group.get(EDGES, beat)
             @a = group.get(points, group.get(edge, 0))
             @b = group.get(points, group.get(edge, 1))

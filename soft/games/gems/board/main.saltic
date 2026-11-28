@@ -242,7 +242,7 @@ Board = Box {
                 }
             }
         }
-        drum (group.count(gone)) {
+        drum (gone) {
             @entry = group.get(gone, beat)
             cells = group.replaced(cells, entry, runs.EMPTY)
         }
@@ -313,16 +313,17 @@ Board = Box {
         @marks = []
         @specials = []
         drum (found) {
-            marks = group.concat(marks, beat)
-            @length = group.count(beat)
+            @run = group.get(found, beat)
+            marks = group.concat(marks, run)
+            @length = group.count(run)
             (length >= 4) {
-                @keep = group.get(beat, length / 2)
-                (group.contains(beat, last) == yes) {
+                @keep = group.get(run, length / 2)
+                (group.contains(run, last) == yes) {
                     keep = last
                 }
                 @kind = kind_of(group.get(cells, keep))
                 @power = LINE_ROW
-                ((group.get(beat, 1) - group.get(beat, 0)) == width) {
+                ((group.get(run, 1) - group.get(run, 0)) == width) {
                     power = LINE_COLUMN
                 }
                 (length >= 5) {
@@ -332,7 +333,7 @@ Board = Box {
             }
         }
         @gained = clear_marks(marks)
-        drum (group.count(specials)) {
+        drum (specials) {
             @special_2 = group.get(specials, beat)
             cells = group.replaced(cells, group.get(special_2, 0), group.get(special_2, 1))
         }
@@ -342,7 +343,7 @@ Board = Box {
             word = " · цепочка ×{chain}"
         }
         note("ряды: +{gained}{word}")
-        drum (group.count(specials)) {
+        drum (specials) {
             @special = group.get(specials, beat)
             @power = power_of(group.get(special, 1))
             pick {

@@ -42,7 +42,7 @@ Mailbox = Box {
 
     skill unread(name) {
         @many = 0
-        drum (group.count(letters)) {
+        drum (letters) {
             @letter_2 = group.get(letters, beat)
             (holds(name, letter_2) == yes) {
                 (letter_2.unread == yes) { many = many + 1 }
@@ -53,7 +53,7 @@ Mailbox = Box {
 
     skill folders() {
         @rows = []
-        drum (group.count(FOLDERS)) {
+        drum (FOLDERS) {
             @folder_2 = group.get(FOLDERS, beat)
             @name = group.get(folder_2, 1)
             @kind = "menu-row"
@@ -69,7 +69,7 @@ Mailbox = Box {
     skill list() {
         @rows = []
         @shown = 0
-        drum (group.count(letters)) {
+        drum (letters) {
             @item = group.get(letters, beat)
             (holds(folder, item) == yes) {
                 rows = group.add(rows, item.row("{LETTER}{beat}", beat == chosen))
@@ -84,7 +84,7 @@ Mailbox = Box {
         @item = group.get(letters, chosen)
         @made = item.reading()
         @answers = []
-        drum (group.count(REPLIES)) {
+        drum (REPLIES) {
             @reply_2 = group.get(REPLIES, beat)
             answers = group.add(answers, calls.call("chip", [["text", calls.quoted(reply_2)], ["fill", calls.quoted("panel")], ["tone", calls.quoted("accent")]]))
         }
@@ -99,7 +99,7 @@ Mailbox = Box {
     skill choose(id) {
         (str.starts_with(id, FOLDER) == yes) {
             folder = str.slice(id, str.bytes(FOLDER), str.bytes(id))
-            drum (group.count(letters)) {
+            drum (letters) {
                 @item = group.get(letters, group.count(letters) - 1 - beat)
                 (holds(folder, item) == yes) { chosen = group.count(letters) - 1 - beat }
             }

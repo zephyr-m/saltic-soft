@@ -92,7 +92,7 @@ skill whole(text) {
 }
 
 skill kind_of(text) {
-    drum (group.count(KINDS)) {
+    drum (KINDS) {
         (group.get(KINDS, beat) == text) { out beat }
     }
     out error.NoSuchKind
@@ -101,7 +101,7 @@ skill kind_of(text) {
 skill face(nodes_graph) {
     @inputs = []
     @outputs = []
-    drum (group.count(nodes_graph.nodes)) {
+    drum (nodes_graph.nodes) {
         @node = group.get(nodes_graph.nodes, beat)
         (node.kind == IN) {
             (group.count(node.outputs) > 0) { inputs = group.add(inputs, group.get(node.outputs, 0)) }

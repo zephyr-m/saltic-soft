@@ -249,7 +249,7 @@ Editor = Box {
         (text == "\n") {
             @indent = ""
             @spaces = yes
-            drum (group.count(letters)) {
+            drum (letters) {
                 @letter_2 = group.get(letters, beat)
                 ((letter_2 == " ") == no) {
                     spaces = no
@@ -379,7 +379,7 @@ Editor = Box {
 
     skill greeting() {
         @rows = [calls.call("headline", [["text", calls.quoted("SalticIDE")]])]
-        drum (group.count(WELCOME)) {
+        drum (WELCOME) {
             @entry = group.get(WELCOME, beat)
             rows = group.add(rows, calls.call("hint", [["text", calls.quoted(entry)]]))
         }
@@ -389,7 +389,7 @@ Editor = Box {
 
     skill jtml() {
         @heads = []
-        drum (group.count(tabs)) {
+        drum (tabs) {
             @tab_2 = group.get(tabs, beat)
             heads = group.add(heads, tab(tab_2))
         }

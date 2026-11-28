@@ -129,7 +129,7 @@ skill spot(world, luck, radius, keep) {
         @x = dice.between(luck, -ROOM, ROOM)
         @z = dice.between(luck, -ROOM, ROOM)
         @free = land.near_pond(world.land, x, z, radius) == no
-        drum (group.count(world.taken)) {
+        drum (world.taken) {
             @other = group.get(world.taken, beat)
             @dx = x - group.get(other, 0)
             @dz = z - group.get(other, 1)
@@ -288,7 +288,7 @@ skill build(screen, seed) {
 skill blots(screen, world) {
     @tint = season.rgb(season.mix(world.season.grass, DUSK, 30))
     @made = []
-    drum (group.count(world.taken)) {
+    drum (world.taken) {
         @spot = group.get(world.taken, beat)
         @x = group.get(spot, 0)
         @z = group.get(spot, 1)
@@ -300,10 +300,10 @@ skill blots(screen, world) {
 
 skill paint(screen, world) {
     mesh.paint(screen, world.ground)
-    drum (group.count(world.flats)) {
+    drum (world.flats) {
         mesh.paint(screen, group.get(world.flats, beat))
     }
-    drum (group.count(world.bodies)) {
+    drum (world.bodies) {
         mesh.paint(screen, group.get(world.bodies, beat))
     }
     out none
@@ -311,11 +311,11 @@ skill paint(screen, world) {
 
 skill quads(world) {
     @count = group.count(world.ground.quads)
-    drum (group.count(world.flats)) {
+    drum (world.flats) {
         @flat = group.get(world.flats, beat)
         count = count + group.count(flat.quads)
     }
-    drum (group.count(world.bodies)) {
+    drum (world.bodies) {
         @body = group.get(world.bodies, beat)
         count = count + group.count(body.quads)
     }

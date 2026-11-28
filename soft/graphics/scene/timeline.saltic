@@ -44,7 +44,7 @@ Timeline = Box {
 
     skill jtml() {
         @rows = [ruler()]
-        drum (group.count(tracks)) {
+        drum (tracks) {
             @track_2 = group.get(tracks, beat)
             rows = group.add(rows, track(track_2))
         }

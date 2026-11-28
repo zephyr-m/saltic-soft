@@ -79,7 +79,7 @@ skill cap(version, limit) {
 skill value_of(name) {
     @rows = process.environment()
     @found = ""
-    drum (group.count(rows)) {
+    drum (rows) {
         @row = group.get(rows, beat)
         @cut = 0
         drum (str.bytes(row)) {

@@ -65,7 +65,7 @@ Board = Box {
 
 skill starting_board() {
     @desk = Board {}
-    drum (group.count(STARTING)) {
+    drum (STARTING) {
         @entry = group.get(STARTING, beat)
         put_task(desk, group.get(entry, 0), group.get(entry, 1))
     }
@@ -143,7 +143,7 @@ skill tick_item(desk, number, item, stamp) {
 
 skill done_count(list) {
     @count = 0
-    drum (group.count(list)) {
+    drum (list) {
         @entry = group.get(list, beat)
         (group.get(entry, 0) == yes) { count = count + 1 }
     }
@@ -176,7 +176,7 @@ skill shift_task(desk, number, column) {
     (column < 0) { out no }
     (column > 2) { out no }
     @changed = []
-    drum (group.count(desk.columns)) {
+    drum (desk.columns) {
         pick {
             (beat + 1 == number) { changed = group.add(changed, column) }
             { changed = group.add(changed, group.get(desk.columns, beat)) }
@@ -188,14 +188,14 @@ skill shift_task(desk, number, column) {
 
 skill tasks_in(desk, column) {
     @found = []
-    drum (group.count(desk.columns)) {
+    drum (desk.columns) {
         (group.get(desk.columns, beat) == column) { found = group.add(found, beat + 1) }
     }
     out found
 }
 
 skill place_of(found, number) {
-    drum (group.count(found)) {
+    drum (found) {
         (group.get(found, beat) == number) { out beat }
     }
     out -1
@@ -251,7 +251,7 @@ skill board_text(desk) {
             @name = group.get(desk.names, number - 1)
             told = "{told}  {number}. {name}\n"
             @list = group.get(desk.items, number - 1)
-            drum (group.count(list)) {
+            drum (list) {
                 @item = group.get(list, beat)
                 @mark = " "
                 (group.get(item, 0) == yes) { mark = "x" }
@@ -260,15 +260,19 @@ skill board_text(desk) {
                 @when = group.get(item, 2)
                 told = "{told}      [{mark}] {place}. {text} · {when}\n"
             }
-            drum (group.get(desk.events, number - 1)) {
-                @when = group.get(beat, 0)
-                @what = group.get(beat, 1)
+            @events = group.get(desk.events, number - 1)
+            drum (events) {
+                @event = group.get(events, beat)
+                @when = group.get(event, 0)
+                @what = group.get(event, 1)
                 told = "{told}      @ {when} {what}\n"
             }
-            drum (group.get(desk.messages, number - 1)) {
-                @when = group.get(beat, 0)
-                @who = group.get(beat, 1)
-                @said = group.get(beat, 2)
+            @messages = group.get(desk.messages, number - 1)
+            drum (messages) {
+                @message = group.get(messages, beat)
+                @when = group.get(message, 0)
+                @who = group.get(message, 1)
+                @said = group.get(message, 2)
                 told = "{told}      > {when} {who}: {said}\n"
             }
         }

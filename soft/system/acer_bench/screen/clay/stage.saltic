@@ -157,7 +157,7 @@ skill remake(stage, base) {
 }
 
 skill season_number(chosen) {
-    drum (group.count(season.SEASONS)) {
+    drum (season.SEASONS) {
         @one = group.get(season.SEASONS, beat)
         (one.name == chosen.name) { out beat }
     }
@@ -214,10 +214,10 @@ skill compose(stage, angle, lift, base) {
         @painter = group.get(stage.painter, 0)
         render.begin(painter)
         cast.ground_collect(set, painter, camera, scene.CELLS)
-        drum (group.count(flats)) {
+        drum (flats) {
             cast.collect(set, painter, camera, group.get(flats, beat))
         }
-        drum (group.count(bodies)) {
+        drum (bodies) {
             cast.collect(set, painter, camera, group.get(bodies, beat))
         }
         at = mark(stage, 1, at)
@@ -236,10 +236,10 @@ skill compose(stage, angle, lift, base) {
         gop.copy_rect(base, back, stage.sky, 0, 0, back.width, back.height)
     }
     cast.ground_draw(set, back, camera, scene.CELLS)
-    drum (group.count(flats)) {
+    drum (flats) {
         cast.draw(set, back, camera, group.get(flats, beat))
     }
-    drum (group.count(bodies)) {
+    drum (bodies) {
         cast.draw(set, back, camera, group.get(bodies, beat))
     }
     out at

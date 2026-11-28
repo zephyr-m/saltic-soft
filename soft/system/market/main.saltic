@@ -90,7 +90,7 @@ Window = Box {
     skill bin() {
         @head = "HOME="
         @settings = process.environment()
-        drum (group.count(settings)) {
+        drum (settings) {
             @setting = group.get(settings, beat)
             (str.starts_with(setting, head) == yes) {
                 @home = str.slice(setting, str.bytes(head), str.bytes(setting))
@@ -105,7 +105,7 @@ Window = Box {
             []
         }
         @names = []
-        drum (group.count(shelf_of.programs)) {
+        drum (shelf_of.programs) {
             @program_2 = group.get(shelf_of.programs, beat)
             (group.contains(there, program_2.name) == yes) {
                 names = group.add(names, program_2.name)
@@ -129,7 +129,7 @@ Window = Box {
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
         @changed = no
-        drum (group.count(drained.gestures)) {
+        drum (drained.gestures) {
             @gesture = group.get(drained.gestures, beat)
             (gesture.kind == gestures.Kind.CLICK) {
                 @hit = jtml.hit(runtime, gesture.x, gesture.y)

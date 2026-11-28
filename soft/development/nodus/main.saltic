@@ -230,7 +230,7 @@ skill show(desk) {
     @screen = desk.back
     @text = status(desk)
     @names = []
-    drum (group.count(desk.catalog.entries)) {
+    drum (desk.catalog.entries) {
         @entry = group.get(desk.catalog.entries, beat)
         names = group.add(names, entry.name)
     }
@@ -273,7 +273,7 @@ program() {
     always {
         (link) |link| {
             @entrys = remote.serve(link)
-            drum (group.count(entrys)) {
+            drum (entrys) {
                 @entry = group.get(entrys, beat)
                 answer(desk, link, entry)
             }

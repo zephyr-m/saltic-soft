@@ -111,7 +111,7 @@ skill project(screen, shape, scene, cache, bank) {
     @c2 = solids.cosine(scene.tilt)
     @s2 = solids.sine(scene.tilt)
     @index = 0
-    drum (group.count(shape.points)) {
+    drum (shape.points) {
         @point = group.get(shape.points, beat)
         @lx = group.get(point, 0)
         @ly = group.get(point, 1)
@@ -198,7 +198,7 @@ skill wire_line(screen, stamps, x, y, x_end, y_end, value, mark) {
 }
 
 skill draw_edges(screen, stamps, shape, cache, bank, value, shades, mark) {
-    drum (group.count(shape.edges)) {
+    drum (shape.edges) {
         @edge = group.get(shape.edges, beat)
         @from = spot(cache, bank, shape, group.get(edge, 0))
         @to = spot(cache, bank, shape, group.get(edge, 1))
@@ -253,7 +253,7 @@ skill scene_frame(screen, stamps, shapes, scene, shades, chosen_ink, background,
 
 skill make_cache(base, shapes) {
     @total = 0
-    drum (group.count(shapes)) {
+    drum (shapes) {
         @shape = group.get(shapes, beat)
         shape.slot = total
         total = total + group.count(shape.points)
@@ -328,7 +328,7 @@ skill draw_panel(stage) {
             mem.store32(address.from(stamps.memory), usize.from((row + left + beat) * graphics.PIXEL_BYTES), u32.from(ROOM_MARK))
         }
     }
-    drum (group.count(lines)) {
+    drum (lines) {
         @color = stage.ink
         (beat == 0) { color = stage.chosen_ink }
         lettering.paint_text(panel, lettering.FACE_SMALL, PANEL_MARGIN, PANEL_MARGIN + beat * PANEL_LINE, group.get(lines, beat), color)
@@ -392,7 +392,7 @@ skill state_text(shapes, scene) {
     @frozen = ""
     (scene.frozen == yes) { frozen = " (пауза)" }
     @edges = 0
-    drum (group.count(shapes)) {
+    drum (shapes) {
         @shape = group.get(shapes, beat)
         edges = edges + group.count(shape.edges)
     }
@@ -405,7 +405,7 @@ skill state_text(shapes, scene) {
 
 skill listen(link, shapes, scene) {
     @packets = remote.serve(link)
-    drum (group.count(packets)) {
+    drum (packets) {
         @packet = group.get(packets, beat)
         (str.starts_with(packet.text, "wire") == yes) {
             @words = str.split(packet.text, " ")

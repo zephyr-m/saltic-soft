@@ -46,7 +46,7 @@ Themes = Box {
         @parts = ["\{\"box\": \{\"id\": \"{BUTTON}\", \"at\": [{left}, 18], \"gap\": 0, \"children\": [{button}]\}\}"]
         (open == yes) {
             @rows = []
-            drum (group.count(themes.NAMES)) {
+            drum (themes.NAMES) {
                 @name_2 = group.get(themes.NAMES, beat)
                 @kind = "menu-row"
                 (name_2 == chosen) { kind = "menu-row-current" }
@@ -115,7 +115,7 @@ program() {
         screen.pump(link, packet, hold, joined)
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
-        drum (group.count(drained.gestures)) {
+        drum (drained.gestures) {
             @gesture = group.get(drained.gestures, beat)
             (gesture.kind == gestures.Kind.CLICK) {
                 @was = picker.chosen

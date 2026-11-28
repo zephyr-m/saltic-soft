@@ -85,7 +85,7 @@ WIDTH_VALUES = [160, 240, 320, 420, 560, 720]
 HEIGHT_VALUES = [40, 120, 200, 280, 560, 720]
 
 skill scale_of(names, values, token) {
-    drum (group.count(names)) {
+    drum (names) {
         (group.get(names, beat) == token) { out group.get(values, beat) }
     }
     out group.get(values, group.count(values) / 2)

@@ -35,7 +35,7 @@ Keeper = Box {
             "cleared={realm.cleared}",
             "played={realm.played}"
         ]
-        drum (group.count(realm.towers)) {
+        drum (realm.towers) {
             @tower_2 = group.get(realm.towers, beat)
             @code = tower_2.code()
             lines = group.add(lines, "tower={code},{tower_2.column},{tower_2.row},{tower_2.level}")
@@ -51,7 +51,7 @@ Keeper = Box {
         @saved = clock
         @towers = []
         @lines_2 = str.lines(text)
-        drum (group.count(lines_2)) {
+        drum (lines_2) {
             @line = group.get(lines_2, beat)
             @value = value_of(line)
             (str.starts_with(line, "saved=") == yes) {

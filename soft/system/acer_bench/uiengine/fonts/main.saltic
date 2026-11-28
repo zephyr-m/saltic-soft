@@ -61,7 +61,7 @@ skill glyph_of(code) {
     }
     (code == 1025) { out 159 }
     (code == 1105) { out 160 }
-    drum (group.count(EXTRA)) {
+    drum (EXTRA) {
         (group.get(EXTRA, beat) == code) { out EXTRA_FIRST + beat }
     }
     out QUESTION
@@ -82,7 +82,7 @@ skill measure(words, face) {
 skill measure_bytes(bytes, face) {
     @pen = 0
     @index = 0
-    drum (group.count(bytes)) {
+    drum (bytes) {
         (index < group.count(bytes)) {
             @point = lettering.decode(bytes, index)
             pen = pen + group.get(face.advance, glyph_of(point.value))
@@ -127,7 +127,7 @@ skill draw_text(screen, x, y, words, ink, face) {
 skill draw_bytes(screen, x, y, bytes, ink, face) {
     @pen = x * 16
     @index = 0
-    drum (group.count(bytes)) {
+    drum (bytes) {
         (index < group.count(bytes)) {
             @point = lettering.decode(bytes, index)
             @glyph = glyph_of(point.value)

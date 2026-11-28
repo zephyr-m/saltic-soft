@@ -56,7 +56,7 @@ skill column_card(desk, column, width) {
     @title = group.get(board.COLUMN_NAMES, column)
     @numbers = board.tasks_in(desk, column)
     @cards = []
-    drum (group.count(numbers)) {
+    drum (numbers) {
         @number = group.get(numbers, beat)
         cards = group.add(cards, task_card(desk, number))
     }

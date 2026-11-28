@@ -102,7 +102,7 @@ skill grow(land) {
 }
 
 skill band_of(value) {
-    drum (group.count(LEVELS)) {
+    drum (LEVELS) {
         (value < group.get(LEVELS, beat)) { out beat }
     }
     out group.count(LEVELS)

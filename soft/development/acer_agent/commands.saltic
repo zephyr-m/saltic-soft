@@ -46,7 +46,7 @@ REGISTRY = [
 ]
 
 skill known(name) {
-    drum (group.count(REGISTRY)) {
+    drum (REGISTRY) {
         @entry = group.get(REGISTRY, beat)
         (entry.name == name) { out yes }
     }
@@ -55,14 +55,14 @@ skill known(name) {
 
 skill help_text() {
     @parts = []
-    drum (group.count(REGISTRY)) {
+    drum (REGISTRY) {
         @command = group.get(REGISTRY, beat)
         @words = command.name
-        drum (group.count(command.params)) {
+        drum (command.params) {
             @param = group.get(command.params, beat)
             words = "{words} <{param}>"
         }
-        drum (group.count(command.options)) {
+        drum (command.options) {
             @option = group.get(command.options, beat)
             words = "{words} [{option}]"
         }

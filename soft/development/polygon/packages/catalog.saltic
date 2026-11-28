@@ -125,7 +125,7 @@ Catalog = Box {
         trouble = ""
         @place = catalog.Catalog {}
         place.settle(document(MANIFEST), document(LOCK))
-        drum (group.count(CATALOGS)) {
+        drum (CATALOGS) {
             @catalog_2 = group.get(CATALOGS, beat)
             @role = group.get(catalog_2, 0)
             @where = place.where(group.get(catalog_2, 1))
@@ -134,7 +134,7 @@ Catalog = Box {
                 ""
             }
             @lines_2 = str.lines(listed)
-            drum (group.count(lines_2)) {
+            drum (lines_2) {
                 @line = group.get(lines_2, beat)
                 (str.starts_with(line, "#") == no) {
                     @words = str.split(line, " ")
@@ -153,7 +153,7 @@ Catalog = Box {
 
     skill count(role) {
         @many = 0
-        drum (group.count(packages)) {
+        drum (packages) {
             @package = group.get(packages, beat)
             (package.role == role) { many = many + 1 }
         }

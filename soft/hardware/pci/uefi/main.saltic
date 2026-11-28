@@ -16,7 +16,7 @@ skill run() {
     io.show("ECAM at {start}, buses {space.first}..{space.last}")
     io.show("")
     @found = pci.device_lines(base, space)
-    drum (group.count(found)) {
+    drum (found) {
         @entry = group.get(found, beat)
         io.show("  {entry}")
     }

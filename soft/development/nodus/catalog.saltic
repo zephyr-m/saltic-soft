@@ -41,7 +41,7 @@ skill load(base) {
     @text = notes.load_note(base, CATALOG) rescue |err| { "" }
     @catalog = Catalog {}
     @lines_2 = str.lines(text)
-    drum (group.count(lines_2)) {
+    drum (lines_2) {
         @line = group.get(lines_2, beat)
         @parts = str.split(line, "|")
         @kind = group.get(parts, 0)
@@ -59,7 +59,7 @@ skill load(base) {
 
 skill save(base, catalog) {
     @lines = []
-    drum (group.count(catalog.entries)) {
+    drum (catalog.entries) {
         @entry = group.get(catalog.entries, beat)
         @name = str.join(str.split(entry.name, "|"), "/")
         lines = group.add(lines, "program|{entry.file}|={name}")
@@ -78,7 +78,7 @@ skill file_name(number) {
 }
 
 skill find_file(catalog, file) {
-    drum (group.count(catalog.entries)) {
+    drum (catalog.entries) {
         @entry = group.get(catalog.entries, beat)
         (entry.file == file) { out beat }
     }

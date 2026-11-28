@@ -99,7 +99,7 @@ Board = Box {
 
     skill steps_of(pairs) {
         @result = []
-        drum (group.count(pairs)) {
+        drum (pairs) {
             @pair = group.get(pairs, beat)
             result = group.add(result, Step { name = group.get(pair, 1), marker = group.get(pair, 0) })
         }
@@ -142,13 +142,13 @@ Board = Box {
             field = [Branch { name = "рефреш · самосборка полки", proc = "x86-64", log = "{work}/board.log", steps = steps_of(SHELF) }]
             out none
         }
-        drum (group.count(TOOLS)) {
+        drum (TOOLS) {
             @tool = group.get(TOOLS, beat)
             prep = group.add(prep, Branch { name = tool, proc = "x86-64", log = "{work}/build-{tool}.log" })
         }
         prep = group.add(prep, Branch { name = "лимиты канона", proc = "x86-64", log = "{work}/limits.log" })
         prep = group.add(prep, Branch { name = "самосборка", proc = "x86-64", log = "{work}/refresh.log" })
-        drum (group.count(TESTS)) {
+        drum (TESTS) {
             @test = group.get(TESTS, beat)
             @host = group.get(test, 0)
             @suites = group.get(test, 1)
@@ -157,7 +157,7 @@ Board = Box {
             field = group.add(field, Branch { name = group.get(test, 2), proc = proc, log = "{work}/check-{host}-{suites}.log", cases = yes })
         }
         @entries = ["rv64", "arm64"]
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             field = group.add(field, Branch { name = "самосборка", proc = entry, log = "{work}/check-{entry}-self.log", steps = self_steps(entry) })
         }
@@ -173,14 +173,14 @@ Board = Box {
         lay(home)
         @gone = []
         @entries = group.concat(prep, field)
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             gone = group.add(gone, entry.log)
             gone = group.add(gone, "{entry.log}.code")
         }
         process.run(group.concat(["rm", "-f", "{home}/{WORK}/board.log", "{home}/{WORK}/board.log.code"], gone), "", [])
         @recipe = "global-check"
-        drum (group.count(RECIPES)) {
+        drum (RECIPES) {
             @recipe_2 = group.get(RECIPES, beat)
             (group.get(recipe_2, 0) == wanted) { recipe = group.get(recipe_2, 1) }
         }
@@ -207,7 +207,7 @@ Board = Box {
             (group.count(branch.steps) == 0) {
                 (str.starts_with(listed, CASES) == yes) {
                     @cases_2 = group.without(str.split(str.slice(listed, str.bytes(CASES), str.bytes(listed)), " "), "")
-                    drum (group.count(cases_2)) {
+                    drum (cases_2) {
                         @case = group.get(cases_2, beat)
                         branch.steps = group.add(branch.steps, Step { name = case, marker = "{CASE}{case}" })
                     }
@@ -215,7 +215,7 @@ Board = Box {
             }
             @current = group.get(fields, 6)
             @reached = -1
-            drum (group.count(branch.steps)) {
+            drum (branch.steps) {
                 @item = group.get(branch.steps, beat)
                 (item.marker == current) { reached = beat }
             }
@@ -241,9 +241,9 @@ Board = Box {
         (group.count(branch.steps) == 0) { out none }
         @text = file.read(branch.log) rescue |err| { out none }
         @lines_2 = group.without(str.lines(text), "")
-        drum (group.count(lines_2)) {
+        drum (lines_2) {
             @line = group.get(lines_2, beat)
-            drum (group.count(branch.steps)) {
+            drum (branch.steps) {
                 @step = group.get(branch.steps, beat)
                 (step.seen == no) {
                     (str.contains(line, step.marker) == yes) {
@@ -260,7 +260,7 @@ Board = Box {
         (pending == yes) { out none }
         @open_ones = []
         @entries = group.concat([driver], group.concat(prep, field))
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             (entry.done == no) { open_ones = group.add(open_ones, entry.log) }
         }
@@ -280,12 +280,12 @@ Board = Box {
         ((group.get(lines, 0) == "seq {asked}") == no) { out no }
         pending = no
         @lines_2 = group.slice(lines, 1, group.count(lines))
-        drum (group.count(lines_2)) {
+        drum (lines_2) {
             @line = group.get(lines_2, beat)
             @fields = str.split(line, "\t")
             @path = group.get(fields, 0)
             @entries = group.concat([driver], group.concat(prep, field))
-            drum (group.count(entries)) {
+            drum (entries) {
                 @entry = group.get(entries, beat)
                 (entry.done == no) {
                     (entry.log == path) { take(entry, fields) }
@@ -314,7 +314,7 @@ Board = Box {
 
     skill last_seen(branch) {
         @result = -1
-        drum (group.count(branch.steps)) {
+        drum (branch.steps) {
             @item = group.get(branch.steps, beat)
             (item.seen == yes) { result = beat }
         }
@@ -352,7 +352,7 @@ Board = Box {
 
     skill counts() {
         @tally = [0, 0, 0, 0]
-        drum (group.count(prep)) {
+        drum (prep) {
             @entry = group.get(prep, beat)
             @slot = 3
             @state = state(entry)
@@ -361,9 +361,9 @@ Board = Box {
             (state == "run") { slot = 2 }
             tally = group.replaced(tally, slot, group.get(tally, slot) + 1)
         }
-        drum (group.count(field)) {
+        drum (field) {
             @branch = group.get(field, beat)
-            drum (group.count(branch.steps)) {
+            drum (branch.steps) {
                 @slot = 3
                 @state = step_state(branch, beat)
                 (state == "ok") { slot = 0 }
@@ -379,7 +379,7 @@ Board = Box {
         @ok = 0
         @bad = 0
         @entries = group.concat(prep, field)
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             ok = ok + entry.ok
             bad = bad + entry.bad
@@ -390,7 +390,7 @@ Board = Box {
     skill running() {
         @result = []
         @entries = group.concat(prep, field)
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             (state(entry) == "run") { result = group.add(result, entry) }
         }
@@ -402,7 +402,7 @@ Board = Box {
         (finished() == yes) {
             @broken = 0
             @entries = group.concat(prep, field)
-            drum (group.count(entries)) {
+            drum (entries) {
                 @entry = group.get(entries, beat)
                 (state(entry) == "fail") { broken = broken + 1 }
             }
@@ -423,14 +423,14 @@ Board = Box {
             out "быстрая · случаи языка на x86-64"
         }
         @builds = 0
-        drum (group.count(TOOLS)) {
+        drum (TOOLS) {
             (state(group.get(prep, beat)) == "run") { builds = builds + 1 }
         }
         (builds > 0) { out "подготовка · собираю инструменты проверки: идёт {builds} из 8" }
         (state(group.get(prep, 8)) == "run") { out "подготовка · лимиты канона" }
         (state(group.get(prep, 9)) == "run") { out "подготовка · самосборка компилятора" }
         @going = 0
-        drum (group.count(field)) {
+        drum (field) {
             @entry_2 = group.get(field, beat)
             (state(entry_2) == "run") { going = going + 1 }
         }
@@ -454,7 +454,7 @@ Board = Box {
         @text = file.read(branch.log) rescue |err| { out [] }
         @kept = []
         @lines_2 = group.without(str.lines(text), "")
-        drum (group.count(lines_2)) {
+        drum (lines_2) {
             @line = group.get(lines_2, beat)
             (str.contains(line, "[ok]") == no) { kept = group.add(kept, line) }
         }

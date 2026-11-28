@@ -32,7 +32,7 @@ Commits = Box {
             out none
         }
         @lines_2 = str.lines(log.output)
-        drum (group.count(lines_2)) {
+        drum (lines_2) {
             @line = group.get(lines_2, beat)
             (str.bytes(line) >= 10) { calendar.mark(line) }
         }

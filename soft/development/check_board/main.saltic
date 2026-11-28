@@ -139,7 +139,7 @@ Window = Box {
         log.cost = cost
         log.stages = [written - began, read_at_ms - written, fitted_at - read_at_ms, mounted_at - fitted_at, compared_at - mounted_at, drawn_at - compared_at]
         @painted = 0
-        drum (group.count(parts)) {
+        drum (parts) {
             @part = group.get(parts, beat)
             painted = painted + group.get(part, 2) * group.get(part, 3)
         }
@@ -250,12 +250,12 @@ Window = Box {
         (checks.launched == no) { out none }
         @tally = checks.counts()
         @prepared = 0
-        drum (group.count(checks.prep)) {
+        drum (checks.prep) {
             @entry_2 = group.get(checks.prep, beat)
             (checks.state(entry_2) == "ok") { prepared = prepared + 1 }
         }
         @launched_now = no
-        drum (group.count(checks.field)) {
+        drum (checks.field) {
             @entry = group.get(checks.field, beat)
             ((checks.state(entry) == "wait") == no) { launched_now = yes }
         }
@@ -328,7 +328,7 @@ Window = Box {
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
         @changed = no
-        drum (group.count(drained.gestures)) {
+        drum (drained.gestures) {
             @gesture = group.get(drained.gestures, beat)
             (gesture.kind == gestures.Kind.CLICK) {
                 @hit = jtml.hit(runtime, gesture.x, gesture.y)

@@ -76,7 +76,7 @@ Window = Box {
         link.way_events = drained.core
         @changed = no
         @closing = no
-        drum (group.count(drained.gestures)) {
+        drum (drained.gestures) {
             @gesture = group.get(drained.gestures, beat)
             (gesture.kind == gestures.Kind.CLICK) {
                 @hit = jtml.hit(runtime, gesture.x, gesture.y)

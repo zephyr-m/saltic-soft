@@ -179,7 +179,7 @@ Target = Box {
 
 skill find_target(base, handles, guid) {
     @found = []
-    drum (group.count(handles)) {
+    drum (handles) {
         @owner = group.get(handles, beat)
         @device = files_protocol(base, owner, guid) rescue |err| { 0 }
         (device > 0) {
@@ -221,7 +221,7 @@ skill files_protocol(base, handle, guid) {
 }
 
 skill place(base, at, bytes) {
-    drum (group.count(bytes)) {
+    drum (bytes) {
         firmware.write8(at, base, beat, group.get(bytes, beat))
     }
     out at

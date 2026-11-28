@@ -67,7 +67,7 @@ Menu = Box {
 
     skill titles() {
         @made = []
-        drum (group.count(NAMES)) {
+        drum (NAMES) {
             @name = group.get(NAMES, beat)
             @tone = "quiet"
             (name == open) {
@@ -85,7 +85,7 @@ Menu = Box {
         }
         @rows = []
         @item_2s = items()
-        drum (group.count(item_2s)) {
+        drum (item_2s) {
             @item_2 = group.get(item_2s, beat)
             rows = group.add(rows, calls.call("menu-row", [["id", calls.quoted("")], ["icon", calls.quoted(group.get(item_2, 1))], ["text", calls.quoted(group.get(item_2, 2))], ["count", calls.quoted(group.get(item_2, 3))]]))
         }

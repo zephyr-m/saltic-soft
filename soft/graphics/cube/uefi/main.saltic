@@ -155,7 +155,7 @@ skill build_mesh() {
 skill fill_quad(buffer, points, color) {
     @low = BOX
     @high = 0
-    drum (group.count(points)) {
+    drum (points) {
         @point = group.get(points, beat)
         (point.y < low) { low = point.y }
         (point.y > high) { high = point.y }
@@ -238,7 +238,7 @@ skill dominant(nx, ny, nz) {
 
 skill render(buffer, mesh, spin) {
     @points = []
-    drum (group.count(mesh.places)) {
+    drum (mesh.places) {
         @place = group.get(mesh.places, beat)
         points = group.add(points, project(place, spin))
     }
@@ -246,7 +246,7 @@ skill render(buffer, mesh, spin) {
     @top = BOX
     @right = 0
     @bottom = 0
-    drum (group.count(points)) {
+    drum (points) {
         @point_2 = group.get(points, beat)
         (point_2.x < left) { left = point_2.x }
         (point_2.y < top) { top = point_2.y }
@@ -262,7 +262,7 @@ skill render(buffer, mesh, spin) {
     (right > BOX - 1) { right = BOX - 1 }
     (bottom > BOX - 1) { bottom = BOX - 1 }
     gop.fill(buffer, left, top, right - left + 1, bottom - top + 1, canvas.paint(buffer, canvas.PAPER))
-    drum (group.count(mesh.quads)) {
+    drum (mesh.quads) {
         @quad_2 = group.get(mesh.quads, beat)
         @color = quad_color(mesh, quad_2, spin)
         (color) |color| {
@@ -278,7 +278,7 @@ skill render(buffer, mesh, spin) {
     spin.top = BOX
     spin.right = 0
     spin.bottom = 0
-    drum (group.count(points)) {
+    drum (points) {
         @point = group.get(points, beat)
         (point.x < spin.left) { spin.left = point.x }
         (point.y < spin.top) { spin.top = point.y }

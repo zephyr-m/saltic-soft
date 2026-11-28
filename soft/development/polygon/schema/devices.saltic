@@ -64,7 +64,7 @@ Device = Box {
 
     skill meminfo(text, key) {
         @lines_2 = str.lines(text)
-        drum (group.count(lines_2)) {
+        drum (lines_2) {
             @line = group.get(lines_2, beat)
             (str.starts_with(line, key) == yes) { out number(line) }
         }
@@ -89,7 +89,7 @@ Device = Box {
         @free = meminfo(memory, "MemAvailable") / 1048576
         @cores = 0
         @lines_2 = str.lines(file.read("/proc/cpuinfo"))
-        drum (group.count(lines_2)) {
+        drum (lines_2) {
             @line = group.get(lines_2, beat)
             (str.starts_with(line, "processor") == yes) { cores = cores + 1 }
         }
@@ -144,7 +144,7 @@ Device = Box {
             out none
         }
         @lines_2 = str.lines(asked.output)
-        drum (group.count(lines_2)) {
+        drum (lines_2) {
             @line = group.get(lines_2, beat)
             (str.ends_with(line, "device") == yes) {
                 @serial = group.get(str.split(line, "\t"), 0)

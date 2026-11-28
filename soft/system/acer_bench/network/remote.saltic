@@ -198,7 +198,7 @@ skill answer(remote, bytes) {
     }
     (packet.text == "quit") {
         reply_text(remote, packet, "выхожу на главный экран")
-        drum (group.count(remote.owned)) {
+        drum (remote.owned) {
             @entry = group.get(remote.owned, beat)
             uefi.free_pages(firmware.guest_base(), group.get(entry, 0), group.get(entry, 1))
         }
@@ -223,7 +223,7 @@ skill answer_mrpc(remote, packet) {
     }
     (call.cmd == "quit") {
         send_to(remote, packet, packet.from_port, mrpc.success(call, utf8.encode("выхожу на главный экран"), 0, REPLY_LIMIT))
-        drum (group.count(remote.owned)) {
+        drum (remote.owned) {
             @entry = group.get(remote.owned, beat)
             uefi.free_pages(firmware.guest_base(), group.get(entry, 0), group.get(entry, 1))
         }

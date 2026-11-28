@@ -14,7 +14,7 @@ Rail = Box {
 
     skill jtml() {
         @buttons = []
-        drum (group.count(SECTIONS)) {
+        drum (SECTIONS) {
             @kind = "rail-button"
             (group.get(SECTIONS, beat) == active) { kind = "rail-button-active" }
             buttons = group.add(buttons, calls.call(kind, [["icon", calls.quoted(group.get(ICONS, beat))]]))

@@ -43,7 +43,7 @@ skill sessions() {
     @found = []
     @points = []
     @names = file.list(DATA)
-    drum (group.count(names)) {
+    drum (names) {
         @name = group.get(names, beat)
         (str.ends_with(name, ".GAZE") == yes) {
             @buffer = file.read_bytes("{DATA}/{name}")
@@ -63,11 +63,11 @@ skill sessions() {
     }
     @sorted = points
     @marked = []
-    drum (group.count(found)) {
+    drum (found) {
         @entry = group.get(found, beat)
         @place = 0
         @key = entry.point
-        drum (group.count(sorted)) {
+        drum (sorted) {
             (group.get(sorted, beat) == key) { place = beat }
         }
         marked = group.add(marked, Sample { input = entry.input, target = entry.target, point = place })
@@ -88,7 +88,7 @@ skill pixels(answer, target) {
 skill error_of(net, samples) {
     (group.count(samples) == 0) { out 0.0 }
     @sum = 0.0
-    drum (group.count(samples)) {
+    drum (samples) {
         @sample = group.get(samples, beat)
         @pass = gazenet.forward(net, sample.input)
         sum = sum + pixels(pass.answer, sample.target)
@@ -99,7 +99,7 @@ skill error_of(net, samples) {
 skill center_of(samples) {
     @x = 0.0
     @y = 0.0
-    drum (group.count(samples)) {
+    drum (samples) {
         @sample = group.get(samples, beat)
         x = x + group.get(sample.target, 0)
         y = y + group.get(sample.target, 1)
@@ -111,7 +111,7 @@ skill center_of(samples) {
 skill center_error(samples, center) {
     (group.count(samples) == 0) { out 0.0 }
     @sum = 0.0
-    drum (group.count(samples)) {
+    drum (samples) {
         @sample = group.get(samples, beat)
         sum = sum + pixels(center, sample.target)
     }
@@ -134,7 +134,7 @@ program() {
     @all = sessions()
     @train = []
     @check = []
-    drum (group.count(all)) {
+    drum (all) {
         @entry = group.get(all, beat)
         pick {
             (entry.point % HOLD == 0) { check = group.add(check, entry) }

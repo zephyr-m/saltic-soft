@@ -56,7 +56,7 @@ skill remember(agent, entry) {
 }
 
 skill icon_of(name) {
-    drum (group.count(ICONS)) {
+    drum (ICONS) {
         @icon = group.get(ICONS, beat)
         (group.get(icon, 0) == name) { out group.get(icon, 1) }
     }
@@ -81,7 +81,7 @@ skill answers(agent, wide, high) {
     @room = high / (LINE + 8)
     @rows = []
     @index = group.count(agent.lines)
-    drum (group.count(agent.lines)) {
+    drum (agent.lines) {
         index = index - 1
         @entry = group.get(agent.lines, index)
         @tone = "ink"
@@ -103,7 +103,7 @@ skill answers(agent, wide, high) {
         }
     }
     @shown = []
-    drum (group.count(rows)) {
+    drum (rows) {
         shown = group.add(shown, group.get(rows, group.count(rows) - 1 - beat))
     }
     (group.count(shown) == 0) { shown = [calls.call("label", [["text", calls.quoted("пока тихо")]])] }
@@ -127,7 +127,7 @@ skill programs(agent, wide) {
     @lines = []
     @line = []
     @used = 0
-    drum (group.count(agent.names)) {
+    drum (agent.names) {
         @name = group.get(agent.names, beat)
         @size = tile_width(name)
         (used + size > room) {

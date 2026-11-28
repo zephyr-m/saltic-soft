@@ -36,12 +36,12 @@ Circles = Box {
 
     skill shapes() {
         @faces = []
-        drum (group.count(people)) {
+        drum (people) {
             @entry = group.get(people, beat)
             faces = group.add(faces, entry.jtml())
         }
         @words = []
-        drum (group.count(states)) {
+        drum (states) {
             @state = group.get(states, beat)
             words = group.add(words, state.jtml())
         }
@@ -50,12 +50,12 @@ Circles = Box {
 
     skill jtml() {
         @progress = []
-        drum (group.count(rings)) {
+        drum (rings) {
             @ring_2 = group.get(rings, beat)
             progress = group.add(progress, ring_2.jtml())
         }
         @gauges = []
-        drum (group.count(dials)) {
+        drum (dials) {
             @dial_2 = group.get(dials, beat)
             gauges = group.add(gauges, dial_2.jtml())
         }

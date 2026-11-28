@@ -37,7 +37,7 @@ Overview = Box {
         drum (spark) {
             (beat > peak) { peak = beat }
         }
-        drum (group.count(spark)) {
+        drum (spark) {
             @entry = group.get(spark, beat)
             @tone = "accent_rim"
             (entry == peak) { tone = "accent" }
@@ -49,7 +49,7 @@ Overview = Box {
 
     skill table() {
         @rows = [calls.call("build-head", [])]
-        drum (group.count(runs)) {
+        drum (runs) {
             @run_2 = group.get(runs, beat)
             rows = group.add(rows, run_2.jtml())
         }
@@ -58,7 +58,7 @@ Overview = Box {
 
     skill jtml() {
         @cards = []
-        drum (group.count(machines)) {
+        drum (machines) {
             @machine_2 = group.get(machines, beat)
             cards = group.add(cards, machine_2.jtml())
         }

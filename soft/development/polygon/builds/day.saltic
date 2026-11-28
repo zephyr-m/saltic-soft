@@ -33,7 +33,7 @@ Day = Box {
 
     skill tone() {
         (future == yes) { out "ground" }
-        drum (group.count(LEVELS)) {
+        drum (LEVELS) {
             @level = group.get(LEVELS, beat)
             (commits >= group.get(level, 0)) { out group.get(level, 1) }
         }

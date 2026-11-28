@@ -86,7 +86,7 @@ Schema = Box {
         @stage = "\{\"box\": \{\"height\": {STAGE_HIGH}, \"gap\": 0, \"children\": [{inside}]\}\}"
         @alive = 0
         @entries = [laptop, acer, phone, board]
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             (entry.alive == yes) { alive = alive + 1 }
         }

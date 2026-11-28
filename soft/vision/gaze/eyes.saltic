@@ -83,7 +83,7 @@ skill spots(made) {
     @rows = group.get(made, 1)
     @table = group.get(made, 2)
     @found = []
-    drum (group.count(RADII)) {
+    drum (RADII) {
         @r = group.get(RADII, beat)
         @outer = r * 2
         drum (rows - outer * 2) {
@@ -110,7 +110,7 @@ skill spots(made) {
 skill keep(found, spot) {
     @made = []
     @placed = no
-    drum (group.count(found)) {
+    drum (found) {
         @entry = group.get(found, beat)
         @near = (entry.x - spot.x) * (entry.x - spot.x) + (entry.y - spot.y) * (entry.y - spot.y) < (entry.radius + spot.radius) * (entry.radius + spot.radius)
         pick {
@@ -131,7 +131,7 @@ skill keep(found, spot) {
 skill insert(list, spot) {
     @made = []
     @done = no
-    drum (group.count(list)) {
+    drum (list) {
         @entry = group.get(list, beat)
         (done == no) {
             (spot.score > entry.score) {
@@ -176,9 +176,9 @@ skill find(gray) {
     (group.count(list) < 2) { out Pair {} }
     @best = 0
     @chosen = Pair {}
-    drum (group.count(list)) {
+    drum (list) {
         @first = group.get(list, beat)
-        drum (group.count(list)) {
+        drum (list) {
             @second = group.get(list, beat)
             @across = second.y - first.y
             (across < 0) { across = 0 - across }

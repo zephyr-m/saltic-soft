@@ -24,7 +24,7 @@ skill clean(text) {
 
 skill joined(items) {
     @made = []
-    drum (group.count(items)) {
+    drum (items) {
         @item_2 = group.get(items, beat)
         made = group.add(made, clean(item_2))
     }
@@ -33,7 +33,7 @@ skill joined(items) {
 
 skill save(base, file, nodes_graph, view) {
     @lines = ["view|{view.x}|{view.y}|{view.zoom}"]
-    drum (group.count(nodes_graph.nodes)) {
+    drum (nodes_graph.nodes) {
         @node = group.get(nodes_graph.nodes, beat)
         @title = clean(node.title)
         @inputs = joined(node.inputs)
@@ -41,7 +41,7 @@ skill save(base, file, nodes_graph, view) {
         @shown = clean(node.value)
         lines = group.add(lines, "node|={title}|{node.x}|{node.y}|{node.width}|{node.kind}|={inputs}|={outputs}|={shown}|={node.called}")
     }
-    drum (group.count(nodes_graph.links)) {
+    drum (nodes_graph.links) {
         @link = group.get(nodes_graph.links, beat)
         lines = group.add(lines, "link|{link.from}|{link.exit}|{link.to}|{link.entry}")
     }
@@ -70,7 +70,7 @@ skill load(base, file, view) {
     @nodes = []
     @links = []
     @lines_2 = str.lines(text)
-    drum (group.count(lines_2)) {
+    drum (lines_2) {
         @line = group.get(lines_2, beat)
         @parts = str.split(line, "|")
         @kind = group.get(parts, 0)

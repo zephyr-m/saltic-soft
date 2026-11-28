@@ -141,7 +141,7 @@ skill quiet_line(value, size) {
 skill now(desk, tick) {
     @rows = [bold(desk.phase(), 15, "ink")]
     @going = desk.running()
-    drum (group.count(going)) {
+    drum (going) {
         @entry = group.get(going, beat)
         @who = put("box", [["width", "230"], ["children", calls.listed([cut("{entry.proc} · {entry.name}", "ink", 12)])]])
         rows = group.add(rows, row(10, "center", [spinner("run", tick), who, cut(reader.replaced(entry.last, "⏳", "…"), "quiet", 12)]))
@@ -263,7 +263,7 @@ skill meter(desk) {
 skill prep_row(desk, tick) {
     @rows = []
     @cells = []
-    drum (group.count(desk.prep)) {
+    drum (desk.prep) {
         @branch = group.get(desk.prep, beat)
         cells = group.add(cells, cell("{CELL}p-{beat}", desk.state(branch), branch.name, branch.took, tick))
         (group.count(cells) == PER_ROW) {
@@ -300,7 +300,7 @@ skill journal(desk, picked, log) {
         tabs = group.add(tabs, tab("{CELL}{index}", "{branch.proc} · {branch.name}", yes))
     }
     @lines = []
-    drum (group.count(log.lines)) {
+    drum (log.lines) {
         @line_2 = group.get(log.lines, beat)
         lines = group.add(lines, line(reader.replaced(line_2, "⏳", "…"), line_tone(line_2), 12))
     }

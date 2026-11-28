@@ -65,7 +65,7 @@ Window = Box {
         link = group.get(host, 1)
         @look = workshop.frame
         @entries = look.palette()
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             colors = group.add(colors, graphics.color(canvas, group.get(entry, 0), group.get(entry, 1), group.get(entry, 2)))
         }
@@ -93,7 +93,7 @@ Window = Box {
                 lists = group.replaced(lists, slot, "{list} {beat}")
             }
         }
-        drum (group.count(lists)) {
+        drum (lists) {
             @list_2 = group.get(lists, beat)
             (str.bytes(list_2) > 0) {
                 process.open(SELF, [SELF, list_2], "", no, process.environment_with([]), no)
@@ -137,7 +137,7 @@ Window = Box {
 
     skill play() {
         @ready = []
-        drum (group.count(frames)) {
+        drum (frames) {
             @frame = group.get(frames, beat)
             (group.count(frame) > 0) {
                 ready = group.add(ready, group.get(frame, 0))
@@ -187,7 +187,7 @@ program(task) {
     workshop.prepare()
     ((task == WINDOW) == no) {
         @entries = str.split(task, " ")
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             workshop.save(workshop.index_of(entry))
         }

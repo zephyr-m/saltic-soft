@@ -101,7 +101,7 @@ Polygon = Box {
 
     skill title() {
         @project_2s = group.concat(group.concat(SECTIONS, PROJECTS), SHOWCASE)
-        drum (group.count(project_2s)) {
+        drum (project_2s) {
             @project_2 = group.get(project_2s, beat)
             (group.get(project_2, 0) == section) { out group.get(project_2, 2) }
         }
@@ -110,22 +110,22 @@ Polygon = Box {
 
     skill side() {
         @rows = [calls.call("brand", [["letter", calls.quoted("S")], ["name", calls.quoted("Полигон Saltic")]])]
-        drum (group.count(SECTIONS)) {
+        drum (SECTIONS) {
             @section_2 = group.get(SECTIONS, beat)
             rows = group.add(rows, menu_row(group.get(section_2, 0), group.get(section_2, 1), group.get(section_2, 2), group.get(section_2, 3), group.get(section_2, 0) == section))
         }
         rows = group.add(rows, calls.call("section-head", [["text", calls.quoted("проекты")]]))
-        drum (group.count(PROJECTS)) {
+        drum (PROJECTS) {
             @project_2 = group.get(PROJECTS, beat)
             rows = group.add(rows, menu_row(group.get(project_2, 0), group.get(project_2, 1), group.get(project_2, 2), group.get(project_2, 3), group.get(project_2, 0) == section))
         }
         rows = group.add(rows, calls.call("section-head", [["text", calls.quoted("витрина")]]))
-        drum (group.count(SHOWCASE)) {
+        drum (SHOWCASE) {
             @entry = group.get(SHOWCASE, beat)
             rows = group.add(rows, menu_row(group.get(entry, 0), group.get(entry, 1), group.get(entry, 2), group.get(entry, 3), group.get(entry, 0) == section))
         }
         rows = group.add(rows, calls.call("section-head", [["text", calls.quoted("темы")]]))
-        drum (group.count(themes.NAMES)) {
+        drum (themes.NAMES) {
             @name_2 = group.get(themes.NAMES, beat)
             @kind = "menu-row"
             (name_2 == theme) { kind = "menu-row-current" }

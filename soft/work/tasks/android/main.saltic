@@ -70,7 +70,7 @@ skill acer() {
     @lines = str.lines(text)
     (group.count(lines) == 0) { out HOST }
     @lines_2 = str.split(group.get(lines, 0), " ")
-    drum (group.count(lines_2)) {
+    drum (lines_2) {
         @line = group.get(lines_2, beat)
         (str.bytes(line) > 0) { out line }
     }

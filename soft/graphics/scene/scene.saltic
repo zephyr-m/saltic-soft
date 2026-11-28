@@ -36,7 +36,7 @@ Scene = Box {
 
     skill triangles() {
         @sum = 0
-        drum (group.count(nodes)) {
+        drum (nodes) {
             @node_2 = group.get(nodes, beat)
             sum = sum + node_2.triangles
         }
@@ -45,7 +45,7 @@ Scene = Box {
 
     skill tree() {
         @rows = []
-        drum (group.count(nodes)) {
+        drum (nodes) {
             @item = group.get(nodes, beat)
             rows = group.add(rows, item.row("{NODE}{beat}", beat == chosen))
         }
@@ -60,7 +60,7 @@ Scene = Box {
 
     skill tools() {
         @made = []
-        drum (group.count(TOOLS)) {
+        drum (TOOLS) {
             @tool_2 = group.get(TOOLS, beat)
             @icon = group.get(tool_2, 0)
             @name = group.get(tool_2, 1)
@@ -74,7 +74,7 @@ Scene = Box {
 
     skill modes() {
         @made = []
-        drum (group.count(MODES)) {
+        drum (MODES) {
             @mode_2 = group.get(MODES, beat)
             @icon = group.get(mode_2, 0)
             @name = group.get(mode_2, 1)

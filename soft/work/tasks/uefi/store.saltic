@@ -48,13 +48,13 @@ skill desk_limit() {
 
 skill desk_bytes(desk) {
     @found = []
-    drum (group.count(desk.names)) {
+    drum (desk.names) {
         found = group.add(found, ZERO + group.get(desk.columns, beat))
         found = group.add(found, BAR)
         found = group.concat(found, utf8.encode(group.get(desk.names, beat)))
         found = group.add(found, LINE_END)
         @item_2s = group.get(desk.items, beat)
-        drum (group.count(item_2s)) {
+        drum (item_2s) {
             @item_2 = group.get(item_2s, beat)
             @mark = SPACE
             (group.get(item_2, 0) == yes) { mark = TICK }
@@ -64,7 +64,7 @@ skill desk_bytes(desk) {
             found = group.add(found, LINE_END)
         }
         @events_2 = group.get(desk.events, beat)
-        drum (group.count(events_2)) {
+        drum (events_2) {
             @event = group.get(events_2, beat)
             found = group.concat(found, [SPACE, SPACE, AT])
             found = stamped(found, group.get(event, 0))
@@ -72,7 +72,7 @@ skill desk_bytes(desk) {
             found = group.add(found, LINE_END)
         }
         @messages_2 = group.get(desk.messages, beat)
-        drum (group.count(messages_2)) {
+        drum (messages_2) {
             @message = group.get(messages_2, beat)
             found = group.concat(found, [SPACE, SPACE, QUOTED])
             found = stamped(found, group.get(message, 0))
@@ -114,7 +114,7 @@ skill save_desk(base, desk) {
     @written = desk_bytes(desk)
     (group.count(written) > desk_limit()) { out error.DeskTooBig }
     @buffer = desk_buffer(base)
-    drum (group.count(written)) {
+    drum (written) {
         firmware.write8(buffer, base, beat, group.get(written, beat))
     }
     @root = files.saltic_root(base)
@@ -180,7 +180,7 @@ skill load_desk(base) {
     (group.count(stored) == 0) { out board.starting_board() }
     @desk = board.Board {}
     @start = 0
-    drum (group.count(stored)) {
+    drum (stored) {
         (group.get(stored, beat) == LINE_END) {
             @item = group.get(stored, start) == SPACE
             (item == no) {

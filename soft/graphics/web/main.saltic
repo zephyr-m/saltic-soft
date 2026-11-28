@@ -107,7 +107,7 @@ skill grow(rect, x0, y0, x1, y1) {
 skill stroke_pieces(stage, pieces, ink) {
     @rect = [stage.front.width, stage.front.height, 0, 0]
     @color = ink_color(ink)
-    drum (group.count(pieces)) {
+    drum (pieces) {
         @piece = group.get(pieces, beat)
         shapes.stroke(stage.layer, piece.x0, piece.y0, piece.x1, piece.y1, 1, color, BACKGROUND)
         rect = grow(rect, piece.x0 - 2, piece.y0 - 2, piece.x1 + 2, piece.y1 + 2)

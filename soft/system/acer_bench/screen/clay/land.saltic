@@ -44,7 +44,7 @@ skill along(kind, x, z) {
 
 skill hills(land, x, z) {
     @sum = 0
-    drum (group.count(land.waves)) {
+    drum (land.waves) {
         @wave = group.get(land.waves, beat)
         @angle = forms.wrap(along(group.get(wave, 0), x, z) * geometry.TURN / group.get(wave, 1) + group.get(wave, 3))
         sum = sum + group.get(wave, 2) * geometry.sine(angle) / geometry.ONE

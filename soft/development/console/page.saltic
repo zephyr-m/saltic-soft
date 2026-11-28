@@ -50,7 +50,7 @@ LOOKS = [
 
 skill top(look, chosen, clock) {
     @buttons = []
-    drum (group.count(LOOKS)) {
+    drum (LOOKS) {
         @one = group.get(LOOKS, beat)
         @fill = "panel"
         @tone = "quiet"

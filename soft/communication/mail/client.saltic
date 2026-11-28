@@ -36,7 +36,7 @@ Client = Box {
 
     skill rail() {
         @faces = []
-        drum (group.count(accounts)) {
+        drum (accounts) {
             @account = group.get(accounts, beat)
             faces = group.add(faces, calls.call("avatar", [["letters", calls.quoted(group.get(account, 0))], ["tone", calls.quoted(group.get(account, 1))]]))
         }

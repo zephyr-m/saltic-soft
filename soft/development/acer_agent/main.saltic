@@ -457,7 +457,7 @@ skill home_state(agent) {
 skill open_by_word(agent, words) {
     (group.count(words) < 2) { out "как: open <имя>" }
     @wanted = str.upper(group.get(words, 1))
-    drum (group.count(agent.names)) {
+    drum (agent.names) {
         (group.get(agent.names, beat) == wanted) {
             agent.chosen = beat
             agent.opening = wanted

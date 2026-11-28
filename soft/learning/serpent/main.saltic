@@ -132,7 +132,7 @@ Window = Box {
         @food = show.model.food
         shapes.shape(canvas, FIELD_X + food.x * CELL + 3, FIELD_Y + food.y * CELL + 3, CELL - 6, CELL - 6, (CELL - 6) / 2, colour("watermelon"))
         @index = 0
-        drum (group.count(show.model.body)) {
+        drum (show.model.body) {
             @entry = group.get(show.model.body, beat)
             @tone = "up"
             (index == 0) {

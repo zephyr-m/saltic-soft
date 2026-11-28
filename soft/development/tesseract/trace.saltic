@@ -73,7 +73,7 @@ Trace = Box {
     }
 
     skill cross(x, y, value, lit) {
-        drum (group.count(CROSS)) {
+        drum (CROSS) {
             @entry = group.get(CROSS, beat)
             touch(x + group.get(entry, 0), y + group.get(entry, 1), value, lit)
         }
@@ -120,11 +120,11 @@ Trace = Box {
 
     skill forgot() {
         graphics.fill(marks, 0, 0, marks.width, marks.height, 0)
-        drum (group.count(places)) {
+        drum (places) {
             @place = group.get(places, beat)
             graphics.fill(marks, group.get(place, 0), group.get(place, 1), group.get(place, 2), group.get(place, 3), FOREVER)
         }
-        drum (group.count(banks)) {
+        drum (banks) {
             @bank = group.get(banks, beat)
             bank.cleared()
         }

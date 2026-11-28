@@ -116,7 +116,7 @@ skill hit_sphere(ray, index) {
 
 skill nearest(ray) {
     @best = Hit {}
-    drum (group.count(SPHERES)) {
+    drum (SPHERES) {
         @t = hit_sphere(ray, beat)
         (t < best.t) {
             best.t = t
@@ -154,7 +154,7 @@ skill sky(ray) {
 
 skill shadowed(px, py, pz) {
     @probe = Ray { ox = px, oy = py, oz = pz, dx = group.get(LIGHT, 0), dy = group.get(LIGHT, 1), dz = group.get(LIGHT, 2) }
-    drum (group.count(SPHERES)) {
+    drum (SPHERES) {
         (hit_sphere(probe, beat) < FAR) { out yes }
     }
     out no

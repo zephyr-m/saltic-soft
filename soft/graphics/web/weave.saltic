@@ -137,7 +137,7 @@ skill plan(web, step) {
 skill nearest(web, x, y) {
     @best = 0
     @best_distance = -1
-    drum (group.count(web.points)) {
+    drum (web.points) {
         @p = group.get(web.points, beat)
         @dx = group.get(p, 0) - x
         @dy = group.get(p, 1) - y
@@ -184,7 +184,7 @@ skill route(web, from, to) {
         head = head + 1
         (node == to) { leave }
         @next = neighbors(web, node)
-        drum (group.count(next)) {
+        drum (next) {
             @other = group.get(next, beat)
             (bytes.get(parent, other) == UNSEEN) {
                 bytes.set(parent, other, node)
@@ -200,7 +200,7 @@ skill route(web, from, to) {
         path = group.add(path, at)
     }
     @forward = []
-    drum (group.count(path)) {
+    drum (path) {
         forward = group.add(forward, group.get(path, group.count(path) - 1 - beat))
     }
     out forward

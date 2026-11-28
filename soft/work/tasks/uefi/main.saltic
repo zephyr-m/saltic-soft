@@ -187,7 +187,7 @@ skill itemizing(desk, session, parts) {
     @list = board.items_of(desk, number)
     @pages = []
     @text = "№{number}, пункты:"
-    drum (group.count(list)) {
+    drum (list) {
         @item = group.get(list, beat)
         pages = group.add(pages, mrpc.object_value([number_field("item", beat + 1), mrpc.field("done", mrpc.flag_value(group.get(item, 0))), text_field("text", group.get(item, 1)), text_field("time", group.get(item, 2))]))
         @what = group.get(item, 1)
@@ -202,7 +202,7 @@ skill happening(desk, session, parts) {
     @pages = []
     @text = "№{number}, события:"
     @entries = board.events_of(desk, number)
-    drum (group.count(entries)) {
+    drum (entries) {
         @entry = group.get(entries, beat)
         pages = group.add(pages, mrpc.object_value([text_field("time", group.get(entry, 0)), text_field("text", group.get(entry, 1))]))
         @when = group.get(entry, 0)
@@ -218,7 +218,7 @@ skill talking(desk, session, parts) {
     @said = board.messages_of(desk, number)
     @pages = []
     @text = "№{number}, сообщения:"
-    drum (group.count(said)) {
+    drum (said) {
         @line = group.get(said, beat)
         pages = group.add(pages, mrpc.object_value([number_field("message", beat + 1), text_field("time", group.get(line, 0)), text_field("author", group.get(line, 1)), text_field("text", group.get(line, 2))]))
         @when = group.get(line, 0)
@@ -252,7 +252,7 @@ skill seen_task(desk, session, number, what) {
 
 skill listing(desk, session, parts) {
     @pages = []
-    drum (group.count(desk.names)) {
+    drum (desk.names) {
         pages = group.add(pages, summary(desk, beat + 1))
     }
     @from = 0
@@ -404,7 +404,7 @@ skill spoken(link, packet) {
 skill listen(link, desk, session) {
     @heard = []
     @packets = remote.serve(link)
-    drum (group.count(packets)) {
+    drum (packets) {
         @packet = group.get(packets, beat)
         @asked = mrpc.is_request(packet.payload)
         (asked == yes) {
@@ -482,7 +482,7 @@ skill tick(base, link, desk, session) {
         store.save_desk(base, desk) rescue |err| { session.note = "не сохранила: {err}" }
     }
     @after = state_text(desk, session)
-    drum (group.count(heard)) {
+    drum (heard) {
         @entry = group.get(heard, beat)
         @said = group.get(entry, 1)
         (group.get(entry, 2) == yes) { answered(link, group.get(entry, 0), said) }

@@ -91,7 +91,7 @@ Stones = Box {
         @tile = colour(palette, "panel")
         @mark = colour(palette, "mustard")
         @tip = colour(palette, "accent")
-        drum (group.count(game.cells)) {
+        drum (game.cells) {
             @cx = left + (beat % game.width) * cell
             @cy = top + (beat / game.width) * cell
             shapes.shape(canvas, cx + GAP / 2, cy + GAP / 2, cell - GAP, cell - GAP, 10, tile)

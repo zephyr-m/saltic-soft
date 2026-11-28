@@ -223,7 +223,7 @@ skill dots(screen, x, y, width, height, picture, palette) {
     drum (rows) {
         @row = group.get(picture, beat)
         @top = y + beat * cell
-        drum (group.count(row)) {
+        drum (row) {
             @ink = palette.edge
             (group.get(row, beat) == 1) { ink = palette.chosen }
             rect(screen, x + beat * cell, top, cell - 1, cell - 1, ink)
@@ -349,7 +349,7 @@ skill programs_list(programs) {
     @names = group.get(programs, 0)
     @open = group.get(programs, 1)
     @rows = []
-    drum (group.count(names)) {
+    drum (names) {
         @kind = "file-row"
         (beat == open) { kind = "file-row-current" }
         rows = group.add(rows, calls.call(kind, [["id", calls.quoted("")], ["name", calls.quoted(group.get(names, beat))], ["indent", "0"]]))
@@ -360,7 +360,7 @@ skill programs_list(programs) {
 
 skill page(nodes_graph, view, status, programs) {
     @cards = []
-    drum (group.count(nodes_graph.nodes)) {
+    drum (nodes_graph.nodes) {
         @node = group.get(nodes_graph.nodes, beat)
         ((node.kind == graph.RING) == no) {
             @x = spot(view, node.x) + view.x
@@ -390,14 +390,14 @@ skill ring(screen, node, view, palette, chosen) {
 
 skill rings(screen, nodes, view, palette) {
     @left = []
-    drum (group.count(nodes)) {
+    drum (nodes) {
         @node = group.get(nodes, beat)
         (node.kind == graph.RING) { left = group.add(left, beat) }
     }
-    drum (group.count(left)) {
+    drum (left) {
         @widest = 0
         @width = -1
-        drum (group.count(left)) {
+        drum (left) {
             @node = group.get(nodes, group.get(left, beat))
             (node.width > width) {
                 widest = beat
@@ -417,7 +417,7 @@ skill draw(base, whole_screen, nodes_graph, view, palette, skin, status, program
     grid(screen, view, palette.dot)
     @nodes = nodes_graph.nodes
     rings(screen, nodes, view, palette)
-    drum (group.count(nodes_graph.links)) {
+    drum (nodes_graph.links) {
         @link = group.get(nodes_graph.links, beat)
         (link.from < group.count(nodes)) {
             (link.to < group.count(nodes)) { joint(screen, group.get(nodes, link.from), group.get(nodes, link.to), link, view, palette) }
@@ -425,7 +425,7 @@ skill draw(base, whole_screen, nodes_graph, view, palette, skin, status, program
     }
     @tree = atoms.fitted(read.page(page(nodes_graph, view, status, programs)), no, skin)
     atoms.paint(whole_screen, jtml.mount(whole_screen, tree), skin)
-    drum (group.count(nodes)) {
+    drum (nodes) {
         @node = group.get(nodes, beat)
         ((node.kind == graph.RING) == no) { inside(screen, node, spot(view, node.x) + view.x, spot(view, node.y) + view.y, palette, view.zoom) }
     }

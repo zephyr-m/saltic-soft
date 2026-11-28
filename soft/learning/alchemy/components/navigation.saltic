@@ -15,7 +15,7 @@ Navigation = Box {
 
     skill jtml() {
         @items = []
-        drum (group.count(ITEMS)) {
+        drum (ITEMS) {
             @name = group.get(ITEMS, beat)
             @kind = "nav-item"
             (name == active) { kind = "nav-item-active" }

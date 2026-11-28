@@ -486,7 +486,7 @@ skill tick(screen, model) {
 
 skill remove_wall(model, x, y) {
     @walls = []
-    drum (group.count(model.walls)) {
+    drum (model.walls) {
         @wall = group.get(model.walls, beat)
         (same(wall, x, y) == no) { walls = group.add(walls, wall) }
     }
@@ -548,7 +548,7 @@ skill edit_cell(screen, model, x, y) {
     (inside_nest(x, y) == yes) { out model }
     edit(model, x, y)
     draw_base_cell(screen, model, x, y)
-    drum (group.count(model.workers)) {
+    drum (model.workers) {
         @worker = group.get(model.workers, beat)
         (same(worker, x, y) == yes) { draw_worker(screen, worker) }
     }

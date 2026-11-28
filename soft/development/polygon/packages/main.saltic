@@ -48,7 +48,7 @@ Packages = Box {
             out none
         }
         @left = []
-        drum (group.count(folded)) {
+        drum (folded) {
             @entry = group.get(folded, beat)
             ((entry == role) == no) { left = group.add(left, entry) }
         }
@@ -62,7 +62,7 @@ Packages = Box {
             out none
         }
         @left = []
-        drum (group.count(opened)) {
+        drum (opened) {
             @entry = group.get(opened, beat)
             ((entry == name) == no) { left = group.add(left, entry) }
         }
@@ -96,7 +96,7 @@ Packages = Box {
     skill found() {
         @many = 0
         @asked = str.lower(query)
-        drum (group.count(catalog.packages)) {
+        drum (catalog.packages) {
             @package = group.get(catalog.packages, beat)
             (package.matches(asked) == yes) { many = many + 1 }
         }
@@ -106,7 +106,7 @@ Packages = Box {
     skill rows() {
         @asked = str.lower(query)
         @made = []
-        drum (group.count(ROLES)) {
+        drum (ROLES) {
             @role_2 = group.get(ROLES, beat)
             @role = group.get(role_2, 0)
             @icon = group.get(role_2, 2)
@@ -115,7 +115,7 @@ Packages = Box {
             @chevron = "chevron-down"
             (shut == yes) { chevron = "chevron-right" }
             @total = 0
-            drum (group.count(catalog.packages)) {
+            drum (catalog.packages) {
                 @package_2 = group.get(catalog.packages, beat)
                 (package_2.role == role) {
                     (package_2.matches(asked) == yes) { total = total + 1 }
@@ -123,7 +123,7 @@ Packages = Box {
             }
             made = group.add(made, calls.call("tree-group", [["id", calls.quoted("{GROUP}{role}")], ["chevron", calls.quoted(chevron)], ["text", calls.quoted(group.get(role_2, 1))], ["count", calls.quoted("{total}")]]))
             (shut == no) {
-                drum (group.count(catalog.packages)) {
+                drum (catalog.packages) {
                     @package = group.get(catalog.packages, beat)
                     (package.role == role) {
                         (package.matches(asked) == yes) {

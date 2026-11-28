@@ -43,7 +43,7 @@ skill paint(buffer, width, height, model) {
     ink.rect(buffer, width, width - 48, 0, 48, 48, CACAO)
     ink.body(buffer, width, 16, 16, "SNAKE", CREAM)
     ink.body(buffer, width, width - 28, 16, "x", CREAM)
-    drum (group.count(model.body)) {
+    drum (model.body) {
         cell(buffer, width, group.get(model.body, beat), CACAO)
     }
     food(buffer, width, model.food)

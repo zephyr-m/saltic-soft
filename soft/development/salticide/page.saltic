@@ -168,7 +168,7 @@ Page = Box {
 
     skill open(path, lines, writable) {
         @known = no
-        drum (group.count(docs)) {
+        drum (docs) {
             @doc = group.get(docs, beat)
             (doc.path == path) {
                 known = yes
@@ -189,7 +189,7 @@ Page = Box {
         (path == pane.active) {
             out pane.dirty
         }
-        drum (group.count(docs)) {
+        drum (docs) {
             @doc = group.get(docs, beat)
             (doc.path == path) {
                 out doc.dirty
@@ -210,7 +210,7 @@ Page = Box {
         foot.note = ""
         @left = []
         @paths = []
-        drum (group.count(docs)) {
+        drum (docs) {
             @doc = group.get(docs, beat)
             ((doc.path == path) == no) {
                 left = group.add(left, doc)
@@ -242,7 +242,7 @@ Page = Box {
         @made = []
         @paths = []
         @chosen = Doc {}
-        drum (group.count(docs)) {
+        drum (docs) {
             @doc = group.get(docs, beat)
             (doc.path == pane.active) {
                 doc.lines = pane.lines
@@ -350,7 +350,7 @@ Page = Box {
         (pane.dirty == yes) {
             out yes
         }
-        drum (group.count(docs)) {
+        drum (docs) {
             @doc = group.get(docs, beat)
             (doc.dirty == yes) {
                 out yes

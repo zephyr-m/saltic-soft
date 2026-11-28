@@ -84,7 +84,7 @@ skill put(base, kind, line) {
     @slot = firmware.add(log, HEADER + next * SLOT)
     firmware.write8(slot, base, 0, kind)
     firmware.write8(slot, base, 1, group.count(line))
-    drum (group.count(line)) {
+    drum (line) {
         firmware.write8(slot, base, 2 + beat, group.get(line, beat))
     }
     firmware.write16(log, base, 0, (next + 1) % SLOTS)

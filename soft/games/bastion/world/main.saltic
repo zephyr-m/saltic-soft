@@ -87,7 +87,7 @@ World = Box {
             [15, 8], [15, 9]
         ]
         spots = []
-        drum (group.count(path)) {
+        drum (path) {
             @entry = group.get(path, beat)
             @column = group.get(entry, 0)
             @row = group.get(entry, 1)
@@ -100,7 +100,7 @@ World = Box {
 
     skill cover(spot) {
         @seen = 0
-        drum (group.count(path)) {
+        drum (path) {
             @entry = group.get(path, beat)
             @dx = group.get(entry, 0) - group.get(spot, 0)
             @dy = group.get(entry, 1) - group.get(spot, 1)
@@ -113,13 +113,13 @@ World = Box {
 
     skill ranked(found) {
         @order = []
-        drum (group.count(found)) {
+        drum (found) {
             @entry_2 = group.get(found, beat)
             @score = cover(entry_2)
             @placed = no
             @next = []
             @spot = entry_2
-            drum (group.count(order)) {
+            drum (order) {
                 @entry = group.get(order, beat)
                 ((placed == no) ○ (score > cover(entry))) {
                     next = group.add(next, spot)
@@ -139,7 +139,7 @@ World = Box {
         ((row < 0) ○○ (row >= rows) ○○ (on_path(column, row) == yes)) {
             out found
         }
-        drum (group.count(found)) {
+        drum (found) {
             @entry = group.get(found, beat)
             ((group.get(entry, 0) == column) ○ (group.get(entry, 1) == row)) {
                 out found
@@ -149,7 +149,7 @@ World = Box {
     }
 
     skill on_path(column, row) {
-        drum (group.count(path)) {
+        drum (path) {
             @entry = group.get(path, beat)
             ((group.get(entry, 0) == column) ○ (group.get(entry, 1) == row)) {
                 out yes
@@ -236,7 +236,7 @@ World = Box {
     skill march(ms) {
         @end = (group.count(path) - 1) * CELL
         @walking = []
-        drum (group.count(enemies)) {
+        drum (enemies) {
             @enemy_2 = group.get(enemies, beat)
             @pace = enemy_2.speed
             (enemy_2.chill > 0) {
@@ -274,7 +274,7 @@ World = Box {
     }
 
     skill tower_at(column, row) {
-        drum (group.count(towers)) {
+        drum (towers) {
             @here = group.get(towers, beat)
             ((here.column == column) ○ (here.row == row)) {
                 out beat
@@ -284,7 +284,7 @@ World = Box {
     }
 
     skill is_spot(column, row) {
-        drum (group.count(spots)) {
+        drum (spots) {
             @spot = group.get(spots, beat)
             ((group.get(spot, 0) == column) ○ (group.get(spot, 1) == row)) {
                 out yes
@@ -294,7 +294,7 @@ World = Box {
     }
 
     skill free_spot() {
-        drum (group.count(spots)) {
+        drum (spots) {
             @spot = group.get(spots, beat)
             (tower_at(group.get(spot, 0), group.get(spot, 1)) < 0) {
                 out spot
@@ -340,7 +340,7 @@ World = Box {
     skill firepower() {
         @haste = 100 + speed_level * SPEED_STEP
         @total = 0
-        drum (group.count(towers)) {
+        drum (towers) {
             @tower_2 = group.get(towers, beat)
             @pause = tower_2.pause() * 100 / haste
             total = total + damage_of(tower_2) * 1000 / pause
@@ -351,7 +351,7 @@ World = Box {
     skill shoot(ms) {
         @boost = 100 + damage_level * DAMAGE_STEP
         @haste = 100 + speed_level * SPEED_STEP
-        drum (group.count(towers)) {
+        drum (towers) {
             @tower_2 = group.get(towers, beat)
             tower_2.wait = tower_2.wait - ms
             (tower_2.wait <= 0) {
@@ -371,7 +371,7 @@ World = Box {
         @reach = shooter.reach()
         @best = none
         @furthest = -1
-        drum (group.count(enemies)) {
+        drum (enemies) {
             @enemy_2 = group.get(enemies, beat)
             @place = at(enemy_2.step)
             @dx = group.get(place, 0) - x
@@ -392,7 +392,7 @@ World = Box {
         }
         (shooter.splashes() == yes) {
             @center = at(victim.step)
-            drum (group.count(enemies)) {
+            drum (enemies) {
                 @enemy_2 = group.get(enemies, beat)
                 @place = at(enemy_2.step)
                 @dx = group.get(place, 0) - group.get(center, 0)
@@ -408,7 +408,7 @@ World = Box {
 
     skill bury() {
         @alive = []
-        drum (group.count(enemies)) {
+        drum (enemies) {
             @enemy_2 = group.get(enemies, beat)
             pick {
                 (enemy_2.health <= 0) {

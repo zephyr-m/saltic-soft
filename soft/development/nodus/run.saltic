@@ -138,7 +138,7 @@ skill shown(value) {
     (value.kind == NUMBER) { out number_text(value.number) }
     (value.kind == TEXT) { out "'{value.text}'" }
     @parts = []
-    drum (group.count(value.items)) {
+    drum (value.items) {
         @item_2 = group.get(value.items, beat)
         parts = group.add(parts, shown(item_2))
     }
@@ -159,7 +159,7 @@ skill same(a, b) {
 }
 
 skill ticking(nodes_graph) {
-    drum (group.count(nodes_graph.nodes)) {
+    drum (nodes_graph.nodes) {
         @node_2 = group.get(nodes_graph.nodes, beat)
         (node_2.title == "время") { out yes }
         (node_2.title == "регистр") { out yes }
@@ -169,7 +169,7 @@ skill ticking(nodes_graph) {
 }
 
 skill source(nodes_graph, index, entry) {
-    drum (group.count(nodes_graph.links)) {
+    drum (nodes_graph.links) {
         @link = group.get(nodes_graph.links, beat)
         (link.to == index) {
             (link.entry == entry) { out link }
@@ -179,7 +179,7 @@ skill source(nodes_graph, index, entry) {
 }
 
 skill shelved(base, shelf, file) {
-    drum (group.count(shelf.files)) {
+    drum (shelf.files) {
         (group.get(shelf.files, beat) == file) { out group.get(shelf.graphs, beat) }
     }
     @spot = look.View {}
@@ -225,7 +225,7 @@ skill glyph(digit) {
     (digit > 9) { out none }
     @rows = []
     @lines = group.get(DIGITS, digit)
-    drum (group.count(lines)) {
+    drum (lines) {
         @line = group.get(lines, beat)
         @row = []
         drum (str.bytes(line)) {
@@ -241,7 +241,7 @@ skill beside(a, b) {
     ((b.kind == LIST) == no) { out none }
     ((group.count(a.items) == group.count(b.items)) == no) { out none }
     @rows = []
-    drum (group.count(a.items)) {
+    drum (a.items) {
         @left = group.get(a.items, beat)
         @right = group.get(b.items, beat)
         rows = group.add(rows, Val { kind = LIST, items = group.concat(group.add(left.items, numeric(0)), right.items) })
@@ -357,7 +357,7 @@ skill start(base, shelf, nodes_graph, now, bound, depth) {
     @states = []
     @slots = []
     @inputs_seen = 0
-    drum (group.count(nodes_graph.nodes)) {
+    drum (nodes_graph.nodes) {
         @node = group.get(nodes_graph.nodes, beat)
         values = group.add(values, [])
         states = group.add(states, WAITING)
@@ -392,7 +392,7 @@ skill instance_of(run, node) {
 skill outputs_from(inner) {
     @inside = inner.nodes
     @outputs = []
-    drum (group.count(inside.nodes)) {
+    drum (inside.nodes) {
         @node = group.get(inside.nodes, beat)
         (node.kind == graph.OUT) {
             @made = demand(inner, beat)
@@ -475,7 +475,7 @@ skill work(run, index) {
         out none
     }
     @args = []
-    drum (group.count(node.inputs)) {
+    drum (node.inputs) {
         @arg = input(run, index, beat)
         @got = no
         (arg) |arg| {
@@ -508,12 +508,12 @@ skill demand(run, index) {
 skill bits_of(value) {
     @rows = []
     (value.kind == LIST) {
-        drum (group.count(value.items)) {
+        drum (value.items) {
             @item_3 = group.get(value.items, beat)
             @row = []
             (item_3.kind == LIST) {
                 @item_2s = item_3.items
-                drum (group.count(item_2s)) {
+                drum (item_2s) {
                     @item_2 = group.get(item_2s, beat)
                     @dot = 0
                     (item_2.kind == NUMBER) {
@@ -530,7 +530,7 @@ skill bits_of(value) {
 
 skill evaluate(base, shelf, nodes_graph, now, live, clock) {
     @run = start(base, shelf, nodes_graph, now, [], 0)
-    drum (group.count(nodes_graph.nodes)) {
+    drum (nodes_graph.nodes) {
         @node = group.get(nodes_graph.nodes, beat)
         node.result = ""
         @made = demand(run, beat)
@@ -557,7 +557,7 @@ skill evaluate(base, shelf, nodes_graph, now, live, clock) {
 
 skill latch(run) {
     @latched = []
-    drum (group.count(run.nodes.nodes)) {
+    drum (run.nodes.nodes) {
         @node = group.get(run.nodes.nodes, beat)
         @next = []
         (node.title == "регистр") {
@@ -566,12 +566,12 @@ skill latch(run) {
         }
         latched = group.add(latched, next)
     }
-    drum (group.count(run.nodes.nodes)) {
+    drum (run.nodes.nodes) {
         @node = group.get(run.nodes.nodes, beat)
         @next = group.get(latched, beat)
         (group.count(next) > 0) { node.memory = next }
     }
-    drum (group.count(run.children)) {
+    drum (run.children) {
         @child = group.get(run.children, beat)
         latch(child)
     }

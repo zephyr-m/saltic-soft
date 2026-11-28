@@ -282,7 +282,7 @@ skill grads(net, pass, target) {
 
 skill joined(a, b, rate) {
     @made = []
-    drum (group.count(a)) {
+    drum (a) {
         made = group.add(made, 0.0 + group.get(a, beat) + 1.0 * group.get(b, beat) * rate)
     }
     out made
@@ -304,16 +304,16 @@ skill parts(net) {
 skill save(net, path) {
     @total = 0
     @part_2s = parts(net)
-    drum (group.count(part_2s)) {
+    drum (part_2s) {
         @part_2 = group.get(part_2s, beat)
         total = total + group.count(part_2)
     }
     @kept = matrix.new(total, 1)
     @at = 0
     @parts_2 = parts(net)
-    drum (group.count(parts_2)) {
+    drum (parts_2) {
         @part = group.get(parts_2, beat)
-        drum (group.count(part)) {
+        drum (part) {
             @entry = group.get(part, beat)
             matrix.set(kept, at, 0, entry)
             at = at + 1
@@ -327,7 +327,7 @@ skill load(path) {
     @sizes = [C1 * 9, C1, C2 * C1 * 9, C2, OUT * DENSE, OUT]
     @found = []
     @at = 0
-    drum (group.count(sizes)) {
+    drum (sizes) {
         @size = group.get(sizes, beat)
         @made = []
         drum (size) {

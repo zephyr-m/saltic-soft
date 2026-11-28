@@ -94,11 +94,11 @@ skill context(text, param) {
 }
 
 skill number_of(name, fallback) {
-    drum (group.count(NUMBERS)) {
+    drum (NUMBERS) {
         @number = group.get(NUMBERS, beat)
         (group.get(number, 0) == name) { out group.get(number, 1) }
     }
-    drum (group.count(GUESSES)) {
+    drum (GUESSES) {
         @guess = group.get(GUESSES, beat)
         (group.get(guess, 0) == name) { out group.get(guess, 1) }
     }
@@ -122,7 +122,7 @@ skill sample(text, param) {
             out calls.quoted("accent")
         }
         (key == "icon") { out calls.quoted("box") }
-        drum (group.count(ENUMS)) {
+        drum (ENUMS) {
             @variant = group.get(ENUMS, beat)
             (group.get(variant, 0) == key) { out calls.quoted(group.get(variant, 1)) }
         }
@@ -136,13 +136,13 @@ skill sample(text, param) {
 skill params(text) {
     @root = reader.read_jtml(text)
     @found = []
-    drum (group.count(root.keys)) {
+    drum (root.keys) {
         (group.get(root.keys, beat) == "component") {
             @inner = group.get(root.items, beat)
-            drum (group.count(inner.keys)) {
+            drum (inner.keys) {
                 (group.get(inner.keys, beat) == "params") {
                     @list = group.get(inner.items, beat)
-                    drum (group.count(list.items)) {
+                    drum (list.items) {
                         @item_2 = group.get(list.items, beat)
                         found = group.add(found, item_2.words)
                     }
@@ -172,7 +172,7 @@ skill count_of(text, needle) {
 
 skill uses(text) {
     @found = []
-    drum (group.count(library.NAMES)) {
+    drum (library.NAMES) {
         @name = group.get(library.NAMES, beat)
         (place(text, "\"{name}\": \{") >= 0) { found = group.add(found, name) }
     }
@@ -182,14 +182,14 @@ skill uses(text) {
 skill drawing(value) {
     @found = 0
     (value.kind == reader.Kind.JTML_ARRAY) {
-        drum (group.count(value.items)) {
+        drum (value.items) {
             @item_2 = group.get(value.items, beat)
             found = found + drawing(item_2)
         }
         out found
     }
     ((value.kind == reader.Kind.JTML_OBJECT) == no) { out 0 }
-    drum (group.count(value.keys)) {
+    drum (value.keys) {
         @key = group.get(value.keys, beat)
         @inner = group.get(value.items, beat)
         (group.contains(["text", "field", "slider", "circle"], key) == yes) {
@@ -198,7 +198,7 @@ skill drawing(value) {
         (key == "box") {
             @seen = no
             (inner.kind == reader.Kind.JTML_OBJECT) {
-                drum (group.count(inner.keys)) {
+                drum (inner.keys) {
                     @key_2 = group.get(inner.keys, beat)
                     (group.contains(VISUAL, key_2) == yes) { seen = yes }
                 }
@@ -214,7 +214,7 @@ skill atoms_in(text) {
     @root = reader.read_jtml(text)
     @about = group.get(root.items, 0)
     @body = none
-    drum (group.count(about.keys)) {
+    drum (about.keys) {
         (group.get(about.keys, beat) == "body") { body = group.get(about.items, beat) }
     }
     out drawing(body)
@@ -222,7 +222,7 @@ skill atoms_in(text) {
 
 skill level_count(level) {
     @found = 0
-    drum (group.count(library.LEVELS)) {
+    drum (library.LEVELS) {
         @level_2 = group.get(library.LEVELS, beat)
         (level_2 == level) { found = found + 1 }
     }
@@ -263,7 +263,7 @@ Gallery = Box {
         @text = library.find(name)
         @names = params(text)
         @pairs = []
-        drum (group.count(names)) {
+        drum (names) {
             @name_2 = group.get(names, beat)
             pairs = group.add(pairs, [name_2, sample(text, name_2)])
         }
@@ -274,10 +274,10 @@ Gallery = Box {
         (group.count(names) == 0) { list = "без параметров" }
         @marks = []
         @useds = uses(text)
-        drum (group.count(useds)) {
+        drum (useds) {
             @used = group.get(useds, beat)
             @tone = "quiet"
-            drum (group.count(library.NAMES)) {
+            drum (library.NAMES) {
                 (group.get(library.NAMES, beat) == used) { tone = group.get(TONES, group.get(library.LEVELS, beat)) }
             }
             marks = group.add(marks, calls.call("badge", [["text", calls.quoted(used)], ["tone", calls.quoted(tone)]]))
@@ -297,7 +297,7 @@ Gallery = Box {
     skill atom_cards() {
         @made = []
         @width = (wide - GAP * (COLUMNS - 1)) / COLUMNS
-        drum (group.count(ATOM_SAMPLES)) {
+        drum (ATOM_SAMPLES) {
             @atom_sample = group.get(ATOM_SAMPLES, beat)
             @note = calls.call("console-line", [["text", calls.quoted("атом — рисует движок, жителем не бывает")], ["tone", calls.quoted("quiet")], ["size", "11"]])
             made = group.add(made, calls.call("console-panel", [["title", calls.quoted(group.get(atom_sample, 0))], ["note", calls.quoted("уровень 1")], ["width", "{width}"], ["radius", "14"], ["grow", "0"], ["children", calls.listed([note, group.get(atom_sample, 1)])]]))
@@ -309,13 +309,13 @@ Gallery = Box {
         @cards = []
         (level == 1) { cards = atom_cards() }
         (level > 1) {
-            drum (group.count(library.NAMES)) {
+            drum (library.NAMES) {
                 (group.get(library.LEVELS, beat) == level) { cards = group.add(cards, card(beat)) }
             }
         }
         @rows = []
         @at = 0
-        drum (group.count(cards)) {
+        drum (cards) {
             (at < group.count(cards)) {
                 @end = at + COLUMNS
                 (end > group.count(cards)) { end = group.count(cards) }

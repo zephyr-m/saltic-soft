@@ -81,7 +81,7 @@ Window = Box {
     }
 
     skill field_place() {
-        drum (group.count(runtime.targets)) {
+        drum (runtime.targets) {
             @target = group.get(runtime.targets, beat)
             (target.id == panel.FIELD) {
                 out target
@@ -135,7 +135,7 @@ Window = Box {
         screen.pump(link, packet, hold, joined)
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
-        drum (group.count(drained.gestures)) {
+        drum (drained.gestures) {
             @gesture = group.get(drained.gestures, beat)
             (gesture.kind == gestures.Kind.CLICK) {
                 @hit = jtml.hit(runtime, gesture.x, gesture.y)

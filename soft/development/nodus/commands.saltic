@@ -58,7 +58,7 @@ skill names(call, name, fallback) {
     (found.found == no) { out fallback }
     (value.is_kind(found.value, json.JsonKind.ARRAY) == no) { out [mrpc.plain(found.value)] }
     @made = []
-    drum (group.count(found.value.items)) {
+    drum (found.value.items) {
         @item_2 = group.get(found.value.items, beat)
         made = group.add(made, mrpc.plain(item_2))
     }
@@ -73,7 +73,7 @@ skill node_at(nodes_graph, index) {
 
 skill listing(nodes_graph) {
     @lines = []
-    drum (group.count(nodes_graph.nodes)) {
+    drum (nodes_graph.nodes) {
         @node = group.get(nodes_graph.nodes, beat)
         @n = beat
         @inputs = str.join(node.inputs, ", ")
@@ -82,7 +82,7 @@ skill listing(nodes_graph) {
         (str.bytes(node.result) > 0) { result = " = {node.result}" }
         lines = group.add(lines, "#{n} {node.title} ({node.x}, {node.y}) входы [{inputs}] выходы [{outputs}] значение «{node.value}»{result}")
     }
-    drum (group.count(nodes_graph.links)) {
+    drum (nodes_graph.links) {
         @link = group.get(nodes_graph.links, beat)
         @n = beat
         lines = group.add(lines, "связь #{n}: {link.from}.{link.exit} → {link.to}.{link.entry}")
@@ -113,11 +113,11 @@ skill fill(desk, node, call) {
 
 skill drop(nodes_graph, index) {
     @kept = []
-    drum (group.count(nodes_graph.nodes)) {
+    drum (nodes_graph.nodes) {
         ((beat == index) == no) { kept = group.add(kept, group.get(nodes_graph.nodes, beat)) }
     }
     @links = []
-    drum (group.count(nodes_graph.links)) {
+    drum (nodes_graph.links) {
         @link = group.get(nodes_graph.links, beat)
         @touches = link.from == index
         (link.to == index) { touches = yes }
@@ -137,7 +137,7 @@ skill drop(nodes_graph, index) {
 skill program_list(desk) {
     @lines = []
     @registry = desk.catalog
-    drum (group.count(registry.entries)) {
+    drum (registry.entries) {
         @entry = group.get(registry.entries, beat)
         @n = beat
         @mark = ""

@@ -87,7 +87,7 @@ skill values(weights, state) {
 skill best(answer) {
     @chosen = 0
     @top = 0.0 + group.get(answer, 0)
-    drum (group.count(answer)) {
+    drum (answer) {
         @value = 0.0 + group.get(answer, beat)
         (value > top) {
             top = value

@@ -38,7 +38,7 @@ skill save_note(base, name, text) {
     @written = utf8.encode(text)
     (group.count(written) > note_limit()) { out error.NoteTooBig }
     @buffer = note_buffer(base)
-    drum (group.count(written)) {
+    drum (written) {
         firmware.write8(buffer, base, beat, group.get(written, beat))
     }
     @root = files.saltic_root(base)

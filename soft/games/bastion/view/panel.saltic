@@ -57,14 +57,14 @@ Panel = Box {
         @field_line = calls.call("hint", [["text", calls.quoted("на поле {count} · урон {fire}/с")]])
         @cards = []
         @entries = store.towers_on_sale(realm)
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             cards = group.add(cards, tower_card(entry))
         }
         @upgrades_title = calls.call("section-title", [["text", calls.quoted("Улучшения")]])
         @rows = []
         @upgrade_2s = store.upgrades(realm)
-        drum (group.count(upgrade_2s)) {
+        drum (upgrade_2s) {
             @upgrade_2 = group.get(upgrade_2s, beat)
             rows = group.add(rows, upgrade(upgrade_2))
         }

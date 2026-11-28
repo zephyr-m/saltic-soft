@@ -69,7 +69,7 @@ Project = Box {
 
     skill home() {
         @settings = process.environment()
-        drum (group.count(settings)) {
+        drum (settings) {
             @setting = group.get(settings, beat)
             (str.starts_with(setting, "SALTIC_HOME=") == yes) {
                 out str.slice(setting, 12, str.bytes(setting))
@@ -91,7 +91,7 @@ Project = Box {
         files = 0
         lines = 0
         @paths = str.lines(listed.output)
-        drum (group.count(paths)) {
+        drum (paths) {
             @path = group.get(paths, beat)
             @text = file.read("{root}/{path}") rescue |err| { "" }
             ((text == "") == no) {
@@ -100,7 +100,7 @@ Project = Box {
                 lines = lines + many
                 @top = group.get(str.split(path, "/"), 0)
                 @slot = group.count(AREAS)
-                drum (group.count(AREAS)) {
+                drum (AREAS) {
                     (group.get(AREAS, beat) == top) { slot = beat }
                 }
                 counted = group.replaced(counted, slot, group.get(counted, slot) + many)
@@ -114,7 +114,7 @@ Project = Box {
 
     skill shelf_of(names) {
         @found = []
-        drum (group.count(names)) {
+        drum (names) {
             @name = group.get(names, beat)
             (str.starts_with(name, PREFIX) == yes) {
                 (str.contains(name, MARK) == yes) {
@@ -138,13 +138,13 @@ Project = Box {
 
     skill floors() {
         @counts = [0, ATOMS, 0, 0, 0]
-        drum (group.count(library.LEVELS)) {
+        drum (library.LEVELS) {
             @level = group.get(library.LEVELS, beat)
             counts = group.replaced(counts, level, group.get(counts, level) + 1)
         }
         @most = widest(counts)
         @rows = []
-        drum (group.count(FLOORS)) {
+        drum (FLOORS) {
             @floor_2 = group.get(FLOORS, beat)
             @many = count_of(counts, floor_2)
             @width = many * TRACK / most + 8
@@ -157,7 +157,7 @@ Project = Box {
         @most = widest(areas)
         @rows = []
         @names = group.concat(AREAS, ["другое"])
-        drum (group.count(names)) {
+        drum (names) {
             @many = group.get(areas, beat)
             @width = many * TRACK / most + 4
             rows = group.add(rows, calls.call("bar-row", [["label", calls.quoted(group.get(names, beat))], ["value", calls.quoted("{many}")], ["width", "{width}"], ["tone", calls.quoted("accent_mid")]]))

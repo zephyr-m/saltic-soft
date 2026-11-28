@@ -103,7 +103,7 @@ Wizard = Box {
 
     skill first() {
         @cards = []
-        drum (group.count(KINDS)) {
+        drum (KINDS) {
             @choice = group.get(KINDS, beat)
             cards = group.add(cards, card(choice))
         }
@@ -128,7 +128,7 @@ Wizard = Box {
         @made = folder()
         @lines = [calls.call("caption", [["text", calls.quoted("будет создано")]]), calls.call("console-line", [["text", calls.quoted("{made}/")], ["tone", calls.quoted("ink")], ["size", "13"]])]
         @entries = planned()
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             @file_name = group.get(entry, 0)
             lines = group.add(lines, calls.call("log-line", [["time", calls.quoted("    {file_name}")], ["text", calls.quoted(group.get(entry, 1))], ["tone", calls.quoted("quiet")]]))

@@ -94,7 +94,7 @@ skill targets(width, height) {
     }
     @mixed = []
     @seed = 7
-    drum (group.count(found)) {
+    drum (found) {
         seed = (seed * 75 + 74) % 65537
         @at = seed % (group.count(mixed) + 1)
         mixed = group.concat(group.concat(group.slice(mixed, 0, at), [group.get(found, beat)]), group.slice(mixed, at, group.count(mixed)))

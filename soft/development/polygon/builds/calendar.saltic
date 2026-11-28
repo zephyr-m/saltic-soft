@@ -67,7 +67,7 @@ Calendar = Box {
 
     skill days() {
         @all = []
-        drum (group.count(weeks)) {
+        drum (weeks) {
             @week_2 = group.get(weeks, beat)
             all = group.concat(all, week_2.days)
         }
@@ -77,7 +77,7 @@ Calendar = Box {
     skill total() {
         @sum = 0
         @day_2s = days()
-        drum (group.count(day_2s)) {
+        drum (day_2s) {
             @day_2 = group.get(day_2s, beat)
             sum = sum + day_2.commits
         }
@@ -87,7 +87,7 @@ Calendar = Box {
     skill active() {
         @many = 0
         @day_2s = days()
-        drum (group.count(day_2s)) {
+        drum (day_2s) {
             @day_2 = group.get(day_2s, beat)
             (day_2.commits > 0) { many = many + 1 }
         }
@@ -98,7 +98,7 @@ Calendar = Box {
         @longest = 0
         @run = 0
         @day_2s = days()
-        drum (group.count(day_2s)) {
+        drum (day_2s) {
             @day_2 = group.get(day_2s, beat)
             (day_2.future == no) {
                 run = run + 1
@@ -112,7 +112,7 @@ Calendar = Box {
     skill best() {
         @top = day.Day {}
         @day_2s = days()
-        drum (group.count(day_2s)) {
+        drum (day_2s) {
             @day_2 = group.get(day_2s, beat)
             (day_2.commits > top.commits) { top = day_2 }
         }
@@ -126,7 +126,7 @@ Calendar = Box {
 
     skill months() {
         @made = [calls.call("tick-label", [["text", calls.quoted("")], ["width", "28"]])]
-        drum (group.count(weeks)) {
+        drum (weeks) {
             @week_2 = group.get(weeks, beat)
             made = group.add(made, calls.call("tick-label", [["text", calls.quoted(week_2.month())], ["width", "{STEP}"]]))
         }
@@ -136,7 +136,7 @@ Calendar = Box {
     skill legend() {
         @made = [calls.call("tick-label", [["text", calls.quoted("меньше")], ["width", "52"]])]
         @entries = [0, 1, 10, 25]
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             @sample = day.Day { commits = entry }
             made = group.add(made, calls.call("heat-cell", [["id", calls.quoted("")], ["tone", calls.quoted(sample.tone())]]))
@@ -158,12 +158,12 @@ Calendar = Box {
 
     skill jtml() {
         @labels = []
-        drum (group.count(MARKS)) {
+        drum (MARKS) {
             @mark = group.get(MARKS, beat)
             labels = group.add(labels, calls.call("tick-label", [["text", calls.quoted(mark)], ["width", "28"], ["height", "16"]]))
         }
         @columns = [shelf("column", 4, labels)]
-        drum (group.count(weeks)) {
+        drum (weeks) {
             @week_2 = group.get(weeks, beat)
             columns = group.add(columns, week_2.cells())
         }

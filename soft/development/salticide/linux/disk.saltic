@@ -47,10 +47,10 @@ skill before(left, right) {
 
 skill sorted(names) {
     @made = []
-    drum (group.count(names)) {
+    drum (names) {
         @item = group.get(names, beat)
         @at = 0
-        drum (group.count(made)) {
+        drum (made) {
             (before(group.get(made, beat), item) == yes) { at = beat + 1 }
         }
         made = group.concat(group.add(group.slice(made, 0, at), item), group.slice(made, at, group.count(made)))
@@ -71,7 +71,7 @@ Disk = Box {
         @folders = []
         @files = []
         @name_2s = sorted(names)
-        drum (group.count(name_2s)) {
+        drum (name_2s) {
             @name_2 = group.get(name_2s, beat)
             ((str.byte(name_2, 0) == HIDDEN) == no) {
                 @path = name_2
@@ -83,7 +83,7 @@ Disk = Box {
             }
         }
         @made = []
-        drum (group.count(folders)) {
+        drum (folders) {
             @folder_2 = group.get(folders, beat)
             @path = folder_2
             @open = group.contains(opened, path)
@@ -91,7 +91,7 @@ Disk = Box {
             made = group.add(made, project.Row { kind = project.FOLDER, name = group.get(parts, group.count(parts) - 1), path = path, depth = depth, open = open })
             (open == yes) { made = group.concat(made, walk(path, depth + 1)) }
         }
-        drum (group.count(files)) {
+        drum (files) {
             @file_2 = group.get(files, beat)
             @parts = str.split(file_2, "/")
             made = group.add(made, project.Row { kind = project.FILE, name = group.get(parts, group.count(parts) - 1), path = file_2, depth = depth })
@@ -103,7 +103,7 @@ Disk = Box {
         @names = file.list(place) rescue |err| { out [] }
         @found = []
         @names_2 = sorted(names)
-        drum (group.count(names_2)) {
+        drum (names_2) {
             @name = group.get(names_2, beat)
             ((str.byte(name, 0) == HIDDEN) == no) {
                 @path = name
@@ -117,7 +117,7 @@ Disk = Box {
     skill project_places() {
         @found = ["."]
         @entries = folders_in(".")
-        drum (group.count(entries)) {
+        drum (entries) {
             @entry = group.get(entries, beat)
             found = group.add(found, entry)
             found = group.concat(found, folders_in(entry))
@@ -135,7 +135,7 @@ Disk = Box {
             out none
         }
         @left = []
-        drum (group.count(opened)) {
+        drum (opened) {
             @entry = group.get(opened, beat)
             ((entry == path) == no) { left = group.add(left, entry) }
         }
@@ -145,7 +145,7 @@ Disk = Box {
 
     skill read(path) {
         @known = no
-        drum (group.count(TEXTS)) {
+        drum (TEXTS) {
             @text_2 = group.get(TEXTS, beat)
             (str.ends_with(path, text_2) == yes) { known = yes }
         }

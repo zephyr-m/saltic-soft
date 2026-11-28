@@ -127,22 +127,22 @@ skill attempt(trace, base, handle, where) {
 
 skill open(base) {
     @trace = Trace {}
-    drum (group.count(LEVELS)) {
+    drum (LEVELS) {
         (group.get(LEVELS, beat) == SCREEN_LEVEL) { trace.screen = beat }
     }
     set_clock(trace, uefi.now(base)) rescue |err| { none }
     @handles = files.file_systems(base)
     @seen = ""
-    drum (group.count(handles)) {
+    drum (handles) {
         @handle_3 = group.get(handles, beat)
         @kind = "usb"
         (files.fixed_volume(base, handle_3) == yes) { kind = "internal" }
         @label = label_of(base, handle_3)
         seen = "{seen} {kind}:'{label}'"
     }
-    drum (group.count(FLASH_LABELS)) {
+    drum (FLASH_LABELS) {
         @wanted = group.get(FLASH_LABELS, beat)
-        drum (group.count(handles)) {
+        drum (handles) {
             @handle_2 = group.get(handles, beat)
             (trace.file == 0) {
                 (files.fixed_volume(base, handle_2) == no) {
@@ -151,7 +151,7 @@ skill open(base) {
             }
         }
     }
-    drum (group.count(handles)) {
+    drum (handles) {
         @handle = group.get(handles, beat)
         (trace.file == 0) {
             (files.fixed_volume(base, handle) == yes) { attempt(trace, base, handle, "internal disk (no writable flash)") }
@@ -209,7 +209,7 @@ skill level(trace, base, words) {
     }
     @wanted = group.get(words, 1)
     @known = -1
-    drum (group.count(LEVELS)) {
+    drum (LEVELS) {
         (group.get(LEVELS, beat) == wanted) { known = beat }
     }
     (known < 0) { out "не знаю уровень '{wanted}': quiet, important, all" }

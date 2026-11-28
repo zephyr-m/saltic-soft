@@ -120,11 +120,11 @@ skill corner(point, turn, size, center) {
 
 skill cube(canvas, turn, size, center, thickness) {
     @points = []
-    drum (group.count(CORNERS)) {
+    drum (CORNERS) {
         @corner_2 = group.get(CORNERS, beat)
         points = group.add(points, corner(corner_2, turn, size, center))
     }
-    drum (group.count(EDGES)) {
+    drum (EDGES) {
         @edge = group.get(EDGES, beat)
         line(canvas, group.get(points, group.get(edge, 0)), group.get(points, group.get(edge, 1)), thickness, accent())
     }

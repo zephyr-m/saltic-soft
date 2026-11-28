@@ -68,7 +68,7 @@ skill fine_cosine(fine) {
 
 skill scaled(rows, size) {
     @found = []
-    drum (group.count(rows)) {
+    drum (rows) {
         @row = group.get(rows, beat)
         found = group.add(found, [group.get(row, 0) * size / ONE, group.get(row, 1) * size / ONE, group.get(row, 2) * size / ONE])
     }
@@ -84,7 +84,7 @@ skill apart(left, right) {
 
 skill nearest_edges(points) {
     @shortest = -1
-    drum (group.count(points)) {
+    drum (points) {
         @first = beat
         drum (group.count(points) - first - 1) {
             @far = apart(group.get(points, first), group.get(points, first + beat + 1))
@@ -96,7 +96,7 @@ skill nearest_edges(points) {
         }
     }
     @edges = []
-    drum (group.count(points)) {
+    drum (points) {
         @first = beat
         drum (group.count(points) - first - 1) {
             @second = first + beat + 1
@@ -122,7 +122,7 @@ skill octahedron() {
 skill icosahedron() {
     @found = []
     @entries = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
-    drum (group.count(entries)) {
+    drum (entries) {
         @entry = group.get(entries, beat)
         @a = group.get(entry, 0) * ONE
         @b = group.get(entry, 1) * GOLDEN
@@ -134,12 +134,12 @@ skill icosahedron() {
 skill dodecahedron() {
     @found = []
     @entry_2s = [[1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1], [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1]]
-    drum (group.count(entry_2s)) {
+    drum (entry_2s) {
         @entry_2 = group.get(entry_2s, beat)
         found = group.add(found, [group.get(entry_2, 0) * ONE, group.get(entry_2, 1) * ONE, group.get(entry_2, 2) * ONE])
     }
     @entries = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
-    drum (group.count(entries)) {
+    drum (entries) {
         @entry = group.get(entries, beat)
         @a = group.get(entry, 0) * INVERSE_GOLDEN
         @b = group.get(entry, 1) * GOLDEN
@@ -199,7 +199,7 @@ skill sphere(size, place, speeds) {
 skill segments(name, pairs) {
     @points = []
     @edges = []
-    drum (group.count(pairs)) {
+    drum (pairs) {
         @pair = group.get(pairs, beat)
         points = group.add(group.add(points, group.get(pair, 0)), group.get(pair, 1))
         edges = group.add(edges, [group.count(points) - 2, group.count(points) - 1])

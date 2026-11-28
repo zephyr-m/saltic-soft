@@ -15,7 +15,7 @@ Journal = Box {
 
     skill jtml() {
         @rows = []
-        drum (group.count(lines)) {
+        drum (lines) {
             @line_2 = group.get(lines, beat)
             rows = group.add(rows, calls.call("log-line", [["time", calls.quoted(group.get(line_2, 0))], ["text", calls.quoted(group.get(line_2, 1))], ["tone", calls.quoted(group.get(line_2, 2))]]))
         }

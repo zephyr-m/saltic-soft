@@ -123,7 +123,7 @@ skill clay(screen, tint, normal) {
 
 skill paint(screen, body) {
     @colors = []
-    drum (group.count(body.points)) {
+    drum (body.points) {
         @tint = group.get(body.tints, beat)
         colors = group.add(colors, clay(screen, Shade { red = group.get(tint, 0), green = group.get(tint, 1), blue = group.get(tint, 2) }, group.get(body.normals, beat)))
     }
@@ -146,7 +146,7 @@ skill join(body, other) {
     body.tints = group.concat(body.tints, other.tints)
     body.colors = group.concat(body.colors, other.colors)
     @quads = body.quads
-    drum (group.count(other.quads)) {
+    drum (other.quads) {
         @q = group.get(other.quads, beat)
         quads = group.add(quads, Quad { a = q.a + shift, b = q.b + shift, c = q.c + shift, d = q.d + shift, nx = q.nx, ny = q.ny, nz = q.nz, cx = q.cx, cy = q.cy, cz = q.cz, color = q.color })
     }
@@ -255,7 +255,7 @@ skill collect_quad(painter, camera, body, quad, seen) {
 
 skill collect(painter, camera, body) {
     @seen = seen_points(camera, body)
-    drum (group.count(body.quads)) {
+    drum (body.quads) {
         collect_quad(painter, camera, body, group.get(body.quads, beat), seen)
     }
     out none
@@ -279,7 +279,7 @@ skill collect_ground(painter, camera, body, cells) {
 
 skill seen_points(camera, body) {
     @seen = []
-    drum (group.count(body.points)) {
+    drum (body.points) {
         seen = group.add(seen, project(camera, group.get(body.points, beat)))
     }
     out seen
@@ -287,7 +287,7 @@ skill seen_points(camera, body) {
 
 skill draw(screen, camera, body) {
     @seen = seen_points(camera, body)
-    drum (group.count(body.quads)) {
+    drum (body.quads) {
         draw_quad(screen, camera, body, group.get(body.quads, beat), seen)
     }
     out none
@@ -319,10 +319,10 @@ skill distance(camera, body) {
 skill order(camera, bodies) {
     @left = bodies
     @sorted = []
-    drum (group.count(bodies)) {
+    drum (bodies) {
         @far = 0
         @far_distance = -1
-        drum (group.count(left)) {
+        drum (left) {
             @d = distance(camera, group.get(left, beat))
             (d > far_distance) {
                 far = beat

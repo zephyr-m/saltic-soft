@@ -87,10 +87,10 @@ skill fill(cast, world) {
     cast.cursor = DATA
     cast.lost = 0
     put_body(cast, world.ground, GROUND)
-    drum (group.count(world.flats)) {
+    drum (world.flats) {
         put_body(cast, group.get(world.flats, beat), FLAT)
     }
-    drum (group.count(world.bodies)) {
+    drum (world.bodies) {
         put_body(cast, group.get(world.bodies, beat), SOLID)
     }
     out none
@@ -193,7 +193,7 @@ skill face(cast, sink, camera, body, index, seen, gpu) {
 skill body_pass(cast, sink, camera, row, gpu) {
     @body = part(cast, row)
     @seen = projected(cast, camera, body)
-    drum (group.count(body.quads)) {
+    drum (body.quads) {
         @quad = group.get(body.quads, beat)
         face(cast, sink, camera, body, quad, seen, gpu)
     }
@@ -255,10 +255,10 @@ skill solids(cast, camera) {
         }
     }
     @sorted = []
-    drum (group.count(left)) {
+    drum (left) {
         @far = 0
         @far_distance = -1
-        drum (group.count(left)) {
+        drum (left) {
             @d = group.get(far_away, beat)
             (d > far_distance) {
                 far = beat

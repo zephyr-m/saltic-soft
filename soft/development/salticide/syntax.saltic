@@ -120,10 +120,12 @@ skill params(text) {
         }
     }
     @names = []
-    drum (pieces(str.slice(text, open, str.bytes(text)))) {
-        @part = group.get(beat, 0)
+    @found_pieces = pieces(str.slice(text, open, str.bytes(text)))
+    drum (found_pieces) {
+        @piece = group.get(found_pieces, beat)
+        @part = group.get(piece, 0)
         (part == ")") { leave }
-        (group.get(beat, 1) == WORD) { names = group.add(names, part) }
+        (group.get(piece, 1) == WORD) { names = group.add(names, part) }
     }
     out names
 }
@@ -133,7 +135,7 @@ skill scan(lines) {
     @scope = Scope {}
     @open = no
     @in_enum = no
-    drum (group.count(lines)) {
+    drum (lines) {
         @text = group.get(lines, beat)
         @number = beat + 1
         (str.starts_with(text, "skill ") == yes) {
@@ -156,7 +158,7 @@ skill scan(lines) {
         }
         (open == yes) {
             @pieces_2 = pieces(text)
-            drum (group.count(pieces_2)) {
+            drum (pieces_2) {
                 @piece = group.get(pieces_2, beat)
                 @part = group.get(piece, 0)
                 (str.starts_with(part, "@") == yes) { scope.vars = group.add(scope.vars, str.slice(part, 1, str.bytes(part))) }
@@ -183,7 +185,7 @@ skill scan(lines) {
 
 skill scope_at(info, number) {
     @best = Scope {}
-    drum (group.count(info.scopes)) {
+    drum (info.scopes) {
         @scope = group.get(info.scopes, beat)
         (scope.line <= number) { best = scope }
     }
@@ -191,7 +193,7 @@ skill scope_at(info, number) {
 }
 
 skill defined_skill(info, word, number) {
-    drum (group.count(info.scopes)) {
+    drum (info.scopes) {
         @scope = group.get(info.scopes, beat)
         (scope.name == word) {
             (scope.line == number) { out yes }
@@ -201,7 +203,7 @@ skill defined_skill(info, word, number) {
 }
 
 skill known_skill(info, word) {
-    drum (group.count(info.scopes)) {
+    drum (info.scopes) {
         @scope = group.get(info.scopes, beat)
         (scope.name == word) { out yes }
     }
@@ -209,7 +211,7 @@ skill known_skill(info, word) {
 }
 
 skill defined_type(info, word, number) {
-    drum (group.count(info.types)) {
+    drum (info.types) {
         @type = group.get(info.types, beat)
         (group.get(type, 0) == word) {
             (group.get(type, 1) == number) { out yes }
@@ -332,7 +334,7 @@ skill line(text, number, info) {
     @parts = pieces(text)
     @nodes = []
     @seen = []
-    drum (group.count(parts)) {
+    drum (parts) {
         @index = beat
         @part = group.get(parts, index)
         @value = group.get(part, 0)

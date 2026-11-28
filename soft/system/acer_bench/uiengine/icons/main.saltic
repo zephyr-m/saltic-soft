@@ -17,7 +17,7 @@ SMALL = set12.SIZE
 LARGE = set28.SIZE
 
 skill icon_index(name) {
-    drum (group.count(set16.NAMES)) {
+    drum (set16.NAMES) {
         (group.get(set16.NAMES, beat) == name) { out beat }
     }
     out -1

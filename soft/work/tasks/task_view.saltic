@@ -39,7 +39,7 @@ skill hint(text) {
 
 skill item_rows(desk, list) {
     @found = []
-    drum (group.count(list)) {
+    drum (list) {
         @item = group.get(list, beat)
         @fill = "well"
         @tone = "quiet"

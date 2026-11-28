@@ -99,7 +99,7 @@ skill render(tones, length) {
     drum (count) {
         put(store, beat * 4, BIAS, 4)
     }
-    drum (group.count(tones)) {
+    drum (tones) {
         @tone_2 = group.get(tones, beat)
         tone(store, tone_2)
     }
@@ -147,12 +147,12 @@ Sound = Box {
 
     skill prepare() {
         process.run(["mkdir", "-p", FOLDER], "", [])
-        drum (group.count(SOUNDS)) {
+        drum (SOUNDS) {
             @sound_2 = group.get(SOUNDS, beat)
             @name = group.get(sound_2, 0)
             (missing(name) == yes) { file.write_bytes(path(name), render(group.get(sound_2, 2), group.get(sound_2, 1))) }
         }
-        drum (group.count(PENTA)) {
+        drum (PENTA) {
             @note = group.get(PENTA, beat)
             (missing("ping-{beat}") == yes) { file.write_bytes(path("ping-{beat}"), render([[TRIANGLE, note, 0, 0, 220, 105], [SINE, note * 2, 0, 0, 120, 36]], 260)) }
         }

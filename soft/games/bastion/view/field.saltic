@@ -61,7 +61,7 @@ Field = Box {
             out none
         }
         @mark = colour(palette, "mustard")
-        drum (group.count(realm.spots)) {
+        drum (realm.spots) {
             @spot = group.get(realm.spots, beat)
             @column = group.get(spot, 0)
             @row = group.get(spot, 1)
@@ -91,7 +91,7 @@ Field = Box {
     skill paint_path(canvas, palette, realm) {
         @road = colour(palette, "panel")
         @inner = cell - PATH_GAP * 2
-        drum (group.count(realm.path)) {
+        drum (realm.path) {
             @entry = group.get(realm.path, beat)
             @column = group.get(entry, 0)
             @row = group.get(entry, 1)
@@ -114,7 +114,7 @@ Field = Box {
         @rim = colour(palette, "line")
         @size = cell - 10
         @pip = 5
-        drum (group.count(realm.towers)) {
+        drum (realm.towers) {
             @tower_2 = group.get(realm.towers, beat)
             @x = left + tower_2.column * cell + 5
             @y = top + tower_2.row * cell + 5
@@ -143,7 +143,7 @@ Field = Box {
             ink = spark,
             fade = spark
         }
-        drum (group.count(realm.enemies)) {
+        drum (realm.enemies) {
             @enemy_2 = group.get(realm.enemies, beat)
             @place = realm.at(enemy_2.step)
             @middle_x = left + group.get(place, 0) * cell / world.CELL

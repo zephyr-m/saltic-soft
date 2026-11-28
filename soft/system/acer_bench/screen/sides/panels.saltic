@@ -41,7 +41,7 @@ Look = Box {
 
 skill text_of(list) {
     @buffer = bytes.new(group.count(list))
-    drum (group.count(list)) {
+    drum (list) {
         bytes.set(buffer, beat, group.get(list, beat))
     }
     out str.from_bytes(buffer)
@@ -62,7 +62,7 @@ skill network(look, lines) {
     @letters = (look.wide - INSET) * 10 / (look.line * 6)
     @room = look.high / (look.line + 9)
     @rows = []
-    drum (group.count(lines)) {
+    drum (lines) {
         @line_2 = group.get(lines, beat)
         @tone = line_tone(group.get(line_2, 0))
         @pieces = journal.wrap(group.get(line_2, 1), letters)
@@ -74,7 +74,7 @@ skill network(look, lines) {
         }
     }
     @shown = []
-    drum (group.count(rows)) {
+    drum (rows) {
         shown = group.add(shown, group.get(rows, group.count(rows) - 1 - beat))
     }
     (group.count(shown) == 0) { shown = [calls.call("console-line", [["text", calls.quoted("журнал пуст")], ["tone", calls.quoted("quiet")], ["size", "{look.line}"]])] }
