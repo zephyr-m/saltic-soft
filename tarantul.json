@@ -5,7 +5,7 @@
     "i2c_esp32": "1",
     "ssd1306": "3",
     "camera_android": "2",
-    "uiengine": "8",
+    "uiengine": "10",
     "rtl8111": "2",
     "intel_gpu": "2",
     "qca9377": "4",
