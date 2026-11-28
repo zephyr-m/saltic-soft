@@ -19,7 +19,7 @@
 --     счётчике (окно ведёт его плавно); first — с какой ветки
 --     показывать поле (колесо), picked — [ветка] вкладки журнала или [] — журнал самого just,
 --     tick — угол крутилок в градусах (оборот за 800 мс)
--- QUICK, AGAIN, SOUND, CLOSE, CELL, FILTER_* — цели щелчка (QUICK — быстрая, AGAIN —
+-- QUICK, AGAIN, REFRESH, SOUND, CLOSE, CELL, FILTER_* — цели щелчка (REFRESH — самосборка полки) (QUICK — быстрая, AGAIN —
 --     глобальная, CLOSE — вкладка самого just) (CELL + "ветка-случай")
 -- Только жители Attacus (решение автора 28.11.2026: «не руками, а из жителей»),
 --     голые box — лишь раскладка без вида. Внутри: put/q — вызов жителя;
@@ -36,6 +36,7 @@ use soft.development.check_board.board
 
 AGAIN = "again"
 QUICK = "quick"
+REFRESH = "refresh"
 SOUND = "sound"
 CLOSE = "close"
 CELL = "cell-"
@@ -230,7 +231,7 @@ skill top(desk, shown, voiced) {
     @hero = put("box", [["flow", q("column")], ["gap", "0"], ["align", q("center")], ["children", calls.listed([put("hero-number", [["text", q(done)], ["tone", q(hero_tone)]]), mono(under, "quiet", 14)])]])
     @sound_kind = "framed"
     (voiced == yes) { sound_kind = "pressed" }
-    @again = row(8, "center", [button(SOUND, "звук", sound_kind), button(QUICK, "▶ быстрая", "main"), button(AGAIN, "глобальная", "framed")])
+    @again = row(8, "center", [button(SOUND, "звук", sound_kind), button(REFRESH, "рефреш", "framed"), button(QUICK, "▶ быстрая", "main"), button(AGAIN, "глобальная", "framed")])
     @left = put("box", [["flow", q("row")], ["grow", "1"], ["children", calls.listed([title])]])
     @right = put("box", [["flow", q("row")], ["grow", "1"], ["justify", q("end")], ["children", calls.listed([again])]])
     out row(24, "center", [left, hero, right])

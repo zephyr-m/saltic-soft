@@ -15,7 +15,8 @@
 --     ветка или шаг подготовки; ok / bad — строки [ok] и FAIL] её журнала
 -- Board { home, started, launched, expected, asked, pending, mode, ended, driver, prep, field } —
 --     expected — проверок в прошлом прогоне этого вида (EXPECTED), 0 — не знаю;
---     mode — QUICK или GLOBAL (прошлый — в MODE); driver — журнал
+--     mode — QUICK, GLOBAL или REFRESH (прошлый — в MODE; рефреш — самосборка
+--     полки: шаги SHELF по строкам bootstrap refresh, рецепты — RECIPES); driver — журнал
 --     самого just global-check (board.log);
 --     lay(root) — разложить ветки; start(mode) — стереть журналы прошлого прогона и
 --     запустить just quick или just global-check с самым низким приоритетом (nice 19, ionice 3:
@@ -42,6 +43,9 @@ ANSWER = "board-probe.txt"
 MODE = "board-mode"
 QUICK = "quick"
 GLOBAL = "global"
+REFRESH = "refresh"
+RECIPES = [["quick", "quick"], ["global", "global-check"], ["refresh", "bootstrap-refresh"]]
+SHELF = [["собирает stage-1", "stage1"], ["stage-1 собирает stage-2", "stage2"], ["собирает stage-3 (rv64)", "stage3 rv64"], ["собирает stage-3 (x86-64)", "stage3 x86-64"], ["собирает stage-3 (rv32i", "stage3 rv32i"], ["собирает stage-3 (arm64)", "stage3 arm64"], ["проверяю fixed point", "fixed point"], ["bootstrap refresh: saltic-", "на полку"]]
 DAY = 86400000
 TAIL = 10
 TOOLS = ["limits", "tests", "refresh", "refresh-qemu", "x86-encoder-golden", "arm64-encoder-golden", "esp32", "esp32-toolchain"]
@@ -121,6 +125,7 @@ Board = Box {
         @kept = file.read("{work}/{MODE}") rescue |err| { GLOBAL }
         mode = GLOBAL
         (str.starts_with(kept, QUICK) == yes) { mode = QUICK }
+        (str.starts_with(kept, REFRESH) == yes) { mode = REFRESH }
         driver = Branch { name = "just {mode}", proc = "x86-64", log = "{work}/board.log" }
         @known = file.read("{work}/{EXPECTED}-{mode}") rescue |err| { "" }
         expected = number(known)
@@ -128,6 +133,10 @@ Board = Box {
         field = []
         (mode == QUICK) {
             field = [Branch { name = "быстрая · случаи языка", proc = "x86-64", log = "{work}/board.log", cases = yes }]
+            out none
+        }
+        (mode == REFRESH) {
+            field = [Branch { name = "рефреш · самосборка полки", proc = "x86-64", log = "{work}/board.log", steps = steps_of(SHELF) }]
             out none
         }
         drum (TOOLS) { prep = group.add(prep, Branch { name = beat, proc = "x86-64", log = "{work}/build-{beat}.log" }) }
@@ -158,7 +167,9 @@ Board = Box {
         }
         process.run(group.concat(["rm", "-f", "{home}/{WORK}/board.log", "{home}/{WORK}/board.log.code"], gone), "", [])
         @recipe = "global-check"
-        (wanted == QUICK) { recipe = QUICK }
+        drum (RECIPES) {
+            (group.get(beat, 0) == wanted) { recipe = group.get(beat, 1) }
+        }
         @wrapped = "nice -n 19 ionice -c 3 just {recipe} > \"$0\" 2>&1; echo $? > \"$0.code\""
         @bash = process.locate("bash")
         process.open(bash, ["bash", "-c", wrapped, "{WORK}/board.log"], home, no, process.environment_with(["SALTIC_PLAIN=1"]), no)
@@ -365,6 +376,13 @@ Board = Box {
             @all = group.count(field)
             (broken > 0) { out "итог · ✕ упало {broken} — щёлкни по красной ветке, там хвост журнала" }
             out "итог · ✓ всё зелёное: {all} из {all} веток — проверка кончилась, время остановлено"
+        }
+        (mode == REFRESH) {
+            @shelf = group.get(field, 0)
+            @at = last_seen(shelf)
+            (at < 0) { out "рефреш · сборка инструмента самосборки" }
+            @step = group.get(shelf.steps, at)
+            out "рефреш · {step.name}"
         }
         (mode == QUICK) {
             @quick = group.get(field, 0)

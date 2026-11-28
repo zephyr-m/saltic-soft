@@ -2,7 +2,7 @@
 -- бывшего CHECK-LOOK.html (в .archive с 28.11) на жителях UIEngine (решение
 -- автора 28.11.2026: сам запускает). При открытии показывает прошлый прогон по
 -- журналам ../saltic/.cache/build/workbench; «▶ быстрая» запускает just quick,
--- «глобальная» — just global-check в ../saltic (SALTIC_PLAIN=1 — без своего окна и чека),
+-- «глобальная» — just global-check, «рефреш» — just bootstrap-refresh в ../saltic (SALTIC_PLAIN=1 — без своего окна и чека),
 -- дальше журналы перечитываются раз в секунду, крутилки вертятся. Справа —
 -- журнал: щелчок по ветке открывает её вкладку, вкладка just — общий вывод;
 -- колесо листает ветки поля. Число проверок набегает плавно, как счётчик
@@ -162,6 +162,7 @@ Window = Box {
         @asked = ""
         (id == page.QUICK) { asked = board.QUICK }
         (id == page.AGAIN) { asked = board.GLOBAL }
+        (id == page.REFRESH) { asked = board.REFRESH }
         (str.bytes(asked) > 0) {
             checks.start(asked)
             heard = [0, 0, 0]
