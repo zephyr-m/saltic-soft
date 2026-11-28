@@ -12,7 +12,7 @@
 --     joined, first, picked, tick, read_at, spun_at, shown, target, pace,
 --     counted_at, log, voice, spots_before, parts, whole, cost, frames, fps_at, log_asked, log_pending, heard, went, ended } — log — журнал справа (page.Log); voice —
 --     звуки (sound), heard — что пульт уже озвучил [клеток ok, провалов,
---     шагов подготовки], went / ended — взлёт и итог уже прозвучали; shown / target — проверки на счётчике и на деле в тысячных,
+--     шагов подготовки, зелёных веток], went / ended — взлёт и итог уже прозвучали; shown / target — проверки на счётчике и на деле в тысячных,
 --     pace — тысячных за мс; open() — окно, шрифты, доска,
 --     первый кадр; NoWindow; step() -> no, когда окно закрыто
 -- program() — вход
@@ -89,7 +89,7 @@ Window = Box {
     fps_at = 0,
     log_asked = 0,
     log_pending = no,
-    heard = [0, 0, 0],
+    heard = [0, 0, 0, 0],
     went = no,
     ended = no
 
@@ -170,7 +170,7 @@ Window = Box {
         (id == page.REFRESH) { asked = board.REFRESH }
         (str.bytes(asked) > 0) {
             checks.start(asked)
-            heard = [0, 0, 0]
+            heard = [0, 0, 0, 0]
             went = no
             ended = no
             shown = 0
@@ -263,6 +263,8 @@ Window = Box {
         @was_ok = group.get(heard, 0)
         @was_bad = group.get(heard, 1)
         @was_prep = group.get(heard, 2)
+        @was_branches = group.get(heard, 3)
+        @branches_now = checks.branches_ok()
         (prepared > was_prep) { voice.play("prep") }
         (launched_now == yes) {
             (went == no) {
@@ -272,6 +274,7 @@ Window = Box {
         @fresh = group.get(tally, 0) - was_ok - (prepared - was_prep)
         (fresh > 0) { voice.pings(fresh) }
         (group.get(tally, 1) > was_bad) { voice.play("fail") }
+        (branches_now > was_branches) { voice.play("branch") }
         (finished_now == yes) {
             (ended == no) {
                 @made = checks.checks()
@@ -281,7 +284,7 @@ Window = Box {
                 voice.play(verdict)
             }
         }
-        heard = [group.get(tally, 0), group.get(tally, 1), prepared]
+        heard = [group.get(tally, 0), group.get(tally, 1), prepared, branches_now]
         went = launched_now
         ended = finished_now
         out none

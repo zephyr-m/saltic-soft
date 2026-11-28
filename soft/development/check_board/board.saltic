@@ -24,7 +24,7 @@
 --     фоне; collect() -> yes, когда ответ пришёл и разобран;
 --     state(branch) / step_state(branch, index) -> "wait" | "run" | "ok" | "fail" | "skip";
 --     step_took(branch, index) -> мс случая, -1 — не знаю; counts() -> [прошло,
---     провал, идёт, ждёт] клеток; checks() -> [прошло, упало] проверок;
+--     провал, идёт, ждёт] клеток; branches_ok() -> веток зелёных целиком; checks() -> [прошло, упало] проверок;
 --     phase() -> что идёт словами; running() -> идущие ветки;
 --     spent() -> мс прогона (кончился — замер на конце; -1 — не знаю); finished() -> yes, когда прогон кончился;
 --     tail(branch) -> хвост журнала без [ok]
@@ -373,6 +373,17 @@ Board = Box {
             }
         }
         out tally
+    }
+
+    skill branches_ok() {
+        @count = 0
+        drum (field) {
+            @branch = group.get(field, beat)
+            (branch.done == yes) {
+                (branch.code == 0) { count = count + 1 }
+            }
+        }
+        out count
     }
 
     skill checks() {
