@@ -114,8 +114,9 @@ Shop = Box {
 
     skill count_of(realm, code) {
         @total = 0
-        drum (realm.towers) {
-            (beat.code() == code) {
+        drum (group.count(realm.towers)) {
+            @tower_2 = group.get(realm.towers, beat)
+            (tower_2.code() == code) {
                 total = total + 1
             }
         }

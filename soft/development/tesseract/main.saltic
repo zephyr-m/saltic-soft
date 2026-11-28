@@ -69,42 +69,43 @@ program() {
         link.way_events = drained.core
         @changed = no
         @moved = no
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.DRAG) {
-                (beat.text == "left") {
-                    eye.dragged_by(beat.dx, beat.dy)
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.DRAG) {
+                (gesture.text == "left") {
+                    eye.dragged_by(gesture.dx, gesture.dy)
                 }
-                (beat.text == "middle") {
-                    eye.moved_by(beat.dx, beat.dy)
+                (gesture.text == "middle") {
+                    eye.moved_by(gesture.dx, gesture.dy)
                 }
                 moved = yes
             }
-            (beat.kind == gestures.Kind.WHEEL) {
-                eye.zoomed(beat.amount)
+            (gesture.kind == gestures.Kind.WHEEL) {
+                eye.zoomed(gesture.amount)
                 moved = yes
             }
-            (beat.kind == gestures.Kind.TYPE) {
-                (beat.text == "1") {
+            (gesture.kind == gestures.Kind.TYPE) {
+                (gesture.text == "1") {
                     shape.rotated()
                     moved = yes
                 }
-                (beat.text == "2") {
+                (gesture.text == "2") {
                     shape.swapped()
                     moved = yes
                 }
-                (beat.text == "3") {
+                (gesture.text == "3") {
                     eye.faced(camera.FRONT)
                     moved = yes
                 }
-                (beat.text == "4") {
+                (gesture.text == "4") {
                     eye.faced(camera.SIDE)
                     moved = yes
                 }
-                (beat.text == "5") {
+                (gesture.text == "5") {
                     eye.faced(camera.TOP)
                     moved = yes
                 }
-                (beat.text == "6") {
+                (gesture.text == "6") {
                     eye.flattened()
                     moved = yes
                 }

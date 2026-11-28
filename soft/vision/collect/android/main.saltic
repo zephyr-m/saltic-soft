@@ -88,7 +88,9 @@ skill targets(width, height) {
     @found = []
     drum (ROWS) {
         @row = beat
-        drum (COLUMNS) { found = group.add(found, [INSET + beat * (width - 2 * INSET) / (COLUMNS - 1), TOP + INSET + row * (height - TOP - 2 * INSET) / (ROWS - 1)]) }
+        drum (COLUMNS) {
+            found = group.add(found, [INSET + beat * (width - 2 * INSET) / (COLUMNS - 1), TOP + INSET + row * (height - TOP - 2 * INSET) / (ROWS - 1)])
+        }
     }
     @mixed = []
     @seed = 7
@@ -187,7 +189,9 @@ program() {
     @started = time.now()
     @session = Session { name = "S{started}.GAZE", points = targets(screen.width, screen.height), buffer = bytes.new(HEAD + LIMIT * (4 + WIDE * HIGH)), last = bytes.new(WIDE * HIGH) }
     @head = "GAZE"
-    drum (4) { bytes.set(session.buffer, beat, str.byte(head, beat)) }
+    drum (4) {
+        bytes.set(session.buffer, beat, str.byte(head, beat))
+    }
     bytes.set(session.buffer, 4, WIDE)
     bytes.set(session.buffer, 6, HIGH)
     session.used = HEAD

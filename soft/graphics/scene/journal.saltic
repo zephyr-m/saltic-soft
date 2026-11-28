@@ -15,7 +15,10 @@ Journal = Box {
 
     skill jtml() {
         @rows = []
-        drum (lines) { rows = group.add(rows, calls.call("log-line", [["time", calls.quoted(group.get(beat, 0))], ["text", calls.quoted(group.get(beat, 1))], ["tone", calls.quoted(group.get(beat, 2))]])) }
+        drum (group.count(lines)) {
+            @line_2 = group.get(lines, beat)
+            rows = group.add(rows, calls.call("log-line", [["time", calls.quoted(group.get(line_2, 0))], ["text", calls.quoted(group.get(line_2, 1))], ["tone", calls.quoted(group.get(line_2, 2))]]))
+        }
         out calls.call("console-panel", [["title", calls.quoted("журнал")], ["note", calls.quoted("образец")], ["width", "0"], ["radius", "14"], ["grow", "1"], ["children", calls.listed(rows)]])
     }
 

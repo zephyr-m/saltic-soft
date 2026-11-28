@@ -69,7 +69,11 @@ skill acer() {
     @text = file.read("{FILES}ACER.TXT") rescue |err| { out HOST }
     @lines = str.lines(text)
     (group.count(lines) == 0) { out HOST }
-    drum (str.split(group.get(lines, 0), " ")) { (str.bytes(beat) > 0) { out beat } }
+    @lines_2 = str.split(group.get(lines, 0), " ")
+    drum (group.count(lines_2)) {
+        @line = group.get(lines_2, beat)
+        (str.bytes(line) > 0) { out line }
+    }
     out HOST
 }
 

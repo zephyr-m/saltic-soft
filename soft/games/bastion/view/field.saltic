@@ -61,9 +61,10 @@ Field = Box {
             out none
         }
         @mark = colour(palette, "mustard")
-        drum (realm.spots) {
-            @column = group.get(beat, 0)
-            @row = group.get(beat, 1)
+        drum (group.count(realm.spots)) {
+            @spot = group.get(realm.spots, beat)
+            @column = group.get(spot, 0)
+            @row = group.get(spot, 1)
             (realm.tower_at(column, row) < 0) {
                 shapes.ring(canvas, left + column * cell + 8, top + row * cell + 8, cell - 16, cell - 16, 8, 2, mark)
             }
@@ -90,9 +91,10 @@ Field = Box {
     skill paint_path(canvas, palette, realm) {
         @road = colour(palette, "panel")
         @inner = cell - PATH_GAP * 2
-        drum (realm.path) {
-            @column = group.get(beat, 0)
-            @row = group.get(beat, 1)
+        drum (group.count(realm.path)) {
+            @entry = group.get(realm.path, beat)
+            @column = group.get(entry, 0)
+            @row = group.get(entry, 1)
             shapes.shape(canvas, left + column * cell + PATH_GAP, top + row * cell + PATH_GAP, inner, inner, ROUND, road)
         }
         out none
@@ -112,13 +114,14 @@ Field = Box {
         @rim = colour(palette, "line")
         @size = cell - 10
         @pip = 5
-        drum (realm.towers) {
-            @x = left + beat.column * cell + 5
-            @y = top + beat.row * cell + 5
-            shapes.shape(canvas, x, y, size, size, size / 2, colour(palette, beat.tone()))
+        drum (group.count(realm.towers)) {
+            @tower_2 = group.get(realm.towers, beat)
+            @x = left + tower_2.column * cell + 5
+            @y = top + tower_2.row * cell + 5
+            shapes.shape(canvas, x, y, size, size, size / 2, colour(palette, tower_2.tone()))
             shapes.ring(canvas, x, y, size, size, size / 2, 2, rim)
-            @dots = (beat.level - 1) % 5 + 1
-            @stage = colour(palette, group.get(STAGES, ((beat.level - 1) / 5) % group.count(STAGES)))
+            @dots = (tower_2.level - 1) % 5 + 1
+            @stage = colour(palette, group.get(STAGES, ((tower_2.level - 1) / 5) % group.count(STAGES)))
             @span = dots * pip + (dots - 1) * 3
             @start = x + (size - span) / 2
             drum (dots) {
@@ -140,28 +143,29 @@ Field = Box {
             ink = spark,
             fade = spark
         }
-        drum (realm.enemies) {
-            @place = realm.at(beat.step)
+        drum (group.count(realm.enemies)) {
+            @enemy_2 = group.get(realm.enemies, beat)
+            @place = realm.at(enemy_2.step)
             @middle_x = left + group.get(place, 0) * cell / world.CELL
             @middle_y = top + group.get(place, 1) * cell / world.CELL
             @size = cell / 2
             @shade = body
-            (beat.boss == yes) {
+            (enemy_2.boss == yes) {
                 size = cell * 3 / 4
                 shade = boss_body
             }
             @x = middle_x - size / 2
             @y = middle_y - size / 2
             shapes.shape(canvas, x, y, size, size, size / 2, shade)
-            (beat.chill > 0) {
+            (enemy_2.chill > 0) {
                 shapes.ring(canvas, x - 3, y - 3, size + 6, size + 6, size / 2 + 3, 2, frost)
             }
-            (beat.flash > 0) {
+            (enemy_2.flash > 0) {
                 shapes.ring(canvas, x, y, size, size, size / 2, 2, spark)
             }
             shapes.shape(canvas, x, y - 7, size, 4, 2, well)
-            shapes.shape(canvas, x, y - 7, size * beat.health / beat.most, 4, 2, alive)
-            @number = "{beat.health}"
+            shapes.shape(canvas, x, y - 7, size * enemy_2.health / enemy_2.most, 4, 2, alive)
+            @number = "{enemy_2.health}"
             @wide = typeface.measure(palette.mono, number, LABEL, 0)
             typeface.paint(canvas, palette.mono, middle_x - wide / 2, y - 9 - typeface.line_height(palette.mono, LABEL), number, pen)
         }

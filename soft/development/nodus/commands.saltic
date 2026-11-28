@@ -58,7 +58,10 @@ skill names(call, name, fallback) {
     (found.found == no) { out fallback }
     (value.is_kind(found.value, json.JsonKind.ARRAY) == no) { out [mrpc.plain(found.value)] }
     @made = []
-    drum (found.value.items) { made = group.add(made, mrpc.plain(beat)) }
+    drum (group.count(found.value.items)) {
+        @item_2 = group.get(found.value.items, beat)
+        made = group.add(made, mrpc.plain(item_2))
+    }
     out made
 }
 

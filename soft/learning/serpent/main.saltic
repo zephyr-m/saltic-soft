@@ -132,12 +132,13 @@ Window = Box {
         @food = show.model.food
         shapes.shape(canvas, FIELD_X + food.x * CELL + 3, FIELD_Y + food.y * CELL + 3, CELL - 6, CELL - 6, (CELL - 6) / 2, colour("watermelon"))
         @index = 0
-        drum (show.model.body) {
+        drum (group.count(show.model.body)) {
+            @entry = group.get(show.model.body, beat)
             @tone = "up"
             (index == 0) {
                 tone = "mustard"
             }
-            shapes.shape(canvas, FIELD_X + beat.x * CELL + 2, FIELD_Y + beat.y * CELL + 2, CELL - 4, CELL - 4, 6, colour(tone))
+            shapes.shape(canvas, FIELD_X + entry.x * CELL + 2, FIELD_Y + entry.y * CELL + 2, CELL - 4, CELL - 4, 6, colour(tone))
             index = index + 1
         }
         words("на поле: {show.model.score} яблок · лучшая партия на поле {shown_best}", FIELD_X, FIELD_Y + height + 20, 17, "ink")

@@ -111,10 +111,11 @@ skill project(screen, shape, scene, cache, bank) {
     @c2 = solids.cosine(scene.tilt)
     @s2 = solids.sine(scene.tilt)
     @index = 0
-    drum (shape.points) {
-        @lx = group.get(beat, 0)
-        @ly = group.get(beat, 1)
-        @lz = group.get(beat, 2)
+    drum (group.count(shape.points)) {
+        @point = group.get(shape.points, beat)
+        @lx = group.get(point, 0)
+        @ly = group.get(point, 1)
+        @lz = group.get(point, 2)
         @ry = (ly * c3 - lz * s3) / solids.ONE
         @rz = (ly * s3 + lz * c3) / solids.ONE
         @x = (lx * c0 - rz * s0) / solids.ONE + shape.x
@@ -197,9 +198,10 @@ skill wire_line(screen, stamps, x, y, x_end, y_end, value, mark) {
 }
 
 skill draw_edges(screen, stamps, shape, cache, bank, value, shades, mark) {
-    drum (shape.edges) {
-        @from = spot(cache, bank, shape, group.get(beat, 0))
-        @to = spot(cache, bank, shape, group.get(beat, 1))
+    drum (group.count(shape.edges)) {
+        @edge = group.get(shape.edges, beat)
+        @from = spot(cache, bank, shape, group.get(edge, 0))
+        @to = spot(cache, bank, shape, group.get(edge, 1))
         @ink = value
         (value < 0) { ink = shade(shades, (num.from(mem.load32(address.from(cache.memory), usize.from(from + 2 * WORD))) + num.from(mem.load32(address.from(cache.memory), usize.from(to + 2 * WORD)))) / 2) }
         wire_line(screen, stamps, num.from(mem.load32(address.from(cache.memory), usize.from(from))) - BIAS, num.from(mem.load32(address.from(cache.memory), usize.from(from + WORD))) - BIAS, num.from(mem.load32(address.from(cache.memory), usize.from(to))) - BIAS, num.from(mem.load32(address.from(cache.memory), usize.from(to + WORD))) - BIAS, ink, mark)
@@ -240,7 +242,9 @@ skill scene_frame(screen, stamps, shapes, scene, shades, chosen_ink, background,
         draw_edges(screen, stamps, shape, cache, fresh, ink, shades, scene.stamp)
     }
     (cache.ready == yes) {
-        drum (group.count(shapes) - 1) { draw_edges(screen, stamps, group.get(shapes, beat + 1), cache, old, background, shades, -scene.stamp) }
+        drum (group.count(shapes) - 1) {
+            draw_edges(screen, stamps, group.get(shapes, beat + 1), cache, old, background, shades, -scene.stamp)
+        }
     }
     cache.bank = old
     cache.ready = yes
@@ -249,9 +253,10 @@ skill scene_frame(screen, stamps, shapes, scene, shades, chosen_ink, background,
 
 skill make_cache(base, shapes) {
     @total = 0
-    drum (shapes) {
-        beat.slot = total
-        total = total + group.count(beat.points)
+    drum (group.count(shapes)) {
+        @shape = group.get(shapes, beat)
+        shape.slot = total
+        total = total + group.count(shape.points)
     }
     @room = arena_map.region("wire_cache")
     (total * 2 * 3 * WORD > room.bytes) { out error.CacheTooSmall }
@@ -319,7 +324,9 @@ skill draw_panel(stage) {
     gop.fill(panel, 0, 0, PANEL_WIDTH, height, background)
     drum (height) {
         @row = beat * screen.stride
-        drum (PANEL_WIDTH) { mem.store32(address.from(stamps.memory), usize.from((row + left + beat) * graphics.PIXEL_BYTES), u32.from(ROOM_MARK)) }
+        drum (PANEL_WIDTH) {
+            mem.store32(address.from(stamps.memory), usize.from((row + left + beat) * graphics.PIXEL_BYTES), u32.from(ROOM_MARK))
+        }
     }
     drum (group.count(lines)) {
         @color = stage.ink
@@ -385,7 +392,10 @@ skill state_text(shapes, scene) {
     @frozen = ""
     (scene.frozen == yes) { frozen = " (пауза)" }
     @edges = 0
-    drum (shapes) { edges = edges + group.count(beat.edges) }
+    drum (group.count(shapes)) {
+        @shape = group.get(shapes, beat)
+        edges = edges + group.count(shape.edges)
+    }
     @figures = group.count(shapes) - 2
     @turn = scene.turn
     @tilt = scene.tilt
@@ -394,8 +404,9 @@ skill state_text(shapes, scene) {
 }
 
 skill listen(link, shapes, scene) {
-    drum (remote.serve(link)) {
-        @packet = beat
+    @packets = remote.serve(link)
+    drum (group.count(packets)) {
+        @packet = group.get(packets, beat)
         (str.starts_with(packet.text, "wire") == yes) {
             @words = str.split(packet.text, " ")
             @action = ""

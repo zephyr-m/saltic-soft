@@ -79,8 +79,9 @@ skill shelf_names(base) {
     @found = files.folder_names(base, root, shelf_path())
     files.close_file(base, root)
     @names = []
-    drum (found) {
-        (str.ends_with(beat, TAIL) == yes) { names = group.add(names, str.slice(beat, 0, str.bytes(beat) - str.bytes(TAIL))) }
+    drum (group.count(found)) {
+        @entry = group.get(found, beat)
+        (str.ends_with(entry, TAIL) == yes) { names = group.add(names, str.slice(entry, 0, str.bytes(entry) - str.bytes(TAIL))) }
     }
     out names
 }

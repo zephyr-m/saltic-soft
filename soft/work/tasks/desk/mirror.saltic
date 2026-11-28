@@ -98,7 +98,10 @@ skill pages(desk, cmd, params, field) {
                 out none
             }
             @list = value.get(answer.data, field)
-            drum (list.value.items) { found = group.add(found, beat) }
+            drum (group.count(list.value.items)) {
+                @item_2 = group.get(list.value.items, beat)
+                found = group.add(found, item_2)
+            }
             @next = value.get(answer.data, "next")
             more = next.found
             (more == yes) { from = parse.parse_size(mrpc.plain(next.value)) }
@@ -112,7 +115,10 @@ skill refresh(desk) {
     @rows = pages(desk, "tasks-list", "", "tasks")
     (rows) |rows| {
         @made = []
-        drum (rows) { made = group.add(made, Task { number = number_of(beat, "number"), column = text_of(beat, "column"), name = text_of(beat, "name"), done = number_of(beat, "done"), items = number_of(beat, "items") }) }
+        drum (group.count(rows)) {
+            @row = group.get(rows, beat)
+            made = group.add(made, Task { number = number_of(row, "number"), column = text_of(row, "column"), name = text_of(row, "name"), done = number_of(row, "done"), items = number_of(row, "items") })
+        }
         desk.tasks = made
     }
     out none
@@ -128,11 +134,26 @@ skill open_task(desk, number) {
     @opened = Opened { number = number, column = text_of(shown.data, "column"), name = text_of(shown.data, "name") }
     @asked = "\"number\":{number}"
     @items = pages(desk, "tasks-items", asked, "items")
-    (items) |items| { drum (items) { opened.items = group.add(opened.items, Item { item = number_of(beat, "item"), done = flag_of(beat, "done"), text = text_of(beat, "text"), time = text_of(beat, "time") }) } }
+    (items) |items| {
+        drum (group.count(items)) {
+            @entry = group.get(items, beat)
+            opened.items = group.add(opened.items, Item { item = number_of(entry, "item"), done = flag_of(entry, "done"), text = text_of(entry, "text"), time = text_of(entry, "time") })
+        }
+    }
     @events = pages(desk, "tasks-events", asked, "events")
-    (events) |events| { drum (events) { opened.events = group.add(opened.events, Event { time = text_of(beat, "time"), text = text_of(beat, "text") }) } }
+    (events) |events| {
+        drum (group.count(events)) {
+            @event = group.get(events, beat)
+            opened.events = group.add(opened.events, Event { time = text_of(event, "time"), text = text_of(event, "text") })
+        }
+    }
     @messages = pages(desk, "tasks-messages", asked, "messages")
-    (messages) |messages| { drum (messages) { opened.messages = group.add(opened.messages, Message { message = number_of(beat, "message"), time = text_of(beat, "time"), author = text_of(beat, "author"), text = text_of(beat, "text") }) } }
+    (messages) |messages| {
+        drum (group.count(messages)) {
+            @message_entry = group.get(messages, beat)
+            opened.messages = group.add(opened.messages, Message { message = number_of(message_entry, "message"), time = text_of(message_entry, "time"), author = text_of(message_entry, "author"), text = text_of(message_entry, "text") })
+        }
+    }
     desk.opened = opened
     out none
 }
@@ -159,10 +180,12 @@ skill move(desk, column) {
 
 skill board_of(desk) {
     @made = board.Board { selected = 0, cursor = -1 }
-    drum (desk.tasks) {
-        @one = beat
+    drum (group.count(desk.tasks)) {
+        @one = group.get(desk.tasks, beat)
         @column = 0
-        drum (3) { (group.get(board.COLUMN_NAMES, beat) == one.column) { column = beat } }
+        drum (3) {
+            (group.get(board.COLUMN_NAMES, beat) == one.column) { column = beat }
+        }
         board.put_task(made, column, one.name)
     }
     @number = desk.opened.number
@@ -170,13 +193,22 @@ skill board_of(desk) {
     (number > group.count(made.names)) { out made }
     made.opened = number
     @items = []
-    drum (desk.opened.items) { items = group.add(items, [beat.done, beat.text, beat.time]) }
+    drum (group.count(desk.opened.items)) {
+        @item_2 = group.get(desk.opened.items, beat)
+        items = group.add(items, [item_2.done, item_2.text, item_2.time])
+    }
     made.items = group.replaced(made.items, number - 1, items)
     @events = []
-    drum (desk.opened.events) { events = group.add(events, [beat.time, beat.text]) }
+    drum (group.count(desk.opened.events)) {
+        @event = group.get(desk.opened.events, beat)
+        events = group.add(events, [event.time, event.text])
+    }
     made.events = group.replaced(made.events, number - 1, events)
     @messages = []
-    drum (desk.opened.messages) { messages = group.add(messages, [beat.time, beat.author, beat.text]) }
+    drum (group.count(desk.opened.messages)) {
+        @message = group.get(desk.opened.messages, beat)
+        messages = group.add(messages, [message.time, message.author, message.text])
+    }
     made.messages = group.replaced(made.messages, number - 1, messages)
     out made
 }

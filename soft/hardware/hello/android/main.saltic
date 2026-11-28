@@ -48,7 +48,9 @@ skill block(canvas, x, y, size, color) {
     @paint = color
     drum (size) {
         @row = (y + beat) * canvas.stride + x
-        drum (size) { mem.store32(base, usize.from((row + beat) * 4), paint) }
+        drum (size) {
+            mem.store32(base, usize.from((row + beat) * 4), paint)
+        }
     }
     out none
 }
@@ -95,7 +97,9 @@ skill line(canvas, a, b, size, color) {
     (other < 0) { other = 0 - other }
     (other > steps) { steps = other }
     (steps == 0) { out dot(canvas, x0, y0, size, color) }
-    drum (steps + 1) { dot(canvas, x0 + dx * beat / steps, y0 + dy * beat / steps, size, color) }
+    drum (steps + 1) {
+        dot(canvas, x0 + dx * beat / steps, y0 + dy * beat / steps, size, color)
+    }
     out none
 }
 
@@ -116,8 +120,14 @@ skill corner(point, turn, size, center) {
 
 skill cube(canvas, turn, size, center, thickness) {
     @points = []
-    drum (CORNERS) { points = group.add(points, corner(beat, turn, size, center)) }
-    drum (EDGES) { line(canvas, group.get(points, group.get(beat, 0)), group.get(points, group.get(beat, 1)), thickness, accent()) }
+    drum (group.count(CORNERS)) {
+        @corner_2 = group.get(CORNERS, beat)
+        points = group.add(points, corner(corner_2, turn, size, center))
+    }
+    drum (group.count(EDGES)) {
+        @edge = group.get(EDGES, beat)
+        line(canvas, group.get(points, group.get(edge, 0)), group.get(points, group.get(edge, 1)), thickness, accent())
+    }
     out none
 }
 
@@ -129,7 +139,9 @@ skill rect(canvas, x, y, width, height, color) {
     @base = address.from(canvas.bits)
     drum (height) {
         @row = (y + beat) * canvas.stride + x
-        drum (width) { mem.store32(base, usize.from((row + beat) * 4), color) }
+        drum (width) {
+            mem.store32(base, usize.from((row + beat) * 4), color)
+        }
     }
     out none
 }

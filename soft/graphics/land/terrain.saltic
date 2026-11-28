@@ -109,7 +109,9 @@ skill band_of(value) {
 }
 
 skill bands(land) {
-    drum (256) { mem.store8(address.from(land.memory), usize.from(BAND_TABLE + beat), u8.from(band_of(beat))) }
+    drum (256) {
+        mem.store8(address.from(land.memory), usize.from(BAND_TABLE + beat), u8.from(band_of(beat)))
+    }
     out none
 }
 

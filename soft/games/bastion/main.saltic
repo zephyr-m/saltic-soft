@@ -90,9 +90,10 @@ Window = Box {
     }
 
     skill field_place() {
-        drum (runtime.targets) {
-            (beat.id == panel.FIELD) {
-                out beat
+        drum (group.count(runtime.targets)) {
+            @target = group.get(runtime.targets, beat)
+            (target.id == panel.FIELD) {
+                out target
             }
         }
         out error.FieldMissing
@@ -131,22 +132,23 @@ Window = Box {
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
         @clicked = no
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.CLICK) {
-                @hit = jtml.hit(runtime, beat.x, beat.y)
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, gesture.x, gesture.y)
                 pick {
                     (hit.id == panel.FIELD) {
-                        @spot = ground.cell_of(realm, beat.x, beat.y)
+                        @spot = ground.cell_of(realm, gesture.x, gesture.y)
                         (group.count(spot) == 2) {
                             realm.touch(group.get(spot, 0), group.get(spot, 1))
                         }
                     }
                     (hit.found == yes) {
                         store.press(realm, hit.id)
-                        io.show("бастион: щелчок {beat.x},{beat.y} — {hit.id}: {realm.news}")
+                        io.show("бастион: щелчок {gesture.x},{gesture.y} — {hit.id}: {realm.news}")
                     }
                     {
-                        io.show("бастион: щелчок {beat.x},{beat.y} — мимо кнопок")
+                        io.show("бастион: щелчок {gesture.x},{gesture.y} — мимо кнопок")
                     }
                 }
                 clicked = yes

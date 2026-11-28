@@ -79,7 +79,9 @@ skill random_group(count, limit, seed) {
 
 skill zeros(count) {
     @made = []
-    drum (count) { made = group.add(made, 0.0) }
+    drum (count) {
+        made = group.add(made, 0.0)
+    }
     out made
 }
 
@@ -100,7 +102,9 @@ skill input_of(buffer, at) {
             @sum = 0
             drum (POOL) {
                 @row = at + (y * POOL + beat) * WIDE + x * POOL
-                drum (POOL) { sum = sum + bytes.get(buffer, row + beat) }
+                drum (POOL) {
+                    sum = sum + bytes.get(buffer, row + beat)
+                }
             }
             made = group.add(made, fraction.from(sum) / area - 0.5)
         }
@@ -130,7 +134,9 @@ skill forward(net, input) {
                 drum (3) {
                     @ky = beat
                     @row = (oy * 2 + ky) * IN_W + ox * 2
-                    drum (3) { sum = sum + 1.0 * group.get(net.w1, f * 9 + ky * 3 + beat) * group.get(input, row + beat) }
+                    drum (3) {
+                        sum = sum + 1.0 * group.get(net.w1, f * 9 + ky * 3 + beat) * group.get(input, row + beat)
+                    }
                 }
                 z1 = group.add(z1, sum)
                 a1 = group.add(a1, relu(sum))
@@ -152,7 +158,9 @@ skill forward(net, input) {
                         @ky = beat
                         @row = (f * A_H + oy * 2 + ky) * A_W + ox * 2
                         @base = (g * C1 + f) * 9 + ky * 3
-                        drum (3) { sum = sum + 1.0 * group.get(net.w2, base + beat) * group.get(a1, row + beat) }
+                        drum (3) {
+                            sum = sum + 1.0 * group.get(net.w2, base + beat) * group.get(a1, row + beat)
+                        }
                     }
                 }
                 z2 = group.add(z2, sum)
@@ -164,7 +172,9 @@ skill forward(net, input) {
     drum (OUT) {
         @j = beat
         @sum = group.get(net.b3, j)
-        drum (DENSE) { sum = sum + 1.0 * group.get(net.w3, j * DENSE + beat) * group.get(a2, beat) }
+        drum (DENSE) {
+            sum = sum + 1.0 * group.get(net.w3, j * DENSE + beat) * group.get(a2, beat)
+        }
         answer = group.add(answer, sum)
     }
     out Pass { input = input, z1 = z1, a1 = a1, z2 = z2, a2 = a2, answer = answer }
@@ -172,17 +182,23 @@ skill forward(net, input) {
 
 skill grads(net, pass, target) {
     @d_out = zeros(0)
-    drum (OUT) { d_out = group.add(d_out, 0.0 + group.get(pass.answer, beat) - group.get(target, beat)) }
+    drum (OUT) {
+        d_out = group.add(d_out, 0.0 + group.get(pass.answer, beat) - group.get(target, beat))
+    }
     @g_w3 = []
     drum (OUT) {
         @d = item(d_out, beat)
-        drum (DENSE) { g_w3 = group.add(g_w3, 1.0 * d * group.get(pass.a2, beat)) }
+        drum (DENSE) {
+            g_w3 = group.add(g_w3, 1.0 * d * group.get(pass.a2, beat))
+        }
     }
     @d_z2 = zeros(0)
     drum (DENSE) {
         @i = beat
         @sum = 0.0
-        drum (OUT) { sum = sum + 1.0 * group.get(net.w3, beat * DENSE + i) * item(d_out, beat) }
+        drum (OUT) {
+            sum = sum + 1.0 * group.get(net.w3, beat * DENSE + i) * item(d_out, beat)
+        }
         ((group.get(pass.z2, i) > 0.0) == no) { sum = 0.0 }
         d_z2 = group.add(d_z2, sum)
     }
@@ -191,7 +207,9 @@ skill grads(net, pass, target) {
     drum (C2) {
         @g = beat
         @bias = 0.0
-        drum (B_H * B_W) { bias = bias + item(d_z2, g * B_H * B_W + beat) }
+        drum (B_H * B_W) {
+            bias = bias + item(d_z2, g * B_H * B_W + beat)
+        }
         g_b2 = group.add(g_b2, bias)
         drum (C1) {
             @f = beat
@@ -201,7 +219,9 @@ skill grads(net, pass, target) {
                 @sum = 0.0
                 drum (B_H) {
                     @oy = beat
-                    drum (B_W) { sum = sum + 1.0 * item(d_z2, (g * B_H + oy) * B_W + beat) * group.get(pass.a1, (f * A_H + oy * 2 + ky) * A_W + beat * 2 + kx) }
+                    drum (B_W) {
+                        sum = sum + 1.0 * item(d_z2, (g * B_H + oy) * B_W + beat) * group.get(pass.a1, (f * A_H + oy * 2 + ky) * A_W + beat * 2 + kx)
+                    }
                 }
                 g_w2 = group.add(g_w2, sum)
             }
@@ -226,7 +246,9 @@ skill grads(net, pass, target) {
                     (dx % 2 == 1) { fits = no }
                     (dy / 2 >= B_H) { fits = no }
                     (dx / 2 >= B_W) { fits = no }
-                    (fits == yes) { drum (C2) { sum = sum + 1.0 * group.get(net.w2, (beat * C1 + f) * 9 + ky * 3 + kx) * item(d_z2, (beat * B_H + dy / 2) * B_W + dx / 2) } }
+                    (fits == yes) { drum (C2) {
+                        sum = sum + 1.0 * group.get(net.w2, (beat * C1 + f) * 9 + ky * 3 + kx) * item(d_z2, (beat * B_H + dy / 2) * B_W + dx / 2)
+                    } }
                 }
                 ((group.get(pass.z1, (f * A_H + y) * A_W + x) > 0.0) == no) { sum = 0.0 }
                 d_z1 = group.add(d_z1, sum)
@@ -238,7 +260,9 @@ skill grads(net, pass, target) {
     drum (C1) {
         @f = beat
         @bias = 0.0
-        drum (A_H * A_W) { bias = bias + item(d_z1, f * A_H * A_W + beat) }
+        drum (A_H * A_W) {
+            bias = bias + item(d_z1, f * A_H * A_W + beat)
+        }
         g_b1 = group.add(g_b1, bias)
         drum (9) {
             @ky = beat / 3
@@ -246,7 +270,9 @@ skill grads(net, pass, target) {
             @sum = 0.0
             drum (A_H) {
                 @oy = beat
-                drum (A_W) { sum = sum + 1.0 * item(d_z1, (f * A_H + oy) * A_W + beat) * group.get(pass.input, (oy * 2 + ky) * IN_W + beat * 2 + kx) }
+                drum (A_W) {
+                    sum = sum + 1.0 * item(d_z1, (f * A_H + oy) * A_W + beat) * group.get(pass.input, (oy * 2 + ky) * IN_W + beat * 2 + kx)
+                }
             }
             g_w1 = group.add(g_w1, sum)
         }
@@ -256,7 +282,9 @@ skill grads(net, pass, target) {
 
 skill joined(a, b, rate) {
     @made = []
-    drum (group.count(a)) { made = group.add(made, 0.0 + group.get(a, beat) + 1.0 * group.get(b, beat) * rate) }
+    drum (group.count(a)) {
+        made = group.add(made, 0.0 + group.get(a, beat) + 1.0 * group.get(b, beat) * rate)
+    }
     out made
 }
 
@@ -275,12 +303,19 @@ skill parts(net) {
 
 skill save(net, path) {
     @total = 0
-    drum (parts(net)) { total = total + group.count(beat) }
+    @part_2s = parts(net)
+    drum (group.count(part_2s)) {
+        @part_2 = group.get(part_2s, beat)
+        total = total + group.count(part_2)
+    }
     @kept = matrix.new(total, 1)
     @at = 0
-    drum (parts(net)) {
-        drum (beat) {
-            matrix.set(kept, at, 0, beat)
+    @parts_2 = parts(net)
+    drum (group.count(parts_2)) {
+        @part = group.get(parts_2, beat)
+        drum (group.count(part)) {
+            @entry = group.get(part, beat)
+            matrix.set(kept, at, 0, entry)
             at = at + 1
         }
     }
@@ -292,9 +327,10 @@ skill load(path) {
     @sizes = [C1 * 9, C1, C2 * C1 * 9, C2, OUT * DENSE, OUT]
     @found = []
     @at = 0
-    drum (sizes) {
+    drum (group.count(sizes)) {
+        @size = group.get(sizes, beat)
         @made = []
-        drum (beat) {
+        drum (size) {
             made = group.add(made, matrix.get(kept, at, 0))
             at = at + 1
         }

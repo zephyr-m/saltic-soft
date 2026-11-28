@@ -106,7 +106,9 @@ skill render(scene, flight, base) {
     @height = back.height
     gop.copy_rect(base, back, scene.sky, 0, 0, back.width, height)
     @columns = scene.columns
-    drum (columns) { mem.store32(address.from(scene.ybuffer), usize.from(YBUFFER + beat * 4), u32.from(height)) }
+    drum (columns) {
+        mem.store32(address.from(scene.ybuffer), usize.from(YBUFFER + beat * 4), u32.from(height))
+    }
     @sine = geometry.sine(flight.angle)
     @cosine = geometry.cosine(flight.angle)
     @ground = terrain.height(scene.land, flight.x / geometry.ONE, flight.y / geometry.ONE)

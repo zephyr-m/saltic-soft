@@ -35,9 +35,10 @@ Keeper = Box {
             "cleared={realm.cleared}",
             "played={realm.played}"
         ]
-        drum (realm.towers) {
-            @code = beat.code()
-            lines = group.add(lines, "tower={code},{beat.column},{beat.row},{beat.level}")
+        drum (group.count(realm.towers)) {
+            @tower_2 = group.get(realm.towers, beat)
+            @code = tower_2.code()
+            lines = group.add(lines, "tower={code},{tower_2.column},{tower_2.row},{tower_2.level}")
         }
         file.write(path, str.join(lines, "\n"))
         out none
@@ -49,39 +50,41 @@ Keeper = Box {
         }
         @saved = clock
         @towers = []
-        drum (str.lines(text)) {
-            @value = value_of(beat)
-            (str.starts_with(beat, "saved=") == yes) {
+        @lines_2 = str.lines(text)
+        drum (group.count(lines_2)) {
+            @line = group.get(lines_2, beat)
+            @value = value_of(line)
+            (str.starts_with(line, "saved=") == yes) {
                 saved = number_of(value)
             }
-            (str.starts_with(beat, "wave=") == yes) {
+            (str.starts_with(line, "wave=") == yes) {
                 realm.wave = number_of(value)
             }
-            (str.starts_with(beat, "gold=") == yes) {
+            (str.starts_with(line, "gold=") == yes) {
                 realm.gold = number_of(value)
             }
-            (str.starts_with(beat, "lives=") == yes) {
+            (str.starts_with(line, "lives=") == yes) {
                 realm.lives = number_of(value)
             }
-            (str.starts_with(beat, "damage_level=") == yes) {
+            (str.starts_with(line, "damage_level=") == yes) {
                 realm.damage_level = number_of(value)
             }
-            (str.starts_with(beat, "speed_level=") == yes) {
+            (str.starts_with(line, "speed_level=") == yes) {
                 realm.speed_level = number_of(value)
             }
-            (str.starts_with(beat, "income_level=") == yes) {
+            (str.starts_with(line, "income_level=") == yes) {
                 realm.income_level = number_of(value)
             }
-            (str.starts_with(beat, "earned=") == yes) {
+            (str.starts_with(line, "earned=") == yes) {
                 realm.earned = number_of(value)
             }
-            (str.starts_with(beat, "cleared=") == yes) {
+            (str.starts_with(line, "cleared=") == yes) {
                 realm.cleared = number_of(value)
             }
-            (str.starts_with(beat, "played=") == yes) {
+            (str.starts_with(line, "played=") == yes) {
                 realm.played = number_of(value)
             }
-            (str.starts_with(beat, "tower=") == yes) {
+            (str.starts_with(line, "tower=") == yes) {
                 @parts = str.split(value, ",")
                 towers = group.add(towers, tower.tower_of(number_of(group.get(parts, 0)), number_of(group.get(parts, 1)), number_of(group.get(parts, 2)), number_of(group.get(parts, 3))))
             }

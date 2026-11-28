@@ -58,7 +58,9 @@ skill grid(gray) {
     @cells = gray.wide / STEP
     @rows = gray.high / STEP
     @table = []
-    drum (cells + 1) { table = group.add(table, 0) }
+    drum (cells + 1) {
+        table = group.add(table, 0)
+    }
     drum (rows) {
         @y = beat
         @line = 0
@@ -81,8 +83,8 @@ skill spots(made) {
     @rows = group.get(made, 1)
     @table = group.get(made, 2)
     @found = []
-    drum (RADII) {
-        @r = beat
+    drum (group.count(RADII)) {
+        @r = group.get(RADII, beat)
         @outer = r * 2
         drum (rows - outer * 2) {
             @y = beat + outer
@@ -108,16 +110,17 @@ skill spots(made) {
 skill keep(found, spot) {
     @made = []
     @placed = no
-    drum (found) {
-        @near = (beat.x - spot.x) * (beat.x - spot.x) + (beat.y - spot.y) * (beat.y - spot.y) < (beat.radius + spot.radius) * (beat.radius + spot.radius)
+    drum (group.count(found)) {
+        @entry = group.get(found, beat)
+        @near = (entry.x - spot.x) * (entry.x - spot.x) + (entry.y - spot.y) * (entry.y - spot.y) < (entry.radius + spot.radius) * (entry.radius + spot.radius)
         pick {
             (near == yes) {
-                (beat.score >= spot.score) {
-                    made = group.add(made, beat)
+                (entry.score >= spot.score) {
+                    made = group.add(made, entry)
                     placed = yes
                 }
             }
-            { made = group.add(made, beat) }
+            { made = group.add(made, entry) }
         }
     }
     (placed == no) { made = insert(made, spot) }
@@ -128,14 +131,15 @@ skill keep(found, spot) {
 skill insert(list, spot) {
     @made = []
     @done = no
-    drum (list) {
+    drum (group.count(list)) {
+        @entry = group.get(list, beat)
         (done == no) {
-            (spot.score > beat.score) {
+            (spot.score > entry.score) {
                 made = group.add(made, spot)
                 done = yes
             }
         }
-        made = group.add(made, beat)
+        made = group.add(made, entry)
     }
     (done == no) { made = group.add(made, spot) }
     out made
@@ -156,7 +160,9 @@ skill pupil(gray, spot) {
                 @sum = 0
                 drum (3) {
                     @dy = beat - 1
-                    drum (3) { sum = sum + light(gray, x + beat - 1, y + dy) }
+                    drum (3) {
+                        sum = sum + light(gray, x + beat - 1, y + dy)
+                    }
                 }
                 (sum < best.score) { best = Spot { x = x, y = y, radius = r, score = sum } }
             }
@@ -170,10 +176,10 @@ skill find(gray) {
     (group.count(list) < 2) { out Pair {} }
     @best = 0
     @chosen = Pair {}
-    drum (list) {
-        @first = beat
-        drum (list) {
-            @second = beat
+    drum (group.count(list)) {
+        @first = group.get(list, beat)
+        drum (group.count(list)) {
+            @second = group.get(list, beat)
             @across = second.y - first.y
             (across < 0) { across = 0 - across }
             @along = second.x - first.x

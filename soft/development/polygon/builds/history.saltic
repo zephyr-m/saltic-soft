@@ -9,6 +9,7 @@
 use core.str
 use core.process
 use soft.development.polygon.builds.day
+use core.group
 
 Commits = Box {
     trouble = ""
@@ -30,8 +31,10 @@ Commits = Box {
             trouble = "git log ответил кодом {log.code} — не репозиторий?"
             out none
         }
-        drum (str.lines(log.output)) {
-            (str.bytes(beat) >= 10) { calendar.mark(beat) }
+        @lines_2 = str.lines(log.output)
+        drum (group.count(lines_2)) {
+            @line = group.get(lines_2, beat)
+            (str.bytes(line) >= 10) { calendar.mark(line) }
         }
         trouble = ""
         out none

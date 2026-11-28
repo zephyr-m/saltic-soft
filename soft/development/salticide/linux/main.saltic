@@ -190,56 +190,57 @@ Window = Box {
         link.way_events = drained.core
         @changed = no
         @closing = no
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.CLICK) {
-                @hit = jtml.hit(runtime, beat.x, beat.y)
-                note("клик {beat.x},{beat.y} → «{hit.id}»")
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, gesture.x, gesture.y)
+                note("клик {gesture.x},{gesture.y} → «{hit.id}»")
                 (hit.id == "close") { closing = yes }
                 (hit.id == "minimize") { screen.minimize(link) }
-                (pressed(view, files, hit, beat.x, beat.y) == yes) { changed = yes }
-                (beat.ctrl == yes) {
+                (pressed(view, files, hit, gesture.x, gesture.y) == yes) { changed = yes }
+                (gesture.ctrl == yes) {
                     (str.starts_with(hit.id, editor.LINE) == yes) {
                         go()
                         changed = yes
                     }
                 }
             }
-            (beat.kind == gestures.Kind.TYPE) {
-                view.typed(beat.text)
+            (gesture.kind == gestures.Kind.TYPE) {
+                view.typed(gesture.text)
                 changed = yes
             }
-            (beat.kind == gestures.Kind.PRESS) {
-                note("клавиша {beat.text}, ctrl {beat.ctrl}")
+            (gesture.kind == gestures.Kind.PRESS) {
+                note("клавиша {gesture.text}, ctrl {gesture.ctrl}")
                 pick {
-                    (beat.ctrl == yes) {
-                        (beat.text == "s") {
+                    (gesture.ctrl == yes) {
+                        (gesture.text == "s") {
                             save()
                             changed = yes
                         }
-                        (beat.text == "n") {
+                        (gesture.text == "n") {
                             view.wanted = "new"
                             changed = yes
                         }
-                        (beat.text == "w") {
+                        (gesture.text == "w") {
                             view.act("close")
                             changed = yes
                         }
-                        (beat.text == "f5") {
+                        (gesture.text == "f5") {
                             view.act("run")
                             changed = yes
                         }
                     }
-                    (view.press(beat.text) == yes) {
+                    (view.press(gesture.text) == yes) {
                         changed = yes
                     }
-                    (beat.text == "escape") {
+                    (gesture.text == "escape") {
                         closing = yes
                     }
                 }
             }
-            (beat.kind == gestures.Kind.WHEEL) {
-                note("колесо {beat.amount}")
-                view.wheel(beat.amount, beat.x)
+            (gesture.kind == gestures.Kind.WHEEL) {
+                note("колесо {gesture.amount}")
+                view.wheel(gesture.amount, gesture.x)
                 changed = yes
             }
         }

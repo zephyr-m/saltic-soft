@@ -249,8 +249,9 @@ Editor = Box {
         (text == "\n") {
             @indent = ""
             @spaces = yes
-            drum (letters) {
-                ((beat == " ") == no) {
+            drum (group.count(letters)) {
+                @letter_2 = group.get(letters, beat)
+                ((letter_2 == " ") == no) {
                     spaces = no
                 }
                 (spaces == yes) {
@@ -378,8 +379,9 @@ Editor = Box {
 
     skill greeting() {
         @rows = [calls.call("headline", [["text", calls.quoted("SalticIDE")]])]
-        drum (WELCOME) {
-            rows = group.add(rows, calls.call("hint", [["text", calls.quoted(beat)]]))
+        drum (group.count(WELCOME)) {
+            @entry = group.get(WELCOME, beat)
+            rows = group.add(rows, calls.call("hint", [["text", calls.quoted(entry)]]))
         }
         @inside = calls.join(rows)
         out ["\{\"box\": \{\"padding\": [24, 24, 24, 24], \"gap\": 10, \"children\": [{inside}]\}\}"]
@@ -387,8 +389,9 @@ Editor = Box {
 
     skill jtml() {
         @heads = []
-        drum (tabs) {
-            heads = group.add(heads, tab(beat))
+        drum (group.count(tabs)) {
+            @tab_2 = group.get(tabs, beat)
+            heads = group.add(heads, tab(tab_2))
         }
         (group.count(lines) == 0) {
             out calls.call("editor", [["tabs", calls.listed(heads)], ["lines", calls.listed(greeting())], ["scroll", bar()]])

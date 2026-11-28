@@ -56,13 +56,17 @@ Panel = Box {
         @fire = grouped(realm.firepower())
         @field_line = calls.call("hint", [["text", calls.quoted("на поле {count} · урон {fire}/с")]])
         @cards = []
-        drum (store.towers_on_sale(realm)) {
-            cards = group.add(cards, tower_card(beat))
+        @entries = store.towers_on_sale(realm)
+        drum (group.count(entries)) {
+            @entry = group.get(entries, beat)
+            cards = group.add(cards, tower_card(entry))
         }
         @upgrades_title = calls.call("section-title", [["text", calls.quoted("Улучшения")]])
         @rows = []
-        drum (store.upgrades(realm)) {
-            rows = group.add(rows, upgrade(beat))
+        @upgrade_2s = store.upgrades(realm)
+        drum (group.count(upgrade_2s)) {
+            @upgrade_2 = group.get(upgrade_2s, beat)
+            rows = group.add(rows, upgrade(upgrade_2))
         }
         @shelf = calls.listed(cards)
         @lines = calls.listed(rows)

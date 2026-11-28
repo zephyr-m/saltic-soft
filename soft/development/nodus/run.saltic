@@ -125,7 +125,9 @@ skill number_text(value) {
     @part = rest % MILLI
     (part == 0) { out "{sign}{whole}" }
     @digits = num.text(part)
-    drum (3 - str.bytes(digits)) { digits = "0{digits}" }
+    drum (3 - str.bytes(digits)) {
+        digits = "0{digits}"
+    }
     drum (3) {
         (str.byte(digits, str.bytes(digits) - 1) == 48) { digits = str.slice(digits, 0, str.bytes(digits) - 1) }
     }
@@ -136,7 +138,10 @@ skill shown(value) {
     (value.kind == NUMBER) { out number_text(value.number) }
     (value.kind == TEXT) { out "'{value.text}'" }
     @parts = []
-    drum (value.items) { parts = group.add(parts, shown(beat)) }
+    drum (group.count(value.items)) {
+        @item_2 = group.get(value.items, beat)
+        parts = group.add(parts, shown(item_2))
+    }
     @inside = str.join(parts, ", ")
     out "[{inside}]"
 }
@@ -154,17 +159,18 @@ skill same(a, b) {
 }
 
 skill ticking(nodes_graph) {
-    drum (nodes_graph.nodes) {
-        (beat.title == "время") { out yes }
-        (beat.title == "регистр") { out yes }
-        (beat.kind == graph.CALL) { out yes }
+    drum (group.count(nodes_graph.nodes)) {
+        @node_2 = group.get(nodes_graph.nodes, beat)
+        (node_2.title == "время") { out yes }
+        (node_2.title == "регистр") { out yes }
+        (node_2.kind == graph.CALL) { out yes }
     }
     out no
 }
 
 skill source(nodes_graph, index, entry) {
-    drum (nodes_graph.links) {
-        @link = beat
+    drum (group.count(nodes_graph.links)) {
+        @link = group.get(nodes_graph.links, beat)
         (link.to == index) {
             (link.entry == entry) { out link }
         }
@@ -218,10 +224,13 @@ skill glyph(digit) {
     (digit < 0) { out none }
     (digit > 9) { out none }
     @rows = []
-    drum (group.get(DIGITS, digit)) {
-        @line = beat
+    @lines = group.get(DIGITS, digit)
+    drum (group.count(lines)) {
+        @line = group.get(lines, beat)
         @row = []
-        drum (str.bytes(line)) { row = group.add(row, numeric((str.byte(line, beat) - 48) * MILLI)) }
+        drum (str.bytes(line)) {
+            row = group.add(row, numeric((str.byte(line, beat) - 48) * MILLI))
+        }
         rows = group.add(rows, Val { kind = LIST, items = row })
     }
     out Val { kind = LIST, items = rows }
@@ -348,8 +357,8 @@ skill start(base, shelf, nodes_graph, now, bound, depth) {
     @states = []
     @slots = []
     @inputs_seen = 0
-    drum (nodes_graph.nodes) {
-        @node = beat
+    drum (group.count(nodes_graph.nodes)) {
+        @node = group.get(nodes_graph.nodes, beat)
         values = group.add(values, [])
         states = group.add(states, WAITING)
         @slot = []
@@ -499,13 +508,16 @@ skill demand(run, index) {
 skill bits_of(value) {
     @rows = []
     (value.kind == LIST) {
-        drum (value.items) {
+        drum (group.count(value.items)) {
+            @item_3 = group.get(value.items, beat)
             @row = []
-            (beat.kind == LIST) {
-                drum (beat.items) {
+            (item_3.kind == LIST) {
+                @item_2s = item_3.items
+                drum (group.count(item_2s)) {
+                    @item_2 = group.get(item_2s, beat)
                     @dot = 0
-                    (beat.kind == NUMBER) {
-                        ((beat.number == 0) == no) { dot = 1 }
+                    (item_2.kind == NUMBER) {
+                        ((item_2.number == 0) == no) { dot = 1 }
                     }
                     row = group.add(row, dot)
                 }
@@ -559,6 +571,9 @@ skill latch(run) {
         @next = group.get(latched, beat)
         (group.count(next) > 0) { node.memory = next }
     }
-    drum (run.children) { latch(beat) }
+    drum (group.count(run.children)) {
+        @child = group.get(run.children, beat)
+        latch(child)
+    }
     out none
 }

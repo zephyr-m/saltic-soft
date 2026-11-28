@@ -33,8 +33,9 @@ Day = Box {
 
     skill tone() {
         (future == yes) { out "ground" }
-        drum (LEVELS) {
-            (commits >= group.get(beat, 0)) { out group.get(beat, 1) }
+        drum (group.count(LEVELS)) {
+            @level = group.get(LEVELS, beat)
+            (commits >= group.get(level, 0)) { out group.get(level, 1) }
         }
         out "well"
     }
@@ -55,7 +56,9 @@ Day = Box {
 
     skill digits(text) {
         @read_number = 0
-        drum (str.bytes(text)) { read_number = read_number * 10 + str.byte(text, beat) - 48 }
+        drum (str.bytes(text)) {
+            read_number = read_number * 10 + str.byte(text, beat) - 48
+        }
         out read_number
     }
 

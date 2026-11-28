@@ -180,7 +180,9 @@ skill answer(remote, bytes) {
         remote.shot_bytes = taken
         reply_text(remote, packet, shot.caption(remote.card, taken))
         (remote.via == "cable") {
-            drum ((taken + shot.SHOT_CHUNK - 1) / shot.SHOT_CHUNK) { shot.send_chunk(remote.card, taken, packet, beat) }
+            drum ((taken + shot.SHOT_CHUNK - 1) / shot.SHOT_CHUNK) {
+                shot.send_chunk(remote.card, taken, packet, beat)
+            }
         }
         out none
     }
@@ -196,7 +198,10 @@ skill answer(remote, bytes) {
     }
     (packet.text == "quit") {
         reply_text(remote, packet, "выхожу на главный экран")
-        drum (remote.owned) { uefi.free_pages(firmware.guest_base(), group.get(beat, 0), group.get(beat, 1)) }
+        drum (group.count(remote.owned)) {
+            @entry = group.get(remote.owned, beat)
+            uefi.free_pages(firmware.guest_base(), group.get(entry, 0), group.get(entry, 1))
+        }
         reply.home("вышла по команде quit")
         out none
     }
@@ -218,7 +223,10 @@ skill answer_mrpc(remote, packet) {
     }
     (call.cmd == "quit") {
         send_to(remote, packet, packet.from_port, mrpc.success(call, utf8.encode("выхожу на главный экран"), 0, REPLY_LIMIT))
-        drum (remote.owned) { uefi.free_pages(firmware.guest_base(), group.get(beat, 0), group.get(beat, 1)) }
+        drum (group.count(remote.owned)) {
+            @entry = group.get(remote.owned, beat)
+            uefi.free_pages(firmware.guest_base(), group.get(entry, 0), group.get(entry, 1))
+        }
         reply.home("вышла по команде quit")
         out none
     }

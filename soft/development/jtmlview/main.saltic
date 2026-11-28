@@ -63,16 +63,17 @@ program() {
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
         @changed = no
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.CLICK) {
-                @hit = jtml.hit(runtime, beat.x, beat.y)
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, gesture.x, gesture.y)
                 (view.choose(hit.id) == yes) {
                     view.sized(palette)
                     changed = yes
                 }
             }
-            (beat.kind == gestures.Kind.WHEEL) {
-                view.scroll(beat.amount)
+            (gesture.kind == gestures.Kind.WHEEL) {
+                view.scroll(gesture.amount)
                 changed = yes
             }
         }

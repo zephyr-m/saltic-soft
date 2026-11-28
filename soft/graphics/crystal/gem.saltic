@@ -30,9 +30,10 @@ Gem = Box {
 
     skill posed(q) {
         @moved = []
-        drum (faces) {
-            @corner = math.plus(center, spin.turned(q, math.minus(group.get(beat, 0), center)))
-            moved = group.add(moved, [corner, spin.turned(q, group.get(beat, 1)), spin.turned(q, group.get(beat, 2)), spin.turned(q, group.get(beat, 3))])
+        drum (group.count(faces)) {
+            @face = group.get(faces, beat)
+            @corner = math.plus(center, spin.turned(q, math.minus(group.get(face, 0), center)))
+            moved = group.add(moved, [corner, spin.turned(q, group.get(face, 1)), spin.turned(q, group.get(face, 2)), spin.turned(q, group.get(face, 3))])
         }
         out Gem {
             faces = moved,
@@ -47,11 +48,12 @@ Gem = Box {
         (misses(origin, direction) == yes) {
             out [best, normal]
         }
-        drum (faces) {
-            @t = hit(beat, origin, direction)
+        drum (group.count(faces)) {
+            @face = group.get(faces, beat)
+            @t = hit(face, origin, direction)
             ((t > 0.0) ○ (t < best)) {
                 best = t
-                normal = group.get(beat, 3)
+                normal = group.get(face, 3)
             }
         }
         out [best, normal]

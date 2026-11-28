@@ -56,7 +56,9 @@ skill cell_text(model, x, y) {
 
 skill border() {
     @line = ""
-    drum (snake.BOARD_COLUMNS + 2) { line = "{line}{WALL}" }
+    drum (snake.BOARD_COLUMNS + 2) {
+        line = "{line}{WALL}"
+    }
     out line
 }
 

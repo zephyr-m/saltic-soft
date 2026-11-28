@@ -68,9 +68,11 @@ Project = Box {
     }
 
     skill home() {
-        drum (process.environment()) {
-            (str.starts_with(beat, "SALTIC_HOME=") == yes) {
-                out str.slice(beat, 12, str.bytes(beat))
+        @settings = process.environment()
+        drum (group.count(settings)) {
+            @setting = group.get(settings, beat)
+            (str.starts_with(setting, "SALTIC_HOME=") == yes) {
+                out str.slice(setting, 12, str.bytes(setting))
             }
         }
         out "../saltic"
@@ -83,11 +85,14 @@ Project = Box {
             out none
         }
         @counted = []
-        drum (group.count(AREAS) + 1) { counted = group.add(counted, 0) }
+        drum (group.count(AREAS) + 1) {
+            counted = group.add(counted, 0)
+        }
         files = 0
         lines = 0
-        drum (str.lines(listed.output)) {
-            @path = beat
+        @paths = str.lines(listed.output)
+        drum (group.count(paths)) {
+            @path = group.get(paths, beat)
             @text = file.read("{root}/{path}") rescue |err| { "" }
             ((text == "") == no) {
                 @many = str.line_count(text)
@@ -109,11 +114,12 @@ Project = Box {
 
     skill shelf_of(names) {
         @found = []
-        drum (names) {
-            (str.starts_with(beat, PREFIX) == yes) {
-                (str.contains(beat, MARK) == yes) {
-                    (str.ends_with(beat, ".txt") == no) {
-                        @parts = str.split(beat, MARK)
+        drum (group.count(names)) {
+            @name = group.get(names, beat)
+            (str.starts_with(name, PREFIX) == yes) {
+                (str.contains(name, MARK) == yes) {
+                    (str.ends_with(name, ".txt") == no) {
+                        @parts = str.split(name, MARK)
                         @chip = group.get(str.split(group.get(parts, 1), "-"), 0)
                         (group.contains(found, chip) == no) { found = group.add(found, chip) }
                         @raw = str.slice(group.get(parts, 0), str.bytes(PREFIX), str.bytes(group.get(parts, 0)))
@@ -126,15 +132,23 @@ Project = Box {
         out none
     }
 
+    skill count_of(counts, floor) {
+        out group.get(counts, group.get(floor, 0))
+    }
+
     skill floors() {
         @counts = [0, ATOMS, 0, 0, 0]
-        drum (library.LEVELS) { counts = group.replaced(counts, beat, group.get(counts, beat) + 1) }
+        drum (group.count(library.LEVELS)) {
+            @level = group.get(library.LEVELS, beat)
+            counts = group.replaced(counts, level, group.get(counts, level) + 1)
+        }
         @most = widest(counts)
         @rows = []
-        drum (FLOORS) {
-            @many = group.get(counts, group.get(beat, 0))
+        drum (group.count(FLOORS)) {
+            @floor_2 = group.get(FLOORS, beat)
+            @many = count_of(counts, floor_2)
             @width = many * TRACK / most + 8
-            rows = group.add(rows, calls.call("floor-bar", [["label", calls.quoted(group.get(beat, 1))], ["count", calls.quoted("{many}")], ["width", "{width}"], ["tone", calls.quoted(group.get(beat, 2))]]))
+            rows = group.add(rows, calls.call("floor-bar", [["label", calls.quoted(group.get(floor_2, 1))], ["count", calls.quoted("{many}")], ["width", "{width}"], ["tone", calls.quoted(group.get(floor_2, 2))]]))
         }
         out calls.call("console-panel", [["title", calls.quoted("пирамида жителей UIEngine")], ["note", calls.quoted("из собранной библиотеки")], ["radius", "16"], ["grow", "1"], ["children", calls.listed([shelf("column", 6, rows)])]])
     }

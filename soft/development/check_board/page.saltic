@@ -141,9 +141,10 @@ skill quiet_line(value, size) {
 skill now(desk, tick) {
     @rows = [bold(desk.phase(), 15, "ink")]
     @going = desk.running()
-    drum (going) {
-        @who = put("box", [["width", "230"], ["children", calls.listed([cut("{beat.proc} · {beat.name}", "ink", 12)])]])
-        rows = group.add(rows, row(10, "center", [spinner("run", tick), who, cut(reader.replaced(beat.last, "⏳", "…"), "quiet", 12)]))
+    drum (group.count(going)) {
+        @entry = group.get(going, beat)
+        @who = put("box", [["width", "230"], ["children", calls.listed([cut("{entry.proc} · {entry.name}", "ink", 12)])]])
+        rows = group.add(rows, row(10, "center", [spinner("run", tick), who, cut(reader.replaced(entry.last, "⏳", "…"), "quiet", 12)]))
     }
     (group.count(going) == 0) {
         @driver = desk.driver
@@ -299,7 +300,10 @@ skill journal(desk, picked, log) {
         tabs = group.add(tabs, tab("{CELL}{index}", "{branch.proc} · {branch.name}", yes))
     }
     @lines = []
-    drum (log.lines) { lines = group.add(lines, line(reader.replaced(beat, "⏳", "…"), line_tone(beat), 12)) }
+    drum (group.count(log.lines)) {
+        @line_2 = group.get(log.lines, beat)
+        lines = group.add(lines, line(reader.replaced(line_2, "⏳", "…"), line_tone(line_2), 12))
+    }
     (group.count(lines) == 0) {
         lines = [mono("журнала пока нет — проверка его ещё не начала", "gutter", 12)]
         (log.bytes > 0) { lines = [mono("✓ провалов нет", "up", 12)] }
@@ -336,7 +340,9 @@ skill journal(desk, picked, log) {
 
 skill jtml(desk, first, picked, tick, shown, log, voiced) {
     @panels = []
-    drum (group.count(desk.field) - first) { panels = group.add(panels, branch_panel(desk, first + beat, group.get(desk.field, first + beat), tick)) }
+    drum (group.count(desk.field) - first) {
+        panels = group.add(panels, branch_panel(desk, first + beat, group.get(desk.field, first + beat), tick))
+    }
     @page = [top(desk, shown, voiced), meter(desk), calls.call("section-title", [["text", calls.quoted("сейчас")]]), now(desk, tick), calls.call("section-title", [["text", calls.quoted("подготовка — по очереди")]]), prep_row(desk, tick), calls.call("section-title", [["text", calls.quoted("ветки — разом · колесо листает")]])]
     (group.count(desk.prep) == 0) { page = [top(desk, shown, voiced), meter(desk), calls.call("section-title", [["text", calls.quoted("сейчас")]]), now(desk, tick), calls.call("section-title", [["text", calls.quoted("случаи")]])] }
     @content = calls.call("box", [["flow", calls.quoted("column")], ["grow", "1"], ["gap", "14"], ["padding", "22"], ["children", calls.listed(group.concat(page, panels))]])

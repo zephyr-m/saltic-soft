@@ -49,10 +49,11 @@ skill keys() {
 }
 
 skill cell_text(model, x, y) {
-    drum (model.workers) {
-        (beat.x == x) {
-            (beat.y == y) {
-                (beat.carrying == yes) { out CARRIER }
+    drum (group.count(model.workers)) {
+        @worker = group.get(model.workers, beat)
+        (worker.x == x) {
+            (worker.y == y) {
+                (worker.carrying == yes) { out CARRIER }
                 out WORKER
             }
         }
@@ -66,7 +67,9 @@ skill cell_text(model, x, y) {
 skill frame(desk) {
     @model = desk.model
     @bar = ""
-    drum (colony.BOARD_COLUMNS + 2) { bar = "{bar}=" }
+    drum (colony.BOARD_COLUMNS + 2) {
+        bar = "{bar}="
+    }
     bar = "{bar}{bar}"
     @lines = [bar]
     @mark = escape("7m")
@@ -117,7 +120,9 @@ skill turn_once(desk) {
     (str.contains(pressed, "[C") == yes) { desk.x = clamp(desk.x + 1, colony.BOARD_COLUMNS) }
     (str.contains(pressed, "[D") == yes) { desk.x = clamp(desk.x - 1, colony.BOARD_COLUMNS) }
     (str.contains(pressed, " ") == yes) { colony.edit(model, desk.x, desk.y) }
-    drum (group.count(model.workers)) { colony.step_worker(model, group.get(model.workers, beat)) }
+    drum (group.count(model.workers)) {
+        colony.step_worker(model, group.get(model.workers, beat))
+    }
     colony.grow(model)
     out io.show(frame(desk))
 }

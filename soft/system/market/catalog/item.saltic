@@ -34,8 +34,9 @@ Item = Box {
         (group.count(wanted) == 0) {
             out yes
         }
-        drum (wanted) {
-            (group.contains(platforms, beat) == yes) {
+        drum (group.count(wanted)) {
+            @entry = group.get(wanted, beat)
+            (group.contains(platforms, entry) == yes) {
                 out yes
             }
         }
@@ -51,8 +52,9 @@ Item = Box {
 
     skill shown_platforms() {
         @words = []
-        drum (platforms) {
-            words = group.add(words, platform_word(beat))
+        drum (group.count(platforms)) {
+            @platform = group.get(platforms, beat)
+            words = group.add(words, platform_word(platform))
         }
         out str.join(words, " · ")
     }

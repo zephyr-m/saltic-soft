@@ -242,8 +242,9 @@ Board = Box {
                 }
             }
         }
-        drum (gone) {
-            cells = group.replaced(cells, beat, runs.EMPTY)
+        drum (group.count(gone)) {
+            @entry = group.get(gone, beat)
+            cells = group.replaced(cells, entry, runs.EMPTY)
         }
         @gained = group.count(gone) * POINTS * chain
         score = score + gained
@@ -331,8 +332,9 @@ Board = Box {
             }
         }
         @gained = clear_marks(marks)
-        drum (specials) {
-            cells = group.replaced(cells, group.get(beat, 0), group.get(beat, 1))
+        drum (group.count(specials)) {
+            @special_2 = group.get(specials, beat)
+            cells = group.replaced(cells, group.get(special_2, 0), group.get(special_2, 1))
         }
         last = -1
         @word = ""
@@ -340,8 +342,9 @@ Board = Box {
             word = " · цепочка ×{chain}"
         }
         note("ряды: +{gained}{word}")
-        drum (specials) {
-            @power = power_of(group.get(beat, 1))
+        drum (group.count(specials)) {
+            @special = group.get(specials, beat)
+            @power = power_of(group.get(special, 1))
             pick {
                 (power == STAR) {
                     note("собрано пять — звезда")

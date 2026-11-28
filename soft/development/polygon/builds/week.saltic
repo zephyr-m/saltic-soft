@@ -16,15 +16,19 @@ Week = Box {
     }
 
     skill month() {
-        drum (days) {
-            (beat.opens_month() == yes) { out beat.month_short() }
+        drum (group.count(days)) {
+            @day_2 = group.get(days, beat)
+            (day_2.opens_month() == yes) { out day_2.month_short() }
         }
         out ""
     }
 
     skill cells() {
         @cells = []
-        drum (days) { cells = group.add(cells, beat.cell()) }
+        drum (group.count(days)) {
+            @day_2 = group.get(days, beat)
+            cells = group.add(cells, day_2.cell())
+        }
         @inside = calls.join(cells)
         out "\{\"box\": \{\"gap\": 4, \"children\": [{inside}]\}\}"
     }

@@ -48,8 +48,9 @@ Packages = Box {
             out none
         }
         @left = []
-        drum (folded) {
-            ((beat == role) == no) { left = group.add(left, beat) }
+        drum (group.count(folded)) {
+            @entry = group.get(folded, beat)
+            ((entry == role) == no) { left = group.add(left, entry) }
         }
         folded = left
         out none
@@ -61,8 +62,9 @@ Packages = Box {
             out none
         }
         @left = []
-        drum (opened) {
-            ((beat == name) == no) { left = group.add(left, beat) }
+        drum (group.count(opened)) {
+            @entry = group.get(opened, beat)
+            ((entry == name) == no) { left = group.add(left, entry) }
         }
         opened = left
         out none
@@ -94,8 +96,9 @@ Packages = Box {
     skill found() {
         @many = 0
         @asked = str.lower(query)
-        drum (catalog.packages) {
-            (beat.matches(asked) == yes) { many = many + 1 }
+        drum (group.count(catalog.packages)) {
+            @package = group.get(catalog.packages, beat)
+            (package.matches(asked) == yes) { many = many + 1 }
         }
         out many
     }
@@ -103,23 +106,25 @@ Packages = Box {
     skill rows() {
         @asked = str.lower(query)
         @made = []
-        drum (ROLES) {
-            @role = group.get(beat, 0)
-            @icon = group.get(beat, 2)
-            @tone = group.get(beat, 3)
+        drum (group.count(ROLES)) {
+            @role_2 = group.get(ROLES, beat)
+            @role = group.get(role_2, 0)
+            @icon = group.get(role_2, 2)
+            @tone = group.get(role_2, 3)
             @shut = group.contains(folded, role)
             @chevron = "chevron-down"
             (shut == yes) { chevron = "chevron-right" }
             @total = 0
-            drum (catalog.packages) {
-                (beat.role == role) {
-                    (beat.matches(asked) == yes) { total = total + 1 }
+            drum (group.count(catalog.packages)) {
+                @package_2 = group.get(catalog.packages, beat)
+                (package_2.role == role) {
+                    (package_2.matches(asked) == yes) { total = total + 1 }
                 }
             }
-            made = group.add(made, calls.call("tree-group", [["id", calls.quoted("{GROUP}{role}")], ["chevron", calls.quoted(chevron)], ["text", calls.quoted(group.get(beat, 1))], ["count", calls.quoted("{total}")]]))
+            made = group.add(made, calls.call("tree-group", [["id", calls.quoted("{GROUP}{role}")], ["chevron", calls.quoted(chevron)], ["text", calls.quoted(group.get(role_2, 1))], ["count", calls.quoted("{total}")]]))
             (shut == no) {
-                drum (catalog.packages) {
-                    @package = beat
+                drum (group.count(catalog.packages)) {
+                    @package = group.get(catalog.packages, beat)
                     (package.role == role) {
                         (package.matches(asked) == yes) {
                             @open = group.contains(opened, package.name)

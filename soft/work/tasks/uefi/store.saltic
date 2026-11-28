@@ -53,25 +53,31 @@ skill desk_bytes(desk) {
         found = group.add(found, BAR)
         found = group.concat(found, utf8.encode(group.get(desk.names, beat)))
         found = group.add(found, LINE_END)
-        drum (group.get(desk.items, beat)) {
+        @item_2s = group.get(desk.items, beat)
+        drum (group.count(item_2s)) {
+            @item_2 = group.get(item_2s, beat)
             @mark = SPACE
-            (group.get(beat, 0) == yes) { mark = TICK }
+            (group.get(item_2, 0) == yes) { mark = TICK }
             found = group.concat(found, [SPACE, SPACE, OPEN, mark, CLOSE])
-            found = stamped(found, group.get(beat, 2))
-            found = group.concat(found, utf8.encode(group.get(beat, 1)))
+            found = stamped(found, group.get(item_2, 2))
+            found = group.concat(found, utf8.encode(group.get(item_2, 1)))
             found = group.add(found, LINE_END)
         }
-        drum (group.get(desk.events, beat)) {
+        @events_2 = group.get(desk.events, beat)
+        drum (group.count(events_2)) {
+            @event = group.get(events_2, beat)
             found = group.concat(found, [SPACE, SPACE, AT])
-            found = stamped(found, group.get(beat, 0))
-            found = group.concat(found, utf8.encode(group.get(beat, 1)))
+            found = stamped(found, group.get(event, 0))
+            found = group.concat(found, utf8.encode(group.get(event, 1)))
             found = group.add(found, LINE_END)
         }
-        drum (group.get(desk.messages, beat)) {
+        @messages_2 = group.get(desk.messages, beat)
+        drum (group.count(messages_2)) {
+            @message = group.get(messages_2, beat)
             found = group.concat(found, [SPACE, SPACE, QUOTED])
-            found = stamped(found, group.get(beat, 0))
-            found = group.add(group.concat(found, utf8.encode(group.get(beat, 1))), BAR)
-            found = group.concat(found, utf8.encode(group.get(beat, 2)))
+            found = stamped(found, group.get(message, 0))
+            found = group.add(group.concat(found, utf8.encode(group.get(message, 1))), BAR)
+            found = group.concat(found, utf8.encode(group.get(message, 2)))
             found = group.add(found, LINE_END)
         }
     }
@@ -108,7 +114,9 @@ skill save_desk(base, desk) {
     @written = desk_bytes(desk)
     (group.count(written) > desk_limit()) { out error.DeskTooBig }
     @buffer = desk_buffer(base)
-    drum (group.count(written)) { firmware.write8(buffer, base, beat, group.get(written, beat)) }
+    drum (group.count(written)) {
+        firmware.write8(buffer, base, beat, group.get(written, beat))
+    }
     @root = files.saltic_root(base)
     @folder = files.create(base, root, FOLDER, files.DIRECTORY)
     drop_old(base, folder)
@@ -139,7 +147,9 @@ skill stored_bytes(base) {
     (asked.failed == yes) { out [] }
     @size = firmware.read16(size_at, base, 0)
     @found = []
-    drum (size) { found = group.add(found, firmware.read8(buffer, base, beat)) }
+    drum (size) {
+        found = group.add(found, firmware.read8(buffer, base, beat))
+    }
     out found
 }
 

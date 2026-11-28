@@ -85,7 +85,9 @@ Project = Box {
             files = []
             @count = room()
             (group.count(rows) - first < count) { count = group.count(rows) - first }
-            drum (count) { files = group.add(files, row(group.get(rows, first + beat))) }
+            drum (count) {
+                files = group.add(files, row(group.get(rows, first + beat)))
+            }
         }
         out calls.call("project-panel", [["files", calls.listed(files)]])
     }

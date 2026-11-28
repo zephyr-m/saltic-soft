@@ -85,8 +85,10 @@ Schema = Box {
         @inside = calls.join(parts)
         @stage = "\{\"box\": \{\"height\": {STAGE_HIGH}, \"gap\": 0, \"children\": [{inside}]\}\}"
         @alive = 0
-        drum ([laptop, acer, phone, board]) {
-            (beat.alive == yes) { alive = alive + 1 }
+        @entries = [laptop, acer, phone, board]
+        drum (group.count(entries)) {
+            @entry = group.get(entries, beat)
+            (entry.alive == yes) { alive = alive + 1 }
         }
         @head = calls.call("page-head", [["title", calls.quoted("Устройства")], ["note", calls.quoted("живой опрос — щёлкни по карточке, чтобы спросить заново")], ["badge", calls.quoted("на связи {alive} из 4 · {took} мс")], ["tone", calls.quoted("up")]])
         out calls.listed([head, stage])

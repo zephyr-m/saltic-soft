@@ -157,7 +157,9 @@ skill segment(screen, x0, y0, x1, y1, color) {
     @dx = x1 - x0
     @dy = y1 - y0
     @steps = geometry.root(dx * dx + dy * dy) + 1
-    drum (steps + 1) { rect(screen, x0 + dx * beat / steps, y0 + dy * beat / steps, 2, 2, color) }
+    drum (steps + 1) {
+        rect(screen, x0 + dx * beat / steps, y0 + dy * beat / steps, 2, 2, color)
+    }
     out none
 }
 
@@ -189,7 +191,9 @@ skill grid(screen, view, color) {
     @first_y = (view.y % step + step) % step
     drum ((screen.height - BAR) / step + 1) {
         @y = first_y + beat * step
-        drum (screen.width / step + 1) { rect(screen, first_x + beat * step, y, 2, 2, color) }
+        drum (screen.width / step + 1) {
+            rect(screen, first_x + beat * step, y, 2, 2, color)
+        }
     }
     out none
 }

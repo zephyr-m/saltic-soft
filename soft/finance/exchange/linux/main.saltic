@@ -46,10 +46,11 @@ Themes = Box {
         @parts = ["\{\"box\": \{\"id\": \"{BUTTON}\", \"at\": [{left}, 18], \"gap\": 0, \"children\": [{button}]\}\}"]
         (open == yes) {
             @rows = []
-            drum (themes.NAMES) {
+            drum (group.count(themes.NAMES)) {
+                @name_2 = group.get(themes.NAMES, beat)
                 @kind = "menu-row"
-                (beat == chosen) { kind = "menu-row-current" }
-                rows = group.add(rows, calls.call(kind, [["id", calls.quoted("{ITEM}{beat}")], ["icon", calls.quoted("palette")], ["text", calls.quoted(beat)], ["count", calls.quoted("")]]))
+                (name_2 == chosen) { kind = "menu-row-current" }
+                rows = group.add(rows, calls.call(kind, [["id", calls.quoted("{ITEM}{name_2}")], ["icon", calls.quoted("palette")], ["text", calls.quoted(name_2)], ["count", calls.quoted("")]]))
             }
             @list = calls.call("console-panel", [["title", calls.quoted("темы")], ["note", calls.quoted("одним словом")], ["width", "{WIDE}"], ["radius", "14"], ["grow", "0"], ["children", calls.listed(rows)]])
             parts = group.add(parts, "\{\"box\": \{\"at\": [{left}, 56], \"gap\": 0, \"children\": [{list}]\}\}")
@@ -114,10 +115,11 @@ program() {
         screen.pump(link, packet, hold, joined)
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.CLICK) {
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.CLICK) {
                 @was = picker.chosen
-                @hit = jtml.hit(runtime, beat.x, beat.y)
+                @hit = jtml.hit(runtime, gesture.x, gesture.y)
                 (picker.choose(hit.id) == yes) {
                     ((picker.chosen == was) == no) { palette = atoms.with_faces(themes.named(picker.chosen, canvas), face(fonts.REGULAR), face(fonts.BOLD), face(fonts.MONO)) }
                     dirty = yes

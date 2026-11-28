@@ -56,8 +56,9 @@ skill remember(agent, entry) {
 }
 
 skill icon_of(name) {
-    drum (ICONS) {
-        (group.get(beat, 0) == name) { out group.get(beat, 1) }
+    drum (group.count(ICONS)) {
+        @icon = group.get(ICONS, beat)
+        (group.get(icon, 0) == name) { out group.get(icon, 1) }
     }
     out "app-window"
 }
@@ -102,7 +103,9 @@ skill answers(agent, wide, high) {
         }
     }
     @shown = []
-    drum (group.count(rows)) { shown = group.add(shown, group.get(rows, group.count(rows) - 1 - beat)) }
+    drum (group.count(rows)) {
+        shown = group.add(shown, group.get(rows, group.count(rows) - 1 - beat))
+    }
     (group.count(shown) == 0) { shown = [calls.call("label", [["text", calls.quoted("пока тихо")]])] }
     @body = calls.call("stack", [["gap", "4"], ["justify", calls.quoted("end")], ["grow", "1"], ["children", calls.listed(shown)]])
     out calls.call("console-panel", [["title", calls.quoted("Ответы")], ["note", calls.quoted("команды и ответы агента")], ["width", "0"], ["radius", "14"], ["grow", "1"], ["children", calls.listed([body])]])

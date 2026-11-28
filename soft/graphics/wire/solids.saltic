@@ -68,7 +68,10 @@ skill fine_cosine(fine) {
 
 skill scaled(rows, size) {
     @found = []
-    drum (rows) { found = group.add(found, [group.get(beat, 0) * size / ONE, group.get(beat, 1) * size / ONE, group.get(beat, 2) * size / ONE]) }
+    drum (group.count(rows)) {
+        @row = group.get(rows, beat)
+        found = group.add(found, [group.get(row, 0) * size / ONE, group.get(row, 1) * size / ONE, group.get(row, 2) * size / ONE])
+    }
     out found
 }
 
@@ -118,9 +121,11 @@ skill octahedron() {
 
 skill icosahedron() {
     @found = []
-    drum ([[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-        @a = group.get(beat, 0) * ONE
-        @b = group.get(beat, 1) * GOLDEN
+    @entries = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+    drum (group.count(entries)) {
+        @entry = group.get(entries, beat)
+        @a = group.get(entry, 0) * ONE
+        @b = group.get(entry, 1) * GOLDEN
         found = group.add(group.add(group.add(found, [0, a, b]), [a, b, 0]), [b, 0, a])
     }
     out found
@@ -128,10 +133,16 @@ skill icosahedron() {
 
 skill dodecahedron() {
     @found = []
-    drum ([[1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1], [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1]]) { found = group.add(found, [group.get(beat, 0) * ONE, group.get(beat, 1) * ONE, group.get(beat, 2) * ONE]) }
-    drum ([[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-        @a = group.get(beat, 0) * INVERSE_GOLDEN
-        @b = group.get(beat, 1) * GOLDEN
+    @entry_2s = [[1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1], [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1]]
+    drum (group.count(entry_2s)) {
+        @entry_2 = group.get(entry_2s, beat)
+        found = group.add(found, [group.get(entry_2, 0) * ONE, group.get(entry_2, 1) * ONE, group.get(entry_2, 2) * ONE])
+    }
+    @entries = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+    drum (group.count(entries)) {
+        @entry = group.get(entries, beat)
+        @a = group.get(entry, 0) * INVERSE_GOLDEN
+        @b = group.get(entry, 1) * GOLDEN
         found = group.add(group.add(group.add(found, [0, a, b]), [a, b, 0]), [b, 0, a])
     }
     out found
@@ -146,10 +157,16 @@ skill pyramid(size, place, speeds) {
 
 skill prism(size, place, speeds) {
     @points = []
-    drum (6) { points = group.add(points, [size * cosine(beat * 60) / ONE, size, size * sine(beat * 60) / ONE]) }
-    drum (6) { points = group.add(points, [size * cosine(beat * 60) / ONE, -size, size * sine(beat * 60) / ONE]) }
+    drum (6) {
+        points = group.add(points, [size * cosine(beat * 60) / ONE, size, size * sine(beat * 60) / ONE])
+    }
+    drum (6) {
+        points = group.add(points, [size * cosine(beat * 60) / ONE, -size, size * sine(beat * 60) / ONE])
+    }
     @edges = []
-    drum (6) { edges = group.add(group.add(group.add(edges, [beat, (beat + 1) % 6]), [beat + 6, (beat + 1) % 6 + 6]), [beat, beat + 6]) }
+    drum (6) {
+        edges = group.add(group.add(group.add(edges, [beat, (beat + 1) % 6]), [beat + 6, (beat + 1) % 6 + 6]), [beat, beat + 6])
+    }
     out Shape { name = "призма", points = points, edges = edges, x = group.get(place, 0), y = group.get(place, 1), z = group.get(place, 2), yaw_speed = group.get(speeds, 0), roll_speed = group.get(speeds, 1) }
 }
 
@@ -159,7 +176,9 @@ skill sphere(size, place, speeds) {
         @ring = (beat + 1) * STEP
         @up = size * cosine(ring) / ONE
         @wide = size * sine(ring) / ONE
-        drum (SLICES) { points = group.add(points, [wide * cosine(beat * STEP) / ONE, up, wide * sine(beat * STEP) / ONE]) }
+        drum (SLICES) {
+            points = group.add(points, [wide * cosine(beat * STEP) / ONE, up, wide * sine(beat * STEP) / ONE])
+        }
     }
     points = group.add(points, [0, -size, 0])
     @bottom = RINGS * SLICES + 1
@@ -180,8 +199,9 @@ skill sphere(size, place, speeds) {
 skill segments(name, pairs) {
     @points = []
     @edges = []
-    drum (pairs) {
-        points = group.add(group.add(points, group.get(beat, 0)), group.get(beat, 1))
+    drum (group.count(pairs)) {
+        @pair = group.get(pairs, beat)
+        points = group.add(group.add(points, group.get(pair, 0)), group.get(pair, 1))
         edges = group.add(edges, [group.count(points) - 2, group.count(points) - 1])
     }
     out Shape { name = name, points = points, edges = edges }

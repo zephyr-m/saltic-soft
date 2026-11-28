@@ -162,7 +162,9 @@ skill shadowed(px, py, pz) {
 
 skill power(value, times) {
     @result = value
-    drum (times) { result = result * result / ONE }
+    drum (times) {
+        result = result * result / ONE
+    }
     out result
 }
 

@@ -255,7 +255,9 @@ skill collect_quad(painter, camera, body, quad, seen) {
 
 skill collect(painter, camera, body) {
     @seen = seen_points(camera, body)
-    drum (group.count(body.quads)) { collect_quad(painter, camera, body, group.get(body.quads, beat), seen) }
+    drum (group.count(body.quads)) {
+        collect_quad(painter, camera, body, group.get(body.quads, beat), seen)
+    }
     out none
 }
 
@@ -277,13 +279,17 @@ skill collect_ground(painter, camera, body, cells) {
 
 skill seen_points(camera, body) {
     @seen = []
-    drum (group.count(body.points)) { seen = group.add(seen, project(camera, group.get(body.points, beat))) }
+    drum (group.count(body.points)) {
+        seen = group.add(seen, project(camera, group.get(body.points, beat)))
+    }
     out seen
 }
 
 skill draw(screen, camera, body) {
     @seen = seen_points(camera, body)
-    drum (group.count(body.quads)) { draw_quad(screen, camera, body, group.get(body.quads, beat), seen) }
+    drum (group.count(body.quads)) {
+        draw_quad(screen, camera, body, group.get(body.quads, beat), seen)
+    }
     out none
 }
 

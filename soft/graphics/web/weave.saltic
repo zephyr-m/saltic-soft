@@ -127,7 +127,9 @@ skill plan(web, step) {
     }
     @start = group.get(web.points, 0)
     pieces = geometry.line(pieces, group.get(first, 0), group.get(first, 1), group.get(start, 0), group.get(start, 1), 0, step)
-    drum (group.count(web.points) - 1) { pieces = group.concat(pieces, spiral_piece(web, beat, SPIRAL, step)) }
+    drum (group.count(web.points) - 1) {
+        pieces = group.concat(pieces, spiral_piece(web, beat, SPIRAL, step))
+    }
     @last = group.get(web.points, group.count(web.points) - 1)
     out geometry.line(pieces, group.get(last, 0), group.get(last, 1), hx, hy, 0, step)
 }
@@ -153,7 +155,9 @@ skill neighbors(web, node) {
     @count = group.count(web.points)
     (node == count) {
         @inner = []
-        drum (SPOKES) { inner = group.add(inner, count - SPOKES + beat) }
+        drum (SPOKES) {
+            inner = group.add(inner, count - SPOKES + beat)
+        }
         out inner
     }
     @found = []
@@ -168,7 +172,9 @@ skill neighbors(web, node) {
 skill route(web, from, to) {
     @count = group.count(web.points) + 1
     @parent = bytes.new(count)
-    drum (count) { bytes.set(parent, beat, UNSEEN) }
+    drum (count) {
+        bytes.set(parent, beat, UNSEEN)
+    }
     bytes.set(parent, from, from)
     @queue = [from]
     @head = 0
@@ -194,7 +200,9 @@ skill route(web, from, to) {
         path = group.add(path, at)
     }
     @forward = []
-    drum (group.count(path)) { forward = group.add(forward, group.get(path, group.count(path) - 1 - beat)) }
+    drum (group.count(path)) {
+        forward = group.add(forward, group.get(path, group.count(path) - 1 - beat))
+    }
     out forward
 }
 

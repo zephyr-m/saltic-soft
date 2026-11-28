@@ -79,7 +79,9 @@ skill paint_row(screen, palette, row) {
 
 skill colors(screen) {
     @palette = []
-    drum (DEPTH + 1) { palette = group.add(palette, shade(screen, beat)) }
+    drum (DEPTH + 1) {
+        palette = group.add(palette, shade(screen, beat))
+    }
     out palette
 }
 

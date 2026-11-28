@@ -103,8 +103,9 @@ Wizard = Box {
 
     skill first() {
         @cards = []
-        drum (KINDS) {
-            cards = group.add(cards, card(beat))
+        drum (group.count(KINDS)) {
+            @choice = group.get(KINDS, beat)
+            cards = group.add(cards, card(choice))
         }
         @row = calls.join(cards)
         @question = calls.call("caption", [["text", calls.quoted("что делаем")]])
@@ -126,9 +127,11 @@ Wizard = Box {
         @placed = labeled("папка", button(PLACE, "{base}/  ▾", no))
         @made = folder()
         @lines = [calls.call("caption", [["text", calls.quoted("будет создано")]]), calls.call("console-line", [["text", calls.quoted("{made}/")], ["tone", calls.quoted("ink")], ["size", "13"]])]
-        drum (planned()) {
-            @file_name = group.get(beat, 0)
-            lines = group.add(lines, calls.call("log-line", [["time", calls.quoted("    {file_name}")], ["text", calls.quoted(group.get(beat, 1))], ["tone", calls.quoted("quiet")]]))
+        @entries = planned()
+        drum (group.count(entries)) {
+            @entry = group.get(entries, beat)
+            @file_name = group.get(entry, 0)
+            lines = group.add(lines, calls.call("log-line", [["time", calls.quoted("    {file_name}")], ["text", calls.quoted(group.get(entry, 1))], ["tone", calls.quoted("quiet")]]))
         }
         @shown = calls.join(lines)
         @buttons = calls.join(["\{\"box\": \{\"grow\": 1, \"gap\": 0\}\}", button(BACK, "← назад", no), button(CREATE, "создать", yes)])

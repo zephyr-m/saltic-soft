@@ -67,20 +67,29 @@ Calendar = Box {
 
     skill days() {
         @all = []
-        drum (weeks) { all = group.concat(all, beat.days) }
+        drum (group.count(weeks)) {
+            @week_2 = group.get(weeks, beat)
+            all = group.concat(all, week_2.days)
+        }
         out all
     }
 
     skill total() {
         @sum = 0
-        drum (days()) { sum = sum + beat.commits }
+        @day_2s = days()
+        drum (group.count(day_2s)) {
+            @day_2 = group.get(day_2s, beat)
+            sum = sum + day_2.commits
+        }
         out sum
     }
 
     skill active() {
         @many = 0
-        drum (days()) {
-            (beat.commits > 0) { many = many + 1 }
+        @day_2s = days()
+        drum (group.count(day_2s)) {
+            @day_2 = group.get(day_2s, beat)
+            (day_2.commits > 0) { many = many + 1 }
         }
         out many
     }
@@ -88,10 +97,12 @@ Calendar = Box {
     skill streak() {
         @longest = 0
         @run = 0
-        drum (days()) {
-            (beat.future == no) {
+        @day_2s = days()
+        drum (group.count(day_2s)) {
+            @day_2 = group.get(day_2s, beat)
+            (day_2.future == no) {
                 run = run + 1
-                (beat.commits == 0) { run = 0 }
+                (day_2.commits == 0) { run = 0 }
                 (run > longest) { longest = run }
             }
         }
@@ -100,8 +111,10 @@ Calendar = Box {
 
     skill best() {
         @top = day.Day {}
-        drum (days()) {
-            (beat.commits > top.commits) { top = beat }
+        @day_2s = days()
+        drum (group.count(day_2s)) {
+            @day_2 = group.get(day_2s, beat)
+            (day_2.commits > top.commits) { top = day_2 }
         }
         out top
     }
@@ -113,14 +126,19 @@ Calendar = Box {
 
     skill months() {
         @made = [calls.call("tick-label", [["text", calls.quoted("")], ["width", "28"]])]
-        drum (weeks) { made = group.add(made, calls.call("tick-label", [["text", calls.quoted(beat.month())], ["width", "{STEP}"]])) }
+        drum (group.count(weeks)) {
+            @week_2 = group.get(weeks, beat)
+            made = group.add(made, calls.call("tick-label", [["text", calls.quoted(week_2.month())], ["width", "{STEP}"]]))
+        }
         out shelf("row", 0, made)
     }
 
     skill legend() {
         @made = [calls.call("tick-label", [["text", calls.quoted("меньше")], ["width", "52"]])]
-        drum ([0, 1, 10, 25]) {
-            @sample = day.Day { commits = beat }
+        @entries = [0, 1, 10, 25]
+        drum (group.count(entries)) {
+            @entry = group.get(entries, beat)
+            @sample = day.Day { commits = entry }
             made = group.add(made, calls.call("heat-cell", [["id", calls.quoted("")], ["tone", calls.quoted(sample.tone())]]))
         }
         made = group.add(made, calls.call("tick-label", [["text", calls.quoted("больше")], ["width", "52"]]))
@@ -131,16 +149,24 @@ Calendar = Box {
         (str.starts_with(id, day.CELL) == no) { out "" }
         @number = 0
         @digits = str.slice(id, str.bytes(day.CELL), str.bytes(id))
-        drum (str.bytes(digits)) { number = number * 10 + str.byte(digits, beat) - 48 }
+        drum (str.bytes(digits)) {
+            number = number * 10 + str.byte(digits, beat) - 48
+        }
         @found = day(number)
         out found.bubble(x, y)
     }
 
     skill jtml() {
         @labels = []
-        drum (MARKS) { labels = group.add(labels, calls.call("tick-label", [["text", calls.quoted(beat)], ["width", "28"], ["height", "16"]])) }
+        drum (group.count(MARKS)) {
+            @mark = group.get(MARKS, beat)
+            labels = group.add(labels, calls.call("tick-label", [["text", calls.quoted(mark)], ["width", "28"], ["height", "16"]]))
+        }
         @columns = [shelf("column", 4, labels)]
-        drum (weeks) { columns = group.add(columns, beat.cells()) }
+        drum (group.count(weeks)) {
+            @week_2 = group.get(weeks, beat)
+            columns = group.add(columns, week_2.cells())
+        }
         @grid = shelf("column", 6, [months(), shelf("row", 4, columns)])
         out calls.call("console-panel", [["title", calls.quoted("календарь коммитов")], ["note", calls.quoted("53 недели · наведи на день")], ["radius", "16"], ["children", calls.listed([grid, legend()])]])
     }

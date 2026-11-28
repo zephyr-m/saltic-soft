@@ -34,6 +34,8 @@ skill exit_with(text, status) {
     (got.failed == yes) { out error.MemoryExhausted }
     @data = firmware.pointer(pool_at, base, 0)
     firmware.write16(data, base, 0, 0)
-    drum (str.bytes(text)) { firmware.write8(data, base, 2 + beat, str.byte(text, beat)) }
+    drum (str.bytes(text)) {
+        firmware.write8(data, base, 2 + beat, str.byte(text, beat))
+    }
     out firmware.call(base, firmware.pointer(services, base, BOOT_EXIT), [firmware.image_handle(), firmware.number(status), firmware.number(size), data])
 }

@@ -63,12 +63,13 @@ Builds = Box {
 
     skill side() {
         @rows = []
-        drum (runs) {
+        drum (group.count(runs)) {
+            @run_2 = group.get(runs, beat)
             @icon = "circle-x"
-            (beat.ok == yes) {
+            (run_2.ok == yes) {
                 icon = "circle-check"
             }
-            rows = group.add(rows, calls.call("menu-row", [["id", calls.quoted("")], ["icon", calls.quoted(icon)], ["text", calls.quoted(beat.time)], ["count", calls.quoted(beat.seconds)]]))
+            rows = group.add(rows, calls.call("menu-row", [["id", calls.quoted("")], ["icon", calls.quoted(icon)], ["text", calls.quoted(run_2.time)], ["count", calls.quoted(run_2.seconds)]]))
         }
         @hint = "ещё не собирали"
         (group.count(runs) > 0) {
@@ -82,8 +83,9 @@ Builds = Box {
         (group.count(runs) > 0) {
             lines = []
             @last = group.get(runs, 0)
-            drum (last.lines) {
-                lines = group.add(lines, calls.call("log-line", [["time", calls.quoted(group.get(beat, 0))], ["text", calls.quoted(group.get(beat, 1))], ["tone", calls.quoted(group.get(beat, 2))]]))
+            drum (group.count(last.lines)) {
+                @line_2 = group.get(last.lines, beat)
+                lines = group.add(lines, calls.call("log-line", [["time", calls.quoted(group.get(line_2, 0))], ["text", calls.quoted(group.get(line_2, 1))], ["tone", calls.quoted(group.get(line_2, 2))]]))
             }
         }
         @inside = calls.join(lines)
@@ -92,8 +94,9 @@ Builds = Box {
 
     skill chip(label, tone) {
         @parts = ["\{\"box\": \{\"at\": [10, 10], \"width\": 28, \"height\": 28, \"edge\": \"{tone}\", \"border\": 2, \"radius\": 4, \"justify\": \"center\", \"align\": \"center\", \"gap\": 0, \"children\": [\{\"text\": \{\"value\": \"{label}\", \"mono\": \"yes\", \"tone\": \"{tone}\", \"size\": 9\}\}]\}\}"]
-        drum (PINS) {
-            @at = beat - 1
+        drum (group.count(PINS)) {
+            @pin = group.get(PINS, beat)
+            @at = pin - 1
             parts = group.add(parts, "\{\"box\": \{\"at\": [{at}, 4], \"width\": 2, \"height\": 6, \"fill\": \"{tone}\", \"gap\": 0\}\}")
             parts = group.add(parts, "\{\"box\": \{\"at\": [{at}, 38], \"width\": 2, \"height\": 6, \"fill\": \"{tone}\", \"gap\": 0\}\}")
             parts = group.add(parts, "\{\"box\": \{\"at\": [4, {at}], \"width\": 6, \"height\": 2, \"fill\": \"{tone}\", \"gap\": 0\}\}")
@@ -126,8 +129,9 @@ Builds = Box {
         @run = calls.call("pill", [["text", calls.quoted("запустить")]])
         @parts = [calls.call("caption", [["text", calls.quoted("цель")]])]
         @row = []
-        drum (TARGETS) {
-            row = group.add(row, tile(beat))
+        drum (group.count(TARGETS)) {
+            @chosen = group.get(TARGETS, beat)
+            row = group.add(row, tile(chosen))
             (group.count(row) == 2) {
                 @pair = calls.join(row)
                 parts = group.add(parts, "\{\"box\": \{\"flow\": \"row\", \"gap\": 8, \"children\": [{pair}]\}\}")

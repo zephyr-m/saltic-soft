@@ -51,7 +51,9 @@ skill address(host, port) {
     bytes.set(made, 0, INET)
     bytes.set(made, 2, port / 256)
     bytes.set(made, 3, port % 256)
-    drum (4) { bytes.set(made, 4 + beat, parse.parse_size(group.get(parts, beat))) }
+    drum (4) {
+        bytes.set(made, 4 + beat, parse.parse_size(group.get(parts, beat)))
+    }
     out made
 }
 

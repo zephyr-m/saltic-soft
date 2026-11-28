@@ -125,16 +125,19 @@ Catalog = Box {
         trouble = ""
         @place = catalog.Catalog {}
         place.settle(document(MANIFEST), document(LOCK))
-        drum (CATALOGS) {
-            @role = group.get(beat, 0)
-            @where = place.where(group.get(beat, 1))
+        drum (group.count(CATALOGS)) {
+            @catalog_2 = group.get(CATALOGS, beat)
+            @role = group.get(catalog_2, 0)
+            @where = place.where(group.get(catalog_2, 1))
             @listed = file.read(where) rescue |err| {
                 trouble = "{where} не прочитался — {err}"
                 ""
             }
-            drum (str.lines(listed)) {
-                (str.starts_with(beat, "#") == no) {
-                    @words = str.split(beat, " ")
+            @lines_2 = str.lines(listed)
+            drum (group.count(lines_2)) {
+                @line = group.get(lines_2, beat)
+                (str.starts_with(line, "#") == no) {
+                    @words = str.split(line, " ")
                     (group.count(words) >= 2) {
                         @path = group.get(words, group.count(words) - 1)
                         @made = Package { name = group.get(words, 0), path = path, source = place.where(path), role = role }
@@ -150,8 +153,9 @@ Catalog = Box {
 
     skill count(role) {
         @many = 0
-        drum (packages) {
-            (beat.role == role) { many = many + 1 }
+        drum (group.count(packages)) {
+            @package = group.get(packages, beat)
+            (package.role == role) { many = many + 1 }
         }
         out many
     }

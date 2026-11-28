@@ -89,9 +89,11 @@ Window = Box {
 
     skill bin() {
         @head = "HOME="
-        drum (process.environment()) {
-            (str.starts_with(beat, head) == yes) {
-                @home = str.slice(beat, str.bytes(head), str.bytes(beat))
+        @settings = process.environment()
+        drum (group.count(settings)) {
+            @setting = group.get(settings, beat)
+            (str.starts_with(setting, head) == yes) {
+                @home = str.slice(setting, str.bytes(head), str.bytes(setting))
                 out "{home}/.local/bin"
             }
         }
@@ -103,9 +105,10 @@ Window = Box {
             []
         }
         @names = []
-        drum (shelf_of.programs) {
-            (group.contains(there, beat.name) == yes) {
-                names = group.add(names, beat.name)
+        drum (group.count(shelf_of.programs)) {
+            @program_2 = group.get(shelf_of.programs, beat)
+            (group.contains(there, program_2.name) == yes) {
+                names = group.add(names, program_2.name)
             }
         }
         out names
@@ -126,9 +129,10 @@ Window = Box {
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
         @changed = no
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.CLICK) {
-                @hit = jtml.hit(runtime, beat.x, beat.y)
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, gesture.x, gesture.y)
                 (hit.found == yes) {
                     pick {
                         (hit.id == choice.RUN) {
@@ -140,13 +144,13 @@ Window = Box {
                     }
                 }
             }
-            (beat.kind == gestures.Kind.TYPE) {
-                picked.typed(beat.text)
+            (gesture.kind == gestures.Kind.TYPE) {
+                picked.typed(gesture.text)
                 changed = yes
             }
-            (beat.kind == gestures.Kind.WHEEL) {
+            (gesture.kind == gestures.Kind.WHEEL) {
                 @total = group.count(shelf_of.found(picked.category, picked.query, picked.wanted))
-                picked.wheel(beat.amount, total)
+                picked.wheel(gesture.amount, total)
                 changed = yes
             }
         }

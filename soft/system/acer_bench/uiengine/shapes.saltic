@@ -103,7 +103,9 @@ skill dim_row(screen, row, keep) {
 }
 
 skill dim(screen, keep) {
-    drum (screen.height) { dim_row(screen, beat, keep) }
+    drum (screen.height) {
+        dim_row(screen, beat, keep)
+    }
     out none
 }
 
@@ -165,7 +167,9 @@ skill keep_rows(screen, x, y, width, rows) {
     @got = firmware.call(base, firmware.pointer(services, base, BOOT_ALLOCATE_POOL), [firmware.number(LOADER_DATA), firmware.number(row_bytes * rows), at])
     (got.failed == yes) { out error.MemoryExhausted }
     @pool = firmware.pointer(at, base, 0)
-    drum (rows) { copy_row(screen, services, firmware.add(pool, beat * row_bytes), x, y + beat, width, yes) }
+    drum (rows) {
+        copy_row(screen, services, firmware.add(pool, beat * row_bytes), x, y + beat, width, yes)
+    }
     out pool
 }
 
@@ -173,7 +177,9 @@ skill put_back_rows(screen, pool, x, y, width, rows) {
     @base = firmware.guest_base()
     @services = uefi.boot_services(base)
     @row_bytes = width * graphics.PIXEL_BYTES
-    drum (rows) { copy_row(screen, services, firmware.add(pool, beat * row_bytes), x, y + beat, width, no) }
+    drum (rows) {
+        copy_row(screen, services, firmware.add(pool, beat * row_bytes), x, y + beat, width, no)
+    }
     out firmware.call(base, firmware.pointer(services, base, BOOT_FREE_POOL), [pool])
 }
 

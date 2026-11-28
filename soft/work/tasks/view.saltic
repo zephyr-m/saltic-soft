@@ -56,14 +56,19 @@ skill column_card(desk, column, width) {
     @title = group.get(board.COLUMN_NAMES, column)
     @numbers = board.tasks_in(desk, column)
     @cards = []
-    drum (numbers) { cards = group.add(cards, task_card(desk, beat)) }
+    drum (group.count(numbers)) {
+        @number = group.get(numbers, beat)
+        cards = group.add(cards, task_card(desk, number))
+    }
     @total = group.count(numbers)
     out calls.call("task-column", [["title", calls.quoted(title)], ["count", calls.quoted("{total}")], ["width", "{width}"], ["cards", calls.listed(cards)]])
 }
 
 skill board_jtml(desk, note) {
     @columns = []
-    drum (3) { columns = group.add(columns, column_card(desk, beat, COLUMN_WIDE)) }
+    drum (3) {
+        columns = group.add(columns, column_card(desk, beat, COLUMN_WIDE))
+    }
     @row = calls.join(columns)
     @head = calls.call("board-head", [["title", calls.quoted("Задачи Saltic")], ["note", calls.quoted(safe(note))]])
     @hints = calls.call("label", [["text", calls.quoted("стрелки — выбор · Enter — взять и положить · Пробел — открыть · Esc — выход")]])

@@ -23,18 +23,20 @@ WORDS = [
 
 Shelf = Box {
     skill title_of(category) {
-        drum (WORDS) {
-            (group.get(beat, 0) == category) {
-                out group.get(beat, 1)
+        drum (group.count(WORDS)) {
+            @word_2 = group.get(WORDS, beat)
+            (group.get(word_2, 0) == category) {
+                out group.get(word_2, 1)
             }
         }
         out category
     }
 
     skill icon_of(category) {
-        drum (WORDS) {
-            (group.get(beat, 0) == category) {
-                out group.get(beat, 2)
+        drum (group.count(WORDS)) {
+            @word_2 = group.get(WORDS, beat)
+            (group.get(word_2, 0) == category) {
+                out group.get(word_2, 2)
             }
         }
         out "folder"

@@ -40,8 +40,10 @@ skill plain(text) {
 skill load(base) {
     @text = notes.load_note(base, CATALOG) rescue |err| { "" }
     @catalog = Catalog {}
-    drum (str.lines(text)) {
-        @parts = str.split(beat, "|")
+    @lines_2 = str.lines(text)
+    drum (group.count(lines_2)) {
+        @line = group.get(lines_2, beat)
+        @parts = str.split(line, "|")
         @kind = group.get(parts, 0)
         (kind == "program") {
             (group.count(parts) == 3) { catalog.entries = group.add(catalog.entries, Entry { file = group.get(parts, 1), name = plain(group.get(parts, 2)) }) }
@@ -57,8 +59,8 @@ skill load(base) {
 
 skill save(base, catalog) {
     @lines = []
-    drum (catalog.entries) {
-        @entry = beat
+    drum (group.count(catalog.entries)) {
+        @entry = group.get(catalog.entries, beat)
         @name = str.join(str.split(entry.name, "|"), "/")
         lines = group.add(lines, "program|{entry.file}|={name}")
     }
@@ -69,7 +71,9 @@ skill save(base, catalog) {
 
 skill file_name(number) {
     @digits = num.text(number)
-    drum (3 - str.bytes(digits)) { digits = "0{digits}" }
+    drum (3 - str.bytes(digits)) {
+        digits = "0{digits}"
+    }
     out "N{digits}.TXT"
 }
 

@@ -65,7 +65,10 @@ Board = Box {
 
 skill starting_board() {
     @desk = Board {}
-    drum (STARTING) { put_task(desk, group.get(beat, 0), group.get(beat, 1)) }
+    drum (group.count(STARTING)) {
+        @entry = group.get(STARTING, beat)
+        put_task(desk, group.get(entry, 0), group.get(entry, 1))
+    }
     out desk
 }
 
@@ -140,7 +143,10 @@ skill tick_item(desk, number, item, stamp) {
 
 skill done_count(list) {
     @count = 0
-    drum (list) { (group.get(beat, 0) == yes) { count = count + 1 } }
+    drum (group.count(list)) {
+        @entry = group.get(list, beat)
+        (group.get(entry, 0) == yes) { count = count + 1 }
+    }
     out count
 }
 

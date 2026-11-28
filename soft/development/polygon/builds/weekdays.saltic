@@ -21,9 +21,11 @@ Weekdays = Box {
 
     skill sums() {
         @made = [0, 0, 0, 0, 0, 0, 0]
-        drum (calendar.days()) {
-            @slot = beat.weekday()
-            made = group.replaced(made, slot, group.get(made, slot) + beat.commits)
+        @day_2s = calendar.days()
+        drum (group.count(day_2s)) {
+            @day_2 = group.get(day_2s, beat)
+            @slot = day_2.weekday()
+            made = group.replaced(made, slot, group.get(made, slot) + day_2.commits)
         }
         out made
     }

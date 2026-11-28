@@ -44,7 +44,10 @@ Timeline = Box {
 
     skill jtml() {
         @rows = [ruler()]
-        drum (tracks) { rows = group.add(rows, track(beat)) }
+        drum (group.count(tracks)) {
+            @track_2 = group.get(tracks, beat)
+            rows = group.add(rows, track(track_2))
+        }
         @play = calls.call("chip", [["text", calls.quoted("▶ играть")], ["fill", calls.quoted("up_soft")], ["tone", calls.quoted("up")]])
         @stop = calls.call("chip", [["text", calls.quoted("пауза")], ["fill", calls.quoted("panel")], ["tone", calls.quoted("quiet")]])
         @where = calls.call("badge", [["text", calls.quoted("кадр {frame} из {length}")], ["tone", calls.quoted("accent")]])

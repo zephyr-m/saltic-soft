@@ -35,7 +35,9 @@ Node = Box {
 
     skill row(id, chosen) {
         @shift = ""
-        drum (depth) { shift = "{shift}{INDENT}" }
+        drum (depth) {
+            shift = "{shift}{INDENT}"
+        }
         @label = "{shift}{name}"
         (group == yes) { out calls.call("tree-group", [["id", calls.quoted(id)], ["chevron", calls.quoted("chevron-down")], ["text", calls.quoted(label)], ["count", calls.quoted(kind)]]) }
         @kind_row = "menu-row"
@@ -61,7 +63,10 @@ Node = Box {
         made = group.add(made, calls.call("labeled-slider", [["label", calls.quoted("грубость")], ["id", calls.quoted("rough")], ["value", "{rough}"], ["min", "0"], ["max", "100"], ["unit", calls.quoted("{rough}")]]))
         made = group.add(made, calls.call("labeled-slider", [["label", calls.quoted("металл")], ["id", calls.quoted("metal")], ["value", "{metal}"], ["min", "0"], ["max", "100"], ["unit", calls.quoted("{metal}")]]))
         @chips = []
-        drum (tags) { chips = group.add(chips, calls.call("chip", [["text", calls.quoted(beat)], ["fill", calls.quoted("raise")], ["tone", calls.quoted("ink")]])) }
+        drum (group.count(tags)) {
+            @tag = group.get(tags, beat)
+            chips = group.add(chips, calls.call("chip", [["text", calls.quoted(tag)], ["fill", calls.quoted("raise")], ["tone", calls.quoted("ink")]]))
+        }
         (group.count(chips) > 0) {
             @inside = calls.join(chips)
             made = group.add(made, "\{\"box\": \{\"flow\": \"row\", \"gap\": 6, \"children\": [{inside}]\}\}")

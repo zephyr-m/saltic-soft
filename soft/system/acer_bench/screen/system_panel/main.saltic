@@ -198,7 +198,9 @@ skill cable_text(status) {
 
 skill signature(text) {
     @mark = 0
-    drum (str.bytes(text)) { mark = (mark * 31 + str.byte(text, beat)) % SIGNATURE_MOD }
+    drum (str.bytes(text)) {
+        mark = (mark * 31 + str.byte(text, beat)) % SIGNATURE_MOD
+    }
     out mark
 }
 

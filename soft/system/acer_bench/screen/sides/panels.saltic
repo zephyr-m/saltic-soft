@@ -41,7 +41,9 @@ Look = Box {
 
 skill text_of(list) {
     @buffer = bytes.new(group.count(list))
-    drum (group.count(list)) { bytes.set(buffer, beat, group.get(list, beat)) }
+    drum (group.count(list)) {
+        bytes.set(buffer, beat, group.get(list, beat))
+    }
     out str.from_bytes(buffer)
 }
 
@@ -60,9 +62,10 @@ skill network(look, lines) {
     @letters = (look.wide - INSET) * 10 / (look.line * 6)
     @room = look.high / (look.line + 9)
     @rows = []
-    drum (lines) {
-        @tone = line_tone(group.get(beat, 0))
-        @pieces = journal.wrap(group.get(beat, 1), letters)
+    drum (group.count(lines)) {
+        @line_2 = group.get(lines, beat)
+        @tone = line_tone(group.get(line_2, 0))
+        @pieces = journal.wrap(group.get(line_2, 1), letters)
         @count = group.count(pieces)
         (group.count(rows) + count > room) { leave }
         drum (count) {
@@ -71,7 +74,9 @@ skill network(look, lines) {
         }
     }
     @shown = []
-    drum (group.count(rows)) { shown = group.add(shown, group.get(rows, group.count(rows) - 1 - beat)) }
+    drum (group.count(rows)) {
+        shown = group.add(shown, group.get(rows, group.count(rows) - 1 - beat))
+    }
     (group.count(shown) == 0) { shown = [calls.call("console-line", [["text", calls.quoted("журнал пуст")], ["tone", calls.quoted("quiet")], ["size", "{look.line}"]])] }
     @body = calls.call("stack", [["gap", "3"], ["justify", calls.quoted("end")], ["grow", "1"], ["children", calls.listed(shown)]])
     out calls.call("console-panel", [["title", calls.quoted("Сеть")], ["note", calls.quoted("10.0.0.2:5555")], ["width", "{look.wide}"], ["radius", "{look.radius}"], ["grow", "{look.grow}"], ["children", calls.listed([body])]])
@@ -94,7 +99,9 @@ skill graph_of(look, title, values, floor, note, tone) {
         (beat > most) { most = beat }
     }
     @bars = []
-    drum (BARS - group.count(values)) { bars = group.add(bars, calls.call("bar", [["width", "{BAR_WIDE}"], ["height", "1"], ["tone", calls.quoted("well")], ["radius", "0"]])) }
+    drum (BARS - group.count(values)) {
+        bars = group.add(bars, calls.call("bar", [["width", "{BAR_WIDE}"], ["height", "1"], ["tone", calls.quoted("well")], ["radius", "0"]]))
+    }
     drum (values) {
         @tall = beat * GRAPH_HIGH / most
         (tall < 1) { tall = 1 }

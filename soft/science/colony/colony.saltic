@@ -370,7 +370,9 @@ skill draw_board(screen, model) {
     graphics.graphics_rect(screen, BOARD_X, BOARD_Y, BOARD_WIDTH, BOARD_HEIGHT, graphics.Ink.BACKGROUND)
     drum (BOARD_ROWS) {
         @row = beat
-        drum (BOARD_COLUMNS) { draw_base_cell(screen, model, beat, row) }
+        drum (BOARD_COLUMNS) {
+            draw_base_cell(screen, model, beat, row)
+        }
     }
     graphics.graphics_frame(
         screen,

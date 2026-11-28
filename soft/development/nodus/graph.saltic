@@ -101,8 +101,8 @@ skill kind_of(text) {
 skill face(nodes_graph) {
     @inputs = []
     @outputs = []
-    drum (nodes_graph.nodes) {
-        @node = beat
+    drum (group.count(nodes_graph.nodes)) {
+        @node = group.get(nodes_graph.nodes, beat)
         (node.kind == IN) {
             (group.count(node.outputs) > 0) { inputs = group.add(inputs, group.get(node.outputs, 0)) }
         }

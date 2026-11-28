@@ -38,7 +38,9 @@ skill save_note(base, name, text) {
     @written = utf8.encode(text)
     (group.count(written) > note_limit()) { out error.NoteTooBig }
     @buffer = note_buffer(base)
-    drum (group.count(written)) { firmware.write8(buffer, base, beat, group.get(written, beat)) }
+    drum (group.count(written)) {
+        firmware.write8(buffer, base, beat, group.get(written, beat))
+    }
     @root = files.saltic_root(base)
     @folder = files.create(base, root, FOLDER, files.DIRECTORY)
     drop_note(base, folder, name)
@@ -69,6 +71,8 @@ skill load_note(base, name) {
     (asked.failed == yes) { out "" }
     @size = firmware.read16(size_at, base, 0)
     @found = []
-    drum (size) { found = group.add(found, firmware.read8(buffer, base, beat)) }
+    drum (size) {
+        found = group.add(found, firmware.read8(buffer, base, beat))
+    }
     out utf8.decode(found, 0, size)
 }

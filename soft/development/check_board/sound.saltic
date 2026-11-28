@@ -96,11 +96,18 @@ skill tone(store, spec) {
 skill render(tones, length) {
     @count = length * RATE / 1000
     @store = bytes.new(count * 4)
-    drum (count) { put(store, beat * 4, BIAS, 4) }
-    drum (tones) { tone(store, beat) }
+    drum (count) {
+        put(store, beat * 4, BIAS, 4)
+    }
+    drum (group.count(tones)) {
+        @tone_2 = group.get(tones, beat)
+        tone(store, tone_2)
+    }
     @made = bytes.new(44 + count * 2)
     @head = "RIFF....WAVEfmt "
-    drum (16) { bytes.set(made, beat, str.byte(head, beat)) }
+    drum (16) {
+        bytes.set(made, beat, str.byte(head, beat))
+    }
     put(made, 4, 36 + count * 2, 4)
     put(made, 16, 16, 4)
     put(made, 20, 1, 2)
@@ -110,7 +117,9 @@ skill render(tones, length) {
     put(made, 32, 2, 2)
     put(made, 34, 16, 2)
     @data = "data"
-    drum (4) { bytes.set(made, 36 + beat, str.byte(data, beat)) }
+    drum (4) {
+        bytes.set(made, 36 + beat, str.byte(data, beat))
+    }
     put(made, 40, count * 2, 4)
     drum (count) {
         @value = take(store, beat * 4) - BIAS
@@ -138,9 +147,10 @@ Sound = Box {
 
     skill prepare() {
         process.run(["mkdir", "-p", FOLDER], "", [])
-        drum (SOUNDS) {
-            @name = group.get(beat, 0)
-            (missing(name) == yes) { file.write_bytes(path(name), render(group.get(beat, 2), group.get(beat, 1))) }
+        drum (group.count(SOUNDS)) {
+            @sound_2 = group.get(SOUNDS, beat)
+            @name = group.get(sound_2, 0)
+            (missing(name) == yes) { file.write_bytes(path(name), render(group.get(sound_2, 2), group.get(sound_2, 1))) }
         }
         drum (group.count(PENTA)) {
             @note = group.get(PENTA, beat)

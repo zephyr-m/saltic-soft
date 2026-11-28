@@ -116,13 +116,14 @@ Window = Box {
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
         @changed = no
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.CLICK) {
-                @hit = jtml.hit(runtime, beat.x, beat.y)
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, gesture.x, gesture.y)
                 (view.choose(hit.id) == yes) { changed = yes }
             }
-            (beat.kind == gestures.Kind.TYPE) {
-                (view.type(beat.text) == yes) { changed = yes }
+            (gesture.kind == gestures.Kind.TYPE) {
+                (view.type(gesture.text) == yes) { changed = yes }
             }
         }
         @moved = follow()

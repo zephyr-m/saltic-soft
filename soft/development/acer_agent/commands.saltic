@@ -46,8 +46,9 @@ REGISTRY = [
 ]
 
 skill known(name) {
-    drum (REGISTRY) {
-        (beat.name == name) { out yes }
+    drum (group.count(REGISTRY)) {
+        @entry = group.get(REGISTRY, beat)
+        (entry.name == name) { out yes }
     }
     out no
 }

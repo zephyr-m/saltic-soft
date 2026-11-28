@@ -37,10 +37,11 @@ Overview = Box {
         drum (spark) {
             (beat > peak) { peak = beat }
         }
-        drum (spark) {
+        drum (group.count(spark)) {
+            @entry = group.get(spark, beat)
             @tone = "accent_rim"
-            (beat == peak) { tone = "accent" }
-            bars = group.add(bars, calls.call("bar", [["width", "22"], ["height", "{beat}"], ["tone", calls.quoted(tone)], ["radius", "3"]]))
+            (entry == peak) { tone = "accent" }
+            bars = group.add(bars, calls.call("bar", [["width", "22"], ["height", "{entry}"], ["tone", calls.quoted(tone)], ["radius", "3"]]))
         }
         @day = calls.call("spark", [["bars", calls.listed(bars)]])
         out shelf("row", 14, [calls.call("stat-panel", [["label", calls.quoted("проверок прошло")], ["value", calls.quoted(checks)], ["tone", calls.quoted("accent")], ["size", "64"], ["note", calls.quoted("из {total} · осталось {left}")], ["grow", "2"]]), calls.call("stat-panel", [["label", calls.quoted("прошло")], ["value", calls.quoted(passed)], ["tone", calls.quoted("up")], ["size", "34"], ["note", calls.quoted("за сутки")], ["grow", "1"], ["extra", day]]), calls.call("stat-panel", [["label", calls.quoted("провал")], ["value", calls.quoted(failed)], ["tone", calls.quoted("down")], ["size", "34"], ["note", calls.quoted(failed_note)], ["grow", "1"]]), calls.call("stat-panel", [["label", calls.quoted("полка")], ["value", calls.quoted("300")], ["tone", calls.quoted("mustard")], ["size", "34"], ["note", calls.quoted(shelf_version)], ["grow", "1"]])])
@@ -48,13 +49,19 @@ Overview = Box {
 
     skill table() {
         @rows = [calls.call("build-head", [])]
-        drum (runs) { rows = group.add(rows, beat.jtml()) }
+        drum (group.count(runs)) {
+            @run_2 = group.get(runs, beat)
+            rows = group.add(rows, run_2.jtml())
+        }
         out calls.call("console-panel", [["title", calls.quoted("последние сборки")], ["note", calls.quoted("образец")], ["radius", "16"], ["children", calls.listed([shelf("column", 0, rows)])]])
     }
 
     skill jtml() {
         @cards = []
-        drum (machines) { cards = group.add(cards, beat.jtml()) }
+        drum (group.count(machines)) {
+            @machine_2 = group.get(machines, beat)
+            cards = group.add(cards, machine_2.jtml())
+        }
         @head = calls.call("page-head", [["title", calls.quoted("Обзор")], ["note", calls.quoted("Сборки и железо за сегодня")], ["badge", calls.quoted("идёт global-check")], ["tone", calls.quoted("accent")]])
         out calls.listed([head, numbers(), calls.call("section-head", [["text", calls.quoted("устройства")]]), shelf("row", 14, cards), table()])
     }

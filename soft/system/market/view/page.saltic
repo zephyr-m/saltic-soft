@@ -54,15 +54,18 @@ Page = Box {
 
     skill side(catalog, picked, installed) {
         @rows = [menu("", "layout-grid", "Все", group.count(catalog.programs), picked.category)]
-        drum (catalog.categories()) {
-            rows = group.add(rows, menu(beat, labels.icon_of(beat), labels.title_of(beat), catalog.count_in(beat), picked.category))
+        @category_2s = catalog.categories()
+        drum (group.count(category_2s)) {
+            @category_2 = group.get(category_2s, beat)
+            rows = group.add(rows, menu(category_2, labels.icon_of(category_2), labels.title_of(category_2), catalog.count_in(category_2), picked.category))
         }
         @kinds = calls.call("section-title", [["text", calls.quoted("Категории")]])
         @where = calls.call("section-title", [["text", calls.quoted("Платформа")]])
         @marks = []
-        drum (PLATFORMS) {
-            @platform = group.get(beat, 0)
-            @word = group.get(beat, 1)
+        drum (group.count(PLATFORMS)) {
+            @platform_2 = group.get(PLATFORMS, beat)
+            @platform = group.get(platform_2, 0)
+            @word = group.get(platform_2, 1)
             @mark = "○"
             (group.contains(picked.wanted, platform) == yes) {
                 mark = "●"
@@ -94,8 +97,10 @@ Page = Box {
         (last > total) {
             last = total
         }
-        drum (group.slice(found, picked.offset, last)) {
-            rows = group.add(rows, row(beat))
+        @entrys = group.slice(found, picked.offset, last)
+        drum (group.count(entrys)) {
+            @entry = group.get(entrys, beat)
+            rows = group.add(rows, row(entry))
         }
         (total == 0) {
             rows = [calls.call("hint", [["text", calls.quoted("ничего не нашлось — сотри поиск или сними платформы")]])]
@@ -135,8 +140,9 @@ Page = Box {
         }
         @top = "\{\"box\": \{\"flow\": \"row\", \"gap\": 14, \"align\": \"center\", \"children\": [{crest}, {names}, {action}]\}\}"
         @lines = []
-        drum (found.about) {
-            lines = group.add(lines, calls.call("words", [["text", calls.quoted(beat)], ["tone", calls.quoted("ink")], ["weight", calls.quoted("regular")], ["grow", "0"]]))
+        drum (group.count(found.about)) {
+            @entry = group.get(found.about, beat)
+            lines = group.add(lines, calls.call("words", [["text", calls.quoted(entry)], ["tone", calls.quoted("ink")], ["weight", calls.quoted("regular")], ["grow", "0"]]))
         }
         @told = calls.listed(lines)
         @about = "\{\"box\": \{\"gap\": 4, \"children\": {told}\}\}"

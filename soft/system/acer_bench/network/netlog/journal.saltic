@@ -23,7 +23,9 @@ NEWLINE = 10
 
 skill bytes_of(text) {
     @bytes = []
-    drum (str.bytes(text)) { bytes = group.add(bytes, str.byte(text, beat)) }
+    drum (str.bytes(text)) {
+        bytes = group.add(bytes, str.byte(text, beat))
+    }
     out bytes
 }
 
@@ -38,8 +40,9 @@ skill line_count(bytes) {
     @count = group.count(bytes)
     (count == 0) { out 1 }
     @lines = 1
-    drum (bytes) {
-        (beat == NEWLINE) { lines = lines + 1 }
+    drum (group.count(bytes)) {
+        @entry = group.get(bytes, beat)
+        (entry == NEWLINE) { lines = lines + 1 }
     }
     (group.get(bytes, count - 1) == NEWLINE) { lines = lines - 1 }
     out lines

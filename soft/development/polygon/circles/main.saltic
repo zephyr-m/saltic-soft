@@ -36,17 +36,29 @@ Circles = Box {
 
     skill shapes() {
         @faces = []
-        drum (people) { faces = group.add(faces, beat.jtml()) }
+        drum (group.count(people)) {
+            @entry = group.get(people, beat)
+            faces = group.add(faces, entry.jtml())
+        }
         @words = []
-        drum (states) { words = group.add(words, beat.jtml()) }
+        drum (group.count(states)) {
+            @state = group.get(states, beat)
+            words = group.add(words, state.jtml())
+        }
         out [calls.call("donut", [["size", "130"], ["first", "200"], ["second", "110"], ["third", "110"], ["note", calls.quoted("код")]]), calls.call("pie", [["size", "130"], ["first", "150"], ["second", "120"], ["third", "60"]]), calls.call("target", [["size", "136"], ["tone", calls.quoted("down")]]), lay("column", 14, "center", [lay("row", 10, "center", faces), lay("column", 8, "start", words)])]
     }
 
     skill jtml() {
         @progress = []
-        drum (rings) { progress = group.add(progress, beat.jtml()) }
+        drum (group.count(rings)) {
+            @ring_2 = group.get(rings, beat)
+            progress = group.add(progress, ring_2.jtml())
+        }
         @gauges = []
-        drum (dials) { gauges = group.add(gauges, beat.jtml()) }
+        drum (group.count(dials)) {
+            @dial_2 = group.get(dials, beat)
+            gauges = group.add(gauges, dial_2.jtml())
+        }
         @head = calls.call("page-head", [["title", calls.quoted("Круги")], ["note", calls.quoted("пятый атом circle и жители на нём — числа образец")], ["badge", calls.quoted("атом 5")], ["tone", calls.quoted("info")]])
         out calls.listed([head, panel("кольца прогресса", progress), panel("спидометры", gauges), panel("бублик, круговая, мишень, аватары, статусы", shapes())])
     }

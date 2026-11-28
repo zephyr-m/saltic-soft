@@ -42,8 +42,9 @@ Sample = Box {
 skill sessions() {
     @found = []
     @points = []
-    drum (file.list(DATA)) {
-        @name = beat
+    @names = file.list(DATA)
+    drum (group.count(names)) {
+        @name = group.get(names, beat)
         (str.ends_with(name, ".GAZE") == yes) {
             @buffer = file.read_bytes("{DATA}/{name}")
             @record = 4 + gazenet.WIDE * gazenet.HIGH
@@ -62,11 +63,14 @@ skill sessions() {
     }
     @sorted = points
     @marked = []
-    drum (found) {
+    drum (group.count(found)) {
+        @entry = group.get(found, beat)
         @place = 0
-        @key = beat.point
-        drum (group.count(sorted)) { (group.get(sorted, beat) == key) { place = beat } }
-        marked = group.add(marked, Sample { input = beat.input, target = beat.target, point = place })
+        @key = entry.point
+        drum (group.count(sorted)) {
+            (group.get(sorted, beat) == key) { place = beat }
+        }
+        marked = group.add(marked, Sample { input = entry.input, target = entry.target, point = place })
     }
     out marked
 }
@@ -84,9 +88,10 @@ skill pixels(answer, target) {
 skill error_of(net, samples) {
     (group.count(samples) == 0) { out 0.0 }
     @sum = 0.0
-    drum (samples) {
-        @pass = gazenet.forward(net, beat.input)
-        sum = sum + pixels(pass.answer, beat.target)
+    drum (group.count(samples)) {
+        @sample = group.get(samples, beat)
+        @pass = gazenet.forward(net, sample.input)
+        sum = sum + pixels(pass.answer, sample.target)
     }
     out sum / fraction.from(group.count(samples))
 }
@@ -94,9 +99,10 @@ skill error_of(net, samples) {
 skill center_of(samples) {
     @x = 0.0
     @y = 0.0
-    drum (samples) {
-        x = x + group.get(beat.target, 0)
-        y = y + group.get(beat.target, 1)
+    drum (group.count(samples)) {
+        @sample = group.get(samples, beat)
+        x = x + group.get(sample.target, 0)
+        y = y + group.get(sample.target, 1)
     }
     @count = fraction.from(group.count(samples))
     out [x / count, y / count]
@@ -105,7 +111,10 @@ skill center_of(samples) {
 skill center_error(samples, center) {
     (group.count(samples) == 0) { out 0.0 }
     @sum = 0.0
-    drum (samples) { sum = sum + pixels(center, beat.target) }
+    drum (group.count(samples)) {
+        @sample = group.get(samples, beat)
+        sum = sum + pixels(center, sample.target)
+    }
     out sum / fraction.from(group.count(samples))
 }
 
@@ -125,10 +134,11 @@ program() {
     @all = sessions()
     @train = []
     @check = []
-    drum (all) {
+    drum (group.count(all)) {
+        @entry = group.get(all, beat)
         pick {
-            (beat.point % HOLD == 0) { check = group.add(check, beat) }
-            { train = group.add(train, beat) }
+            (entry.point % HOLD == 0) { check = group.add(check, entry) }
+            { train = group.add(train, entry) }
         }
     }
     @trained = group.count(train)

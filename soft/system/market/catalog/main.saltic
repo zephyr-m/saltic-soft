@@ -27,15 +27,18 @@ Catalog = Box {
 
     skill scan(root) {
         programs = []
-        drum (sorted(file.list(root))) {
-            @category = beat
+        @categorys = sorted(file.list(root))
+        drum (group.count(categorys)) {
+            @category = group.get(categorys, beat)
             @shelf = "{root}/{category}"
             @names = file.list(shelf) rescue |err| {
                 []
             }
-            drum (sorted(names)) {
-                @folder = "{shelf}/{beat}"
-                @made = read_program(category, beat, folder)
+            @names_2 = sorted(names)
+            drum (group.count(names_2)) {
+                @name = group.get(names_2, beat)
+                @folder = "{shelf}/{name}"
+                @made = read_program(category, name, folder)
                 (group.count(made.entries) > 0) {
                     programs = group.add(programs, made)
                 }
@@ -51,8 +54,9 @@ Catalog = Box {
             folder = folder
         }
         @texts = []
-        drum (group.concat([""], SIDES)) {
-            @place = beat
+        @places_2 = group.concat([""], SIDES)
+        drum (group.count(places_2)) {
+            @place = group.get(places_2, beat)
             @where = folder
             ((place == "") == no) {
                 where = "{folder}/{place}"
@@ -60,10 +64,12 @@ Catalog = Box {
             @files = file.list(where) rescue |err| {
                 []
             }
-            drum (sorted(files)) {
-                @text = entry_text("{where}/{beat}")
+            @file_2s = sorted(files)
+            drum (group.count(file_2s)) {
+                @file_2 = group.get(file_2s, beat)
+                @text = entry_text("{where}/{file_2}")
                 (str.bytes(text) > 0) {
-                    made.entries = group.add(made.entries, "{where}/{beat}")
+                    made.entries = group.add(made.entries, "{where}/{file_2}")
                     (group.count(made.about) == 0) {
                         made.about = about_of(text)
                     }
@@ -75,15 +81,19 @@ Catalog = Box {
         @checks = file.list("{folder}/checks") rescue |err| {
             []
         }
-        drum (checks) {
-            (str.ends_with(beat, ".saltic") == yes) {
+        drum (group.count(checks)) {
+            @check = group.get(checks, beat)
+            (str.ends_with(check, ".saltic") == yes) {
                 made.checks = made.checks + 1
             }
         }
-        drum (texts) {
-            drum (packages_of(beat)) {
-                (group.contains(made.packages, beat) == no) {
-                    made.packages = group.add(made.packages, beat)
+        drum (group.count(texts)) {
+            @text_2 = group.get(texts, beat)
+            @entrys = packages_of(text_2)
+            drum (group.count(entrys)) {
+                @entry = group.get(entrys, beat)
+                (group.contains(made.packages, entry) == no) {
+                    made.packages = group.add(made.packages, entry)
                 }
             }
         }
@@ -115,11 +125,13 @@ Catalog = Box {
 
     skill about_of(text) {
         @lines = []
-        drum (str.lines(text)) {
-            (str.starts_with(beat, "--") == no) {
+        @line_2s = str.lines(text)
+        drum (group.count(line_2s)) {
+            @line_2 = group.get(line_2s, beat)
+            (str.starts_with(line_2, "--") == no) {
                 out lines
             }
-            @line = str.slice(beat, 2, str.bytes(beat))
+            @line = str.slice(line_2, 2, str.bytes(line_2))
             (str.starts_with(line, " ") == yes) {
                 line = str.slice(line, 1, str.bytes(line))
             }
@@ -166,9 +178,11 @@ Catalog = Box {
     skill packages_of(text) {
         @names = []
         @head = "use tarantul."
-        drum (str.lines(text)) {
-            (str.starts_with(beat, head) == yes) {
-                @rest = str.slice(beat, str.bytes(head), str.bytes(beat))
+        @lines_2 = str.lines(text)
+        drum (group.count(lines_2)) {
+            @line = group.get(lines_2, beat)
+            (str.starts_with(line, head) == yes) {
+                @rest = str.slice(line, str.bytes(head), str.bytes(line))
                 @parts = str.split(rest, ".")
                 @package = group.get(parts, 0)
                 (group.contains(names, package) == no) {
@@ -181,9 +195,10 @@ Catalog = Box {
 
     skill categories() {
         @names = []
-        drum (programs) {
-            (group.contains(names, beat.category) == no) {
-                names = group.add(names, beat.category)
+        drum (group.count(programs)) {
+            @program_2 = group.get(programs, beat)
+            (group.contains(names, program_2.category) == no) {
+                names = group.add(names, program_2.category)
             }
         }
         out names
@@ -191,8 +206,9 @@ Catalog = Box {
 
     skill count_in(category) {
         @total = 0
-        drum (programs) {
-            (beat.category == category) {
+        drum (group.count(programs)) {
+            @program_2 = group.get(programs, beat)
+            (program_2.category == category) {
                 total = total + 1
             }
         }
@@ -201,14 +217,15 @@ Catalog = Box {
 
     skill found(category, query, wanted) {
         @chosen = []
-        drum (programs) {
+        drum (group.count(programs)) {
+            @program_2 = group.get(programs, beat)
             @kept = yes
             ((category == "") == no) {
-                kept = (beat.category == category)
+                kept = (program_2.category == category)
             }
             (kept == yes) {
-                (beat.fits(query, wanted) == yes) {
-                    chosen = group.add(chosen, beat)
+                (program_2.fits(query, wanted) == yes) {
+                    chosen = group.add(chosen, program_2)
                 }
             }
         }
@@ -216,9 +233,10 @@ Catalog = Box {
     }
 
     skill named(name) {
-        drum (programs) {
-            (beat.name == name) {
-                out beat
+        drum (group.count(programs)) {
+            @program_2 = group.get(programs, beat)
+            (program_2.name == name) {
+                out program_2
             }
         }
         out error.ProgramMissing
@@ -226,16 +244,17 @@ Catalog = Box {
 
     skill sorted(names) {
         @result = []
-        drum (names) {
-            @name = beat
+        drum (group.count(names)) {
+            @name = group.get(names, beat)
             @placed = []
             @done = no
-            drum (result) {
-                ((done == no) ○ (str_before(name, beat) == yes)) {
+            drum (group.count(result)) {
+                @entry = group.get(result, beat)
+                ((done == no) ○ (str_before(name, entry) == yes)) {
                     placed = group.add(placed, name)
                     done = yes
                 }
-                placed = group.add(placed, beat)
+                placed = group.add(placed, entry)
             }
             (done == no) {
                 placed = group.add(placed, name)

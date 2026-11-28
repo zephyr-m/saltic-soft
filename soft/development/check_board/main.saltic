@@ -139,7 +139,10 @@ Window = Box {
         log.cost = cost
         log.stages = [written - began, read_at_ms - written, fitted_at - read_at_ms, mounted_at - fitted_at, compared_at - mounted_at, drawn_at - compared_at]
         @painted = 0
-        drum (parts) { painted = painted + group.get(beat, 2) * group.get(beat, 3) }
+        drum (group.count(parts)) {
+            @part = group.get(parts, beat)
+            painted = painted + group.get(part, 2) * group.get(part, 3)
+        }
         log.painted = (painted * 100) / (canvas.width * canvas.height)
         @size = str.bytes(source)
         file.write(STAGES, "текст {log.stages}\nбайт JTML {size}\n") rescue |err| { none }
@@ -154,7 +157,9 @@ Window = Box {
 
     skill number(text) {
         @value = 0
-        drum (str.bytes(text)) { value = value * 10 + str.byte(text, beat) - 48 }
+        drum (str.bytes(text)) {
+            value = value * 10 + str.byte(text, beat) - 48
+        }
         out value
     }
 
@@ -245,12 +250,14 @@ Window = Box {
         (checks.launched == no) { out none }
         @tally = checks.counts()
         @prepared = 0
-        drum (checks.prep) {
-            (checks.state(beat) == "ok") { prepared = prepared + 1 }
+        drum (group.count(checks.prep)) {
+            @entry_2 = group.get(checks.prep, beat)
+            (checks.state(entry_2) == "ok") { prepared = prepared + 1 }
         }
         @launched_now = no
-        drum (checks.field) {
-            ((checks.state(beat) == "wait") == no) { launched_now = yes }
+        drum (group.count(checks.field)) {
+            @entry = group.get(checks.field, beat)
+            ((checks.state(entry) == "wait") == no) { launched_now = yes }
         }
         @finished_now = checks.finished()
         @was_ok = group.get(heard, 0)
@@ -321,13 +328,14 @@ Window = Box {
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
         @changed = no
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.CLICK) {
-                @hit = jtml.hit(runtime, beat.x, beat.y)
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, gesture.x, gesture.y)
                 (click(hit.id) == yes) { changed = yes }
             }
-            (beat.kind == gestures.Kind.WHEEL) {
-                first = first + beat.amount
+            (gesture.kind == gestures.Kind.WHEEL) {
+                first = first + gesture.amount
                 (first < 0) { first = 0 }
                 @last = group.count(checks.field) - 1
                 (first > last) { first = last }

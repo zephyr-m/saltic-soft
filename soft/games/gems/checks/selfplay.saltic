@@ -67,9 +67,10 @@ program() {
     results = group.add(results, verdict("бот сделал ходы", played, (played > 100)))
     results = group.add(results, verdict("поле в покое без рядов и пустот", broken, (broken == 0)))
     results = group.add(results, verdict("уровни сменяются", game.level, (game.level > 1)))
-    drum (results) {
+    drum (group.count(results)) {
+        @result = group.get(results, beat)
         pick {
-            (beat == yes) {
+            (result == yes) {
                 passed = passed + 1
             }
             {
@@ -77,8 +78,9 @@ program() {
             }
         }
     }
-    drum (game.log) {
-        io.show("журнал: {beat}")
+    drum (group.count(game.log)) {
+        @entry = group.get(game.log, beat)
+        io.show("журнал: {entry}")
     }
     io.show("итог: пройдено {passed}, провалено {failed}")
 }

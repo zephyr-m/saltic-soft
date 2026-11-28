@@ -63,8 +63,10 @@ Device = Box {
     }
 
     skill meminfo(text, key) {
-        drum (str.lines(text)) {
-            (str.starts_with(beat, key) == yes) { out number(beat) }
+        @lines_2 = str.lines(text)
+        drum (group.count(lines_2)) {
+            @line = group.get(lines_2, beat)
+            (str.starts_with(line, key) == yes) { out number(line) }
         }
         out 0
     }
@@ -86,8 +88,10 @@ Device = Box {
         @total = meminfo(memory, "MemTotal") / 1048576
         @free = meminfo(memory, "MemAvailable") / 1048576
         @cores = 0
-        drum (str.lines(file.read("/proc/cpuinfo"))) {
-            (str.starts_with(beat, "processor") == yes) { cores = cores + 1 }
+        @lines_2 = str.lines(file.read("/proc/cpuinfo"))
+        drum (group.count(lines_2)) {
+            @line = group.get(lines_2, beat)
+            (str.starts_with(line, "processor") == yes) { cores = cores + 1 }
         }
         @load = group.get(str.split(file.read("/proc/loadavg"), " "), 0)
         @host = group.get(str.lines(file.read("/etc/hostname")), 0)
@@ -139,9 +143,11 @@ Device = Box {
             first = "adb не запустился"
             out none
         }
-        drum (str.lines(asked.output)) {
-            (str.ends_with(beat, "device") == yes) {
-                @serial = group.get(str.split(beat, "\t"), 0)
+        @lines_2 = str.lines(asked.output)
+        drum (group.count(lines_2)) {
+            @line = group.get(lines_2, beat)
+            (str.ends_with(line, "device") == yes) {
+                @serial = group.get(str.split(line, "\t"), 0)
                 state = "в сети"
                 tone = "up"
                 first = "adb: {serial}"

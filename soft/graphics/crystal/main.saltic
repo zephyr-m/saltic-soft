@@ -64,8 +64,10 @@ Window = Box {
         canvas = group.get(host, 0)
         link = group.get(host, 1)
         @look = workshop.frame
-        drum (look.palette()) {
-            colors = group.add(colors, graphics.color(canvas, group.get(beat, 0), group.get(beat, 1), group.get(beat, 2)))
+        @entries = look.palette()
+        drum (group.count(entries)) {
+            @entry = group.get(entries, beat)
+            colors = group.add(colors, graphics.color(canvas, group.get(entry, 0), group.get(entry, 1), group.get(entry, 2)))
         }
         graphics.fill(canvas, 0, 0, canvas.width, canvas.height, graphics.color(canvas, 0, 0, 0))
         started = time.now()
@@ -91,9 +93,10 @@ Window = Box {
                 lists = group.replaced(lists, slot, "{list} {beat}")
             }
         }
-        drum (lists) {
-            (str.bytes(beat) > 0) {
-                process.open(SELF, [SELF, beat], "", no, process.environment_with([]), no)
+        drum (group.count(lists)) {
+            @list_2 = group.get(lists, beat)
+            (str.bytes(list_2) > 0) {
+                process.open(SELF, [SELF, list_2], "", no, process.environment_with([]), no)
             }
         }
         @folder = studio.FOLDER
@@ -134,9 +137,10 @@ Window = Box {
 
     skill play() {
         @ready = []
-        drum (frames) {
-            (group.count(beat) > 0) {
-                ready = group.add(ready, group.get(beat, 0))
+        drum (group.count(frames)) {
+            @frame = group.get(frames, beat)
+            (group.count(frame) > 0) {
+                ready = group.add(ready, group.get(frame, 0))
             }
         }
         (group.count(ready) == 0) {
@@ -182,8 +186,10 @@ program(task) {
     @workshop = studio.Studio {}
     workshop.prepare()
     ((task == WINDOW) == no) {
-        drum (str.split(task, " ")) {
-            workshop.save(workshop.index_of(beat))
+        @entries = str.split(task, " ")
+        drum (group.count(entries)) {
+            @entry = group.get(entries, beat)
+            workshop.save(workshop.index_of(entry))
         }
         out none
     }

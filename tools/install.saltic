@@ -48,16 +48,19 @@ CORAL = [[20, 6, 6, 20], [6, 20, 20, 34]]
 TEAL = [[36, 6, 50, 20], [50, 20, 36, 34]]
 
 skill entry(name) {
-    drum (PROGRAMS) {
-        (group.get(beat, 0) == name) { out beat }
+    drum (group.count(PROGRAMS)) {
+        @program_2 = group.get(PROGRAMS, beat)
+        (group.get(program_2, 0) == name) { out program_2 }
     }
     out []
 }
 
 skill variable(key) {
     @head = "{key}="
-    drum (process.environment()) {
-        (str.starts_with(beat, head) == yes) { out str.slice(beat, str.bytes(head), str.bytes(beat)) }
+    @settings = process.environment()
+    drum (group.count(settings)) {
+        @setting = group.get(settings, beat)
+        (str.starts_with(setting, head) == yes) { out str.slice(setting, str.bytes(head), str.bytes(setting)) }
     }
     out ""
 }
@@ -87,8 +90,9 @@ skill covered(px, py, line) {
 }
 
 skill painted(px, py, lines) {
-    drum (lines) {
-        (covered(px, py, beat) == yes) { out yes }
+    drum (group.count(lines)) {
+        @line = group.get(lines, beat)
+        (covered(px, py, line) == yes) { out yes }
     }
     out no
 }
@@ -144,9 +148,10 @@ program(name) {
     @found = entry(name)
     (group.count(found) == 0) {
         io.show("нет программы «{name}». Можно поставить:")
-        drum (PROGRAMS) {
-            @known = group.get(beat, 0)
-            @title = group.get(beat, 2)
+        drum (group.count(PROGRAMS)) {
+            @program_2 = group.get(PROGRAMS, beat)
+            @known = group.get(program_2, 0)
+            @title = group.get(program_2, 2)
             io.show("  {known} — {title}")
         }
         out error.InstallFailed

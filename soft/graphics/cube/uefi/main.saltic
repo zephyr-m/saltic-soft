@@ -155,9 +155,10 @@ skill build_mesh() {
 skill fill_quad(buffer, points, color) {
     @low = BOX
     @high = 0
-    drum (points) {
-        (beat.y < low) { low = beat.y }
-        (beat.y > high) { high = beat.y }
+    drum (group.count(points)) {
+        @point = group.get(points, beat)
+        (point.y < low) { low = point.y }
+        (point.y > high) { high = point.y }
     }
     (low < 0) { low = 0 }
     (high > BOX - 1) { high = BOX - 1 }
@@ -237,16 +238,20 @@ skill dominant(nx, ny, nz) {
 
 skill render(buffer, mesh, spin) {
     @points = []
-    drum (mesh.places) { points = group.add(points, project(beat, spin)) }
+    drum (group.count(mesh.places)) {
+        @place = group.get(mesh.places, beat)
+        points = group.add(points, project(place, spin))
+    }
     @left = BOX
     @top = BOX
     @right = 0
     @bottom = 0
-    drum (points) {
-        (beat.x < left) { left = beat.x }
-        (beat.y < top) { top = beat.y }
-        (beat.x > right) { right = beat.x }
-        (beat.y > bottom) { bottom = beat.y }
+    drum (group.count(points)) {
+        @point_2 = group.get(points, beat)
+        (point_2.x < left) { left = point_2.x }
+        (point_2.y < top) { top = point_2.y }
+        (point_2.x > right) { right = point_2.x }
+        (point_2.y > bottom) { bottom = point_2.y }
     }
     (spin.left < left) { left = spin.left }
     (spin.top < top) { top = spin.top }
@@ -257,11 +262,14 @@ skill render(buffer, mesh, spin) {
     (right > BOX - 1) { right = BOX - 1 }
     (bottom > BOX - 1) { bottom = BOX - 1 }
     gop.fill(buffer, left, top, right - left + 1, bottom - top + 1, canvas.paint(buffer, canvas.PAPER))
-    drum (mesh.quads) {
-        @color = quad_color(mesh, beat, spin)
+    drum (group.count(mesh.quads)) {
+        @quad_2 = group.get(mesh.quads, beat)
+        @color = quad_color(mesh, quad_2, spin)
         (color) |color| {
             @quad = []
-            drum (beat) { quad = group.add(quad, group.get(points, beat)) }
+            drum (quad_2) {
+                quad = group.add(quad, group.get(points, beat))
+            }
             fill_quad(buffer, quad, canvas.paint(buffer, color))
         }
     }
@@ -270,11 +278,12 @@ skill render(buffer, mesh, spin) {
     spin.top = BOX
     spin.right = 0
     spin.bottom = 0
-    drum (points) {
-        (beat.x < spin.left) { spin.left = beat.x }
-        (beat.y < spin.top) { spin.top = beat.y }
-        (beat.x > spin.right) { spin.right = beat.x }
-        (beat.y > spin.bottom) { spin.bottom = beat.y }
+    drum (group.count(points)) {
+        @point = group.get(points, beat)
+        (point.x < spin.left) { spin.left = point.x }
+        (point.y < spin.top) { spin.top = point.y }
+        (point.x > spin.right) { spin.right = point.x }
+        (point.y > spin.bottom) { spin.bottom = point.y }
     }
     out [area, bottom - top + 1]
 }
@@ -284,7 +293,9 @@ skill blit(screen, buffer, left, top, area, rows) {
         @row = area.y + beat
         @from = (row * buffer.stride + area.x) * graphics.PIXEL_BYTES
         @to = ((top + row) * screen.stride + left + area.x) * graphics.PIXEL_BYTES
-        drum (area.z) { mem.store32(address.from(screen.memory), usize.from(to + beat * graphics.PIXEL_BYTES), u32.from(num.from(mem.load32(address.from(buffer.memory), usize.from(from + beat * graphics.PIXEL_BYTES))))) }
+        drum (area.z) {
+            mem.store32(address.from(screen.memory), usize.from(to + beat * graphics.PIXEL_BYTES), u32.from(num.from(mem.load32(address.from(buffer.memory), usize.from(from + beat * graphics.PIXEL_BYTES)))))
+        }
     }
     out none
 }

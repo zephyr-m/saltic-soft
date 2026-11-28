@@ -44,7 +44,9 @@ skill line(x0, y0, x1, y1) {
     (other < 0) { other = 0 - other }
     (other > steps) { steps = other }
     (steps == 0) { out dot(x0, y0) }
-    drum (steps + 1) { dot(x0 + dx * beat / steps, y0 + dy * beat / steps) }
+    drum (steps + 1) {
+        dot(x0 + dx * beat / steps, y0 + dy * beat / steps)
+    }
     out none
 }
 
@@ -55,7 +57,9 @@ skill text(page, words) {
         (at < str.bytes(words)) {
             @code = font.font_decode(words, at)
             @glyph = group.get(spleen.GLYPHS_5X8, font.font_glyph_index(code.value))
-            drum (5) { arena.store8(column + beat, ssd1306.column(glyph, beat)) }
+            drum (5) {
+                arena.store8(column + beat, ssd1306.column(glyph, beat))
+            }
             column = column + 6
             at = at + code.width
         }
@@ -83,7 +87,9 @@ program() {
         out none
     }
     io.show("куб крутится")
-    drum (256) { arena.store32(beat * 4, 0) }
+    drum (256) {
+        arena.store32(beat * 4, 0)
+    }
     text(0, "Saltic ESP32")
     ssd1306.picture()
     @turn = 0
@@ -95,22 +101,26 @@ program() {
     always {
         drum (BOTTOM - TOP + 1) {
             @row = (TOP + beat) * 128 + left
-            drum (right - left + 1) { arena.store8(row + beat, 0) }
+            drum (right - left + 1) {
+                arena.store8(row + beat, 0)
+            }
         }
         @points = []
         @low = 127
         @high = 0
-        drum (CORNERS) {
-            @point = corner(beat, turn)
+        drum (group.count(CORNERS)) {
+            @corner_2 = group.get(CORNERS, beat)
+            @point = corner(corner_2, turn)
             points = group.add(points, point)
             (group.get(point, 0) < low) { low = group.get(point, 0) }
             (group.get(point, 0) > high) { high = group.get(point, 0) }
         }
         (low < 0) { low = 0 }
         (high > 127) { high = 127 }
-        drum (EDGES) {
-            @a = group.get(points, group.get(beat, 0))
-            @b = group.get(points, group.get(beat, 1))
+        drum (group.count(EDGES)) {
+            @edge = group.get(EDGES, beat)
+            @a = group.get(points, group.get(edge, 0))
+            @b = group.get(points, group.get(edge, 1))
             line(group.get(a, 0), group.get(a, 1), group.get(b, 0), group.get(b, 1))
         }
         @from = left
@@ -126,7 +136,9 @@ program() {
             rate = frames
             frames = 0
             since = time.now()
-            drum (32) { arena.store32(BOTTOM * 128 + 128 + beat * 4, 0) }
+            drum (32) {
+                arena.store32(BOTTOM * 128 + 128 + beat * 4, 0)
+            }
             text(7, "кадр/с {rate}")
             ssd1306.region(7, 7, 0, 127)
         }

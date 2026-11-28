@@ -95,16 +95,18 @@ Painter = Box {
 
     skill box_seen(x, y, z, hx, hy, hz) {
         @corners = []
-        drum (SIGNS) {
-            corners = group.add(corners, eye.seen(x + group.get(beat, 0) * hx, y + group.get(beat, 1) * hy, z + group.get(beat, 2) * hz))
+        drum (group.count(SIGNS)) {
+            @sign = group.get(SIGNS, beat)
+            corners = group.add(corners, eye.seen(x + group.get(sign, 0) * hx, y + group.get(sign, 1) * hy, z + group.get(sign, 2) * hz))
         }
         out corners
     }
 
     skill box_lines(corners, value, alpha) {
-        drum (EDGES) {
-            @a = group.get(corners, group.get(beat, 0))
-            @b = group.get(corners, group.get(beat, 1))
+        drum (group.count(EDGES)) {
+            @edge = group.get(EDGES, beat)
+            @a = group.get(corners, group.get(edge, 0))
+            @b = group.get(corners, group.get(edge, 1))
             graphics.canvas_line(canvas, group.get(a, 0), group.get(a, 1), group.get(b, 0), group.get(b, 1), value, alpha)
         }
     }
@@ -199,18 +201,19 @@ Painter = Box {
             @y0 = group.get(group.get(lit, 0), 1)
             @x1 = x0
             @y1 = y0
-            drum (lit) {
-                (group.get(beat, 0) < x0) {
-                    x0 = group.get(beat, 0)
+            drum (group.count(lit)) {
+                @entry = group.get(lit, beat)
+                (group.get(entry, 0) < x0) {
+                    x0 = group.get(entry, 0)
                 }
-                (group.get(beat, 0) > x1) {
-                    x1 = group.get(beat, 0)
+                (group.get(entry, 0) > x1) {
+                    x1 = group.get(entry, 0)
                 }
-                (group.get(beat, 1) < y0) {
-                    y0 = group.get(beat, 1)
+                (group.get(entry, 1) < y0) {
+                    y0 = group.get(entry, 1)
                 }
-                (group.get(beat, 1) > y1) {
-                    y1 = group.get(beat, 1)
+                (group.get(entry, 1) > y1) {
+                    y1 = group.get(entry, 1)
                 }
             }
             lit_x = x0 - 2
@@ -460,9 +463,10 @@ Painter = Box {
             (shape.cellar(floor, beat) == yes) {
                 rim = cellar
             }
-            drum (EDGES) {
-                @a = group.get(corners, group.get(beat, 0))
-                @b = group.get(corners, group.get(beat, 1))
+            drum (group.count(EDGES)) {
+                @edge = group.get(EDGES, beat)
+                @a = group.get(corners, group.get(edge, 0))
+                @b = group.get(corners, group.get(edge, 1))
                 delta.line(group.get(a, 0), group.get(a, 1), group.get(b, 0), group.get(b, 1), rim)
             }
         }

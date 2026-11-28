@@ -69,7 +69,9 @@ skill glyph_of(code) {
 
 skill bytes_of(words) {
     @bytes = []
-    drum (str.bytes(words)) { bytes = group.add(bytes, str.byte(words, beat)) }
+    drum (str.bytes(words)) {
+        bytes = group.add(bytes, str.byte(words, beat))
+    }
     out bytes
 }
 

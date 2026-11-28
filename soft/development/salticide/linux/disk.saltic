@@ -47,8 +47,8 @@ skill before(left, right) {
 
 skill sorted(names) {
     @made = []
-    drum (names) {
-        @item = beat
+    drum (group.count(names)) {
+        @item = group.get(names, beat)
         @at = 0
         drum (group.count(made)) {
             (before(group.get(made, beat), item) == yes) { at = beat + 1 }
@@ -70,10 +70,12 @@ Disk = Box {
         @names = file.list(place) rescue |err| { out [] }
         @folders = []
         @files = []
-        drum (sorted(names)) {
-            ((str.byte(beat, 0) == HIDDEN) == no) {
-                @path = beat
-                ((place == ".") == no) { path = "{place}/{beat}" }
+        @name_2s = sorted(names)
+        drum (group.count(name_2s)) {
+            @name_2 = group.get(name_2s, beat)
+            ((str.byte(name_2, 0) == HIDDEN) == no) {
+                @path = name_2
+                ((place == ".") == no) { path = "{place}/{name_2}" }
                 pick {
                     (folder(path) == yes) { folders = group.add(folders, path) }
                     { files = group.add(files, path) }
@@ -81,16 +83,18 @@ Disk = Box {
             }
         }
         @made = []
-        drum (folders) {
-            @path = beat
+        drum (group.count(folders)) {
+            @folder_2 = group.get(folders, beat)
+            @path = folder_2
             @open = group.contains(opened, path)
             @parts = str.split(path, "/")
             made = group.add(made, project.Row { kind = project.FOLDER, name = group.get(parts, group.count(parts) - 1), path = path, depth = depth, open = open })
             (open == yes) { made = group.concat(made, walk(path, depth + 1)) }
         }
-        drum (files) {
-            @parts = str.split(beat, "/")
-            made = group.add(made, project.Row { kind = project.FILE, name = group.get(parts, group.count(parts) - 1), path = beat, depth = depth })
+        drum (group.count(files)) {
+            @file_2 = group.get(files, beat)
+            @parts = str.split(file_2, "/")
+            made = group.add(made, project.Row { kind = project.FILE, name = group.get(parts, group.count(parts) - 1), path = file_2, depth = depth })
         }
         out made
     }
@@ -98,10 +102,12 @@ Disk = Box {
     skill folders_in(place) {
         @names = file.list(place) rescue |err| { out [] }
         @found = []
-        drum (sorted(names)) {
-            ((str.byte(beat, 0) == HIDDEN) == no) {
-                @path = beat
-                ((place == ".") == no) { path = "{place}/{beat}" }
+        @names_2 = sorted(names)
+        drum (group.count(names_2)) {
+            @name = group.get(names_2, beat)
+            ((str.byte(name, 0) == HIDDEN) == no) {
+                @path = name
+                ((place == ".") == no) { path = "{place}/{name}" }
                 (folder(path) == yes) { found = group.add(found, path) }
             }
         }
@@ -110,9 +116,11 @@ Disk = Box {
 
     skill project_places() {
         @found = ["."]
-        drum (folders_in(".")) {
-            found = group.add(found, beat)
-            found = group.concat(found, folders_in(beat))
+        @entries = folders_in(".")
+        drum (group.count(entries)) {
+            @entry = group.get(entries, beat)
+            found = group.add(found, entry)
+            found = group.concat(found, folders_in(entry))
         }
         out found
     }
@@ -127,8 +135,9 @@ Disk = Box {
             out none
         }
         @left = []
-        drum (opened) {
-            ((beat == path) == no) { left = group.add(left, beat) }
+        drum (group.count(opened)) {
+            @entry = group.get(opened, beat)
+            ((entry == path) == no) { left = group.add(left, entry) }
         }
         opened = left
         out none
@@ -136,8 +145,9 @@ Disk = Box {
 
     skill read(path) {
         @known = no
-        drum (TEXTS) {
-            (str.ends_with(path, beat) == yes) { known = yes }
+        drum (group.count(TEXTS)) {
+            @text_2 = group.get(TEXTS, beat)
+            (str.ends_with(path, text_2) == yes) { known = yes }
         }
         (known == no) {
             out Text {

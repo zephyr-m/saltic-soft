@@ -36,7 +36,10 @@ Scene = Box {
 
     skill triangles() {
         @sum = 0
-        drum (nodes) { sum = sum + beat.triangles }
+        drum (group.count(nodes)) {
+            @node_2 = group.get(nodes, beat)
+            sum = sum + node_2.triangles
+        }
         out sum
     }
 
@@ -57,9 +60,10 @@ Scene = Box {
 
     skill tools() {
         @made = []
-        drum (TOOLS) {
-            @icon = group.get(beat, 0)
-            @name = group.get(beat, 1)
+        drum (group.count(TOOLS)) {
+            @tool_2 = group.get(TOOLS, beat)
+            @icon = group.get(tool_2, 0)
+            @name = group.get(tool_2, 1)
             @kind = "rail-button"
             (name == tool) { kind = "rail-button-active" }
             @button = calls.call(kind, [["icon", calls.quoted(icon)]])
@@ -70,9 +74,10 @@ Scene = Box {
 
     skill modes() {
         @made = []
-        drum (MODES) {
-            @icon = group.get(beat, 0)
-            @name = group.get(beat, 1)
+        drum (group.count(MODES)) {
+            @mode_2 = group.get(MODES, beat)
+            @icon = group.get(mode_2, 0)
+            @name = group.get(mode_2, 1)
             @button = calls.call("chip", [["text", calls.quoted(name)], ["fill", calls.quoted("panel")], ["tone", calls.quoted("quiet")]])
             (name == mode) { button = calls.call("mode-active", [["text", calls.quoted(name)], ["icon", calls.quoted(icon)]]) }
             made = group.add(made, "\{\"box\": \{\"id\": \"{MODE}{name}\", \"gap\": 0, \"children\": [{button}]\}\}")

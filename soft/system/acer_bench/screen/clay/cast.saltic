@@ -87,8 +87,12 @@ skill fill(cast, world) {
     cast.cursor = DATA
     cast.lost = 0
     put_body(cast, world.ground, GROUND)
-    drum (group.count(world.flats)) { put_body(cast, group.get(world.flats, beat), FLAT) }
-    drum (group.count(world.bodies)) { put_body(cast, group.get(world.bodies, beat), SOLID) }
+    drum (group.count(world.flats)) {
+        put_body(cast, group.get(world.flats, beat), FLAT)
+    }
+    drum (group.count(world.bodies)) {
+        put_body(cast, group.get(world.bodies, beat), SOLID)
+    }
     out none
 }
 
@@ -114,11 +118,15 @@ skill put_body(cast, body, kind) {
     (colored == yes) { put(cast, row + 4, 1) }
     put(cast, row + 5, 0)
     (body.flat == yes) { put(cast, row + 5, 1) }
-    drum (3) { put(cast, row + 6 + beat, group.get(body.center, beat)) }
+    drum (3) {
+        put(cast, row + 6 + beat, group.get(body.center, beat))
+    }
     drum (points) {
         @point = group.get(body.points, beat)
         @word = at + beat * POINT_WORDS
-        drum (3) { put(cast, word + beat, group.get(point, beat)) }
+        drum (3) {
+            put(cast, word + beat, group.get(point, beat))
+        }
         put(cast, word + 3, 0)
         (colored == yes) { put(cast, word + 3, group.get(body.colors, beat)) }
     }
@@ -185,7 +193,10 @@ skill face(cast, sink, camera, body, index, seen, gpu) {
 skill body_pass(cast, sink, camera, row, gpu) {
     @body = part(cast, row)
     @seen = projected(cast, camera, body)
-    drum (body.quads) { face(cast, sink, camera, body, beat, seen, gpu) }
+    drum (group.count(body.quads)) {
+        @quad = group.get(body.quads, beat)
+        face(cast, sink, camera, body, quad, seen, gpu)
+    }
     out none
 }
 

@@ -57,7 +57,9 @@ skill text_bytes(text, limit) {
     @bytes = []
     @count = str.bytes(text)
     (count > limit) { count = limit }
-    drum (count) { bytes = group.add(bytes, str.byte(text, beat)) }
+    drum (count) {
+        bytes = group.add(bytes, str.byte(text, beat))
+    }
     out bytes
 }
 
@@ -71,12 +73,13 @@ skill show_command(agent, who, payload) {
 skill split_lines(bytes) {
     @lines = []
     @line = []
-    drum (bytes) {
-        (beat == 10) {
+    drum (group.count(bytes)) {
+        @entry = group.get(bytes, beat)
+        (entry == 10) {
             lines = group.add(lines, line)
             line = []
         }
-        ((beat == 10) == no) { line = group.add(line, beat) }
+        ((entry == 10) == no) { line = group.add(line, entry) }
     }
     out group.add(lines, line)
 }
@@ -86,7 +89,9 @@ skill told(agent, bytes, kind) {
     @all = split_lines(bytes)
     @shown = group.count(all)
     (shown > REPLY_LINES) { shown = REPLY_LINES }
-    drum (shown) { front.remember(agent, front.Entry { kind = kind, bytes = group.get(all, beat) }) }
+    drum (shown) {
+        front.remember(agent, front.Entry { kind = kind, bytes = group.get(all, beat) })
+    }
     @hidden = group.count(all) - shown
     (hidden > 0) { front.remember(agent, front.Entry { kind = front.REPLY, bytes = text_bytes("… и ещё {hidden} строк", 200) }) }
     out front.draw(agent)

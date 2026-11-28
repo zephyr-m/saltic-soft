@@ -41,7 +41,9 @@ SLOT = 256
 
 skill create(base) {
     @place = uefi.pages_below_4g(base, PAGES)
-    drum (HEADER) { firmware.write8(place, base, beat, 0) }
+    drum (HEADER) {
+        firmware.write8(place, base, beat, 0)
+    }
     uefi.add_table(base, GUID, place)
     out place
 }
@@ -63,7 +65,9 @@ skill entries(base) {
     drum (firmware.read16(log, base, 2)) {
         @slot = firmware.add(log, HEADER + (next - 1 - beat + SLOTS) % SLOTS * SLOT)
         @bytes = []
-        drum (firmware.read8(slot, base, 1)) { bytes = group.add(bytes, firmware.read8(slot, base, 2 + beat)) }
+        drum (firmware.read8(slot, base, 1)) {
+            bytes = group.add(bytes, firmware.read8(slot, base, 2 + beat))
+        }
         found = group.add(found, [firmware.read8(slot, base, 0), bytes])
     }
     out found
@@ -80,7 +84,9 @@ skill put(base, kind, line) {
     @slot = firmware.add(log, HEADER + next * SLOT)
     firmware.write8(slot, base, 0, kind)
     firmware.write8(slot, base, 1, group.count(line))
-    drum (group.count(line)) { firmware.write8(slot, base, 2 + beat, group.get(line, beat)) }
+    drum (group.count(line)) {
+        firmware.write8(slot, base, 2 + beat, group.get(line, beat))
+    }
     firmware.write16(log, base, 0, (next + 1) % SLOTS)
     (filled < SLOTS) { firmware.write16(log, base, 2, filled + 1) }
     out none

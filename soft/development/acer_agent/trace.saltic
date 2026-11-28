@@ -96,7 +96,9 @@ skill write_file(base, file, bytes) {
     drum ((total + CHUNK - 1) / CHUNK) {
         @size = total - done
         (size > CHUNK) { size = CHUNK }
-        drum (size) { firmware.write8(buffer, base, beat, group.get(bytes, done + beat)) }
+        drum (size) {
+            firmware.write8(buffer, base, beat, group.get(bytes, done + beat))
+        }
         firmware.write64(size_at, base, 0, firmware.number(size))
         @written = firmware.call(base, firmware.pointer(file, base, files.FILE_WRITE), [file, size_at, buffer])
         (written.failed == yes) { out error.WriteFailed }
@@ -131,25 +133,28 @@ skill open(base) {
     set_clock(trace, uefi.now(base)) rescue |err| { none }
     @handles = files.file_systems(base)
     @seen = ""
-    drum (handles) {
+    drum (group.count(handles)) {
+        @handle_3 = group.get(handles, beat)
         @kind = "usb"
-        (files.fixed_volume(base, beat) == yes) { kind = "internal" }
-        @label = label_of(base, beat)
+        (files.fixed_volume(base, handle_3) == yes) { kind = "internal" }
+        @label = label_of(base, handle_3)
         seen = "{seen} {kind}:'{label}'"
     }
-    drum (FLASH_LABELS) {
-        @wanted = beat
-        drum (handles) {
+    drum (group.count(FLASH_LABELS)) {
+        @wanted = group.get(FLASH_LABELS, beat)
+        drum (group.count(handles)) {
+            @handle_2 = group.get(handles, beat)
             (trace.file == 0) {
-                (files.fixed_volume(base, beat) == no) {
-                    (label_of(base, beat) == wanted) { attempt(trace, base, beat, "usb '{wanted}'") }
+                (files.fixed_volume(base, handle_2) == no) {
+                    (label_of(base, handle_2) == wanted) { attempt(trace, base, handle_2, "usb '{wanted}'") }
                 }
             }
         }
     }
-    drum (handles) {
+    drum (group.count(handles)) {
+        @handle = group.get(handles, beat)
         (trace.file == 0) {
-            (files.fixed_volume(base, beat) == yes) { attempt(trace, base, beat, "internal disk (no writable flash)") }
+            (files.fixed_volume(base, handle) == yes) { attempt(trace, base, handle, "internal disk (no writable flash)") }
         }
     }
     @place = trace.place

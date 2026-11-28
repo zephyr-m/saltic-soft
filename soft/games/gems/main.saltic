@@ -81,9 +81,10 @@ Window = Box {
     }
 
     skill field_place() {
-        drum (runtime.targets) {
-            (beat.id == panel.FIELD) {
-                out beat
+        drum (group.count(runtime.targets)) {
+            @target = group.get(runtime.targets, beat)
+            (target.id == panel.FIELD) {
+                out target
             }
         }
         out error.FieldMissing
@@ -134,11 +135,12 @@ Window = Box {
         screen.pump(link, packet, hold, joined)
         @drained = reader.drain(link.way_events)
         link.way_events = drained.core
-        drum (drained.gestures) {
-            (beat.kind == gestures.Kind.CLICK) {
-                @hit = jtml.hit(runtime, beat.x, beat.y)
+        drum (group.count(drained.gestures)) {
+            @gesture = group.get(drained.gestures, beat)
+            (gesture.kind == gestures.Kind.CLICK) {
+                @hit = jtml.hit(runtime, gesture.x, gesture.y)
                 (hit.found == yes) {
-                    press(hit.id, beat.x, beat.y)
+                    press(hit.id, gesture.x, gesture.y)
                 }
                 dirty = yes
             }

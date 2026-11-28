@@ -201,10 +201,12 @@ skill happening(desk, session, parts) {
     seen_task(desk, session, number, "события")
     @pages = []
     @text = "№{number}, события:"
-    drum (board.events_of(desk, number)) {
-        pages = group.add(pages, mrpc.object_value([text_field("time", group.get(beat, 0)), text_field("text", group.get(beat, 1))]))
-        @when = group.get(beat, 0)
-        @what = group.get(beat, 1)
+    @entries = board.events_of(desk, number)
+    drum (group.count(entries)) {
+        @entry = group.get(entries, beat)
+        pages = group.add(pages, mrpc.object_value([text_field("time", group.get(entry, 0)), text_field("text", group.get(entry, 1))]))
+        @when = group.get(entry, 0)
+        @what = group.get(entry, 1)
         text = "{text}\n{when} {what}"
     }
     out pages_of(number, pages, "events", parts, text)
@@ -250,7 +252,9 @@ skill seen_task(desk, session, number, what) {
 
 skill listing(desk, session, parts) {
     @pages = []
-    drum (group.count(desk.names)) { pages = group.add(pages, summary(desk, beat + 1)) }
+    drum (group.count(desk.names)) {
+        pages = group.add(pages, summary(desk, beat + 1))
+    }
     @from = 0
     (group.count(parts) > 2) { from = parse.parse_size(group.get(parts, 2)) }
     seen_board(desk, session, from)
@@ -399,8 +403,9 @@ skill spoken(link, packet) {
 
 skill listen(link, desk, session) {
     @heard = []
-    drum (remote.serve(link)) {
-        @packet = beat
+    @packets = remote.serve(link)
+    drum (group.count(packets)) {
+        @packet = group.get(packets, beat)
         @asked = mrpc.is_request(packet.payload)
         (asked == yes) {
             @words = spoken(link, packet)
@@ -477,10 +482,11 @@ skill tick(base, link, desk, session) {
         store.save_desk(base, desk) rescue |err| { session.note = "не сохранила: {err}" }
     }
     @after = state_text(desk, session)
-    drum (heard) {
-        @said = group.get(beat, 1)
-        (group.get(beat, 2) == yes) { answered(link, group.get(beat, 0), said) }
-        (group.get(beat, 2) == no) { remote.reply_text(link, group.get(beat, 0), "{said.text}\n\n{after}") }
+    drum (group.count(heard)) {
+        @entry = group.get(heard, beat)
+        @said = group.get(entry, 1)
+        (group.get(entry, 2) == yes) { answered(link, group.get(entry, 0), said) }
+        (group.get(entry, 2) == no) { remote.reply_text(link, group.get(entry, 0), "{said.text}\n\n{after}") }
     }
     out none
 }

@@ -263,12 +263,20 @@ skill build(screen, seed) {
     world.ground = field(screen, world, luck)
     world.flats = pond(screen, world)
     @bodies = []
-    drum (dice.between(luck, 1, 2)) { bodies = group.concat(bodies, house(screen, world, luck)) }
+    drum (dice.between(luck, 1, 2)) {
+        bodies = group.concat(bodies, house(screen, world, luck))
+    }
     (world.season.extra == season.SNOWMAN) { bodies = group.concat(bodies, snowman(screen, world, luck)) }
-    drum (dice.between(luck, 4, 7)) { bodies = group.concat(bodies, tree(screen, world, luck, dice.between(luck, 34, 54))) }
-    drum (dice.between(luck, 2, 4)) { bodies = group.concat(bodies, rock(screen, world, luck)) }
+    drum (dice.between(luck, 4, 7)) {
+        bodies = group.concat(bodies, tree(screen, world, luck, dice.between(luck, 34, 54)))
+    }
+    drum (dice.between(luck, 2, 4)) {
+        bodies = group.concat(bodies, rock(screen, world, luck))
+    }
     (world.season.extra == season.PUMPKINS) {
-        drum (dice.between(luck, 2, 4)) { bodies = group.concat(bodies, pumpkin(screen, world, luck)) }
+        drum (dice.between(luck, 2, 4)) {
+            bodies = group.concat(bodies, pumpkin(screen, world, luck))
+        }
     }
     bodies = group.concat(bodies, flowers(screen, world, luck))
     world.bodies = bodies
@@ -292,8 +300,12 @@ skill blots(screen, world) {
 
 skill paint(screen, world) {
     mesh.paint(screen, world.ground)
-    drum (group.count(world.flats)) { mesh.paint(screen, group.get(world.flats, beat)) }
-    drum (group.count(world.bodies)) { mesh.paint(screen, group.get(world.bodies, beat)) }
+    drum (group.count(world.flats)) {
+        mesh.paint(screen, group.get(world.flats, beat))
+    }
+    drum (group.count(world.bodies)) {
+        mesh.paint(screen, group.get(world.bodies, beat))
+    }
     out none
 }
 

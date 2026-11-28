@@ -30,7 +30,9 @@ Book = Box {
             asks = group.add(asks, row(price + step * STEP, market.noise(tick * 31 + beat) * 3 + 20, "down"))
         }
         @bids = []
-        drum (ROWS) { bids = group.add(bids, row(price - (beat + 1) * STEP, market.noise(tick * 17 + beat) * 3 + 20, "up")) }
+        drum (ROWS) {
+            bids = group.add(bids, row(price - (beat + 1) * STEP, market.noise(tick * 17 + beat) * 3 + 20, "up"))
+        }
         out calls.call("order-book", [["asks", calls.listed(asks)], ["mid", calls.quoted(market.money(price))], ["bids", calls.listed(bids)]])
     }
 }

@@ -57,7 +57,9 @@ FAT_TYPE = "FAT32   "
 
 skill zeros(count) {
     @bytes = []
-    drum (count) { bytes = group.add(bytes, 0) }
+    drum (count) {
+        bytes = group.add(bytes, 0)
+    }
     out bytes
 }
 
@@ -74,7 +76,9 @@ skill le64(bytes, value) {
 }
 
 skill ascii(bytes, line) {
-    drum (str.bytes(line)) { bytes = group.add(bytes, str.byte(line, beat)) }
+    drum (str.bytes(line)) {
+        bytes = group.add(bytes, str.byte(line, beat))
+    }
     out bytes
 }
 
@@ -110,7 +114,9 @@ skill esp_entry() {
     bytes = le64(bytes, firmware.number(ESP_FIRST))
     bytes = le64(bytes, firmware.number(ESP_FIRST + ESP_SECTORS - 1))
     bytes = le64(bytes, 0)
-    drum (str.bytes(ESP_NAME)) { bytes = le16(bytes, str.byte(ESP_NAME, beat)) }
+    drum (str.bytes(ESP_NAME)) {
+        bytes = le16(bytes, str.byte(ESP_NAME, beat))
+    }
     out pad_to(bytes, ENTRY_BYTES)
 }
 
@@ -173,8 +179,8 @@ Target = Box {
 
 skill find_target(base, handles, guid) {
     @found = []
-    drum (handles) {
-        @owner = beat
+    drum (group.count(handles)) {
+        @owner = group.get(handles, beat)
         @device = files_protocol(base, owner, guid) rescue |err| { 0 }
         (device > 0) {
             @media = firmware.pointer(device, base, BLOCK_MEDIA)
@@ -206,14 +212,18 @@ skill files_protocol(base, handle, guid) {
     @services = uefi.boot_services(base)
     @at = firmware.scratch(base, 24)
     @guid_at = firmware.scratch(base, 0)
-    drum (16) { firmware.write8(guid_at, base, beat, group.get(guid, beat)) }
+    drum (16) {
+        firmware.write8(guid_at, base, beat, group.get(guid, beat))
+    }
     @got = firmware.call(base, firmware.pointer(services, base, 152), [handle, guid_at, at])
     (got.failed == yes) { out error.NoProtocol }
     out firmware.pointer(at, base, 0)
 }
 
 skill place(base, at, bytes) {
-    drum (group.count(bytes)) { firmware.write8(at, base, beat, group.get(bytes, beat)) }
+    drum (group.count(bytes)) {
+        firmware.write8(at, base, beat, group.get(bytes, beat))
+    }
     out at
 }
 
@@ -228,7 +238,9 @@ skill blocks(base, target, kind, lba, count, buffer) {
 }
 
 skill place_zeros(base, at, count) {
-    drum (count) { firmware.write8(at, base, beat, 0) }
+    drum (count) {
+        firmware.write8(at, base, beat, 0)
+    }
     out at
 }
 

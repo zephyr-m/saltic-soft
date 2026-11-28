@@ -63,19 +63,28 @@ Letter = Box {
         @names = "\{\"box\": \{\"gap\": 4, \"grow\": 1, \"children\": [{title}, {who}]\}\}"
         @made = ["\{\"box\": \{\"flow\": \"row\", \"gap\": 14, \"align\": \"center\", \"children\": [{face}, {names}]\}\}"]
         @chips = []
-        drum (tags) { chips = group.add(chips, calls.call("chip", [["text", calls.quoted(beat)], ["fill", calls.quoted("raise")], ["tone", calls.quoted("ink")]])) }
+        drum (group.count(tags)) {
+            @tag = group.get(tags, beat)
+            chips = group.add(chips, calls.call("chip", [["text", calls.quoted(tag)], ["fill", calls.quoted("raise")], ["tone", calls.quoted("ink")]]))
+        }
         (starred == yes) { chips = group.add(chips, calls.call("chip", [["text", calls.quoted("★ важное")], ["fill", calls.quoted("mustard_soft")], ["tone", calls.quoted("mustard")]])) }
         (group.count(chips) > 0) {
             @row = calls.join(chips)
             made = group.add(made, "\{\"box\": \{\"flow\": \"row\", \"gap\": 6, \"children\": [{row}]\}\}")
         }
         made = group.add(made, calls.call("divider", [["width", "0"], ["height", "1"]]))
-        drum (lines) { made = group.add(made, calls.call("words", [["text", calls.quoted(beat)], ["tone", calls.quoted("ink")], ["weight", calls.quoted("regular")], ["grow", "0"]])) }
+        drum (group.count(lines)) {
+            @line = group.get(lines, beat)
+            made = group.add(made, calls.call("words", [["text", calls.quoted(line)], ["tone", calls.quoted("ink")], ["weight", calls.quoted("regular")], ["grow", "0"]]))
+        }
         (group.count(files) > 0) {
             @count = group.count(files)
             made = group.add(made, calls.call("section-head", [["text", calls.quoted("вложения · {count}")]]))
             @cards = []
-            drum (files) { cards = group.add(cards, calls.call("link-row", [["icon", calls.quoted("paperclip")], ["tone", calls.quoted("accent")], ["title", calls.quoted(group.get(beat, 0))], ["text", calls.quoted(group.get(beat, 1))], ["size", "13"], ["small", "11"]])) }
+            drum (group.count(files)) {
+                @file_2 = group.get(files, beat)
+                cards = group.add(cards, calls.call("link-row", [["icon", calls.quoted("paperclip")], ["tone", calls.quoted("accent")], ["title", calls.quoted(group.get(file_2, 0))], ["text", calls.quoted(group.get(file_2, 1))], ["size", "13"], ["small", "11"]]))
+            }
             @inside = calls.join(cards)
             made = group.add(made, "\{\"box\": \{\"flow\": \"row\", \"gap\": 24, \"children\": [{inside}]\}\}")
         }

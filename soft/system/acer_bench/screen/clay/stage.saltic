@@ -100,7 +100,9 @@ skill cloud(screen, cx, cy, size, shade, bright) {
 }
 
 skill draw_sky(screen, world) {
-    drum (screen.height) { gop.fill(screen, 0, beat, screen.width, 1, paint(screen, season.mix(world.top, world.low, beat * 100 / screen.height))) }
+    drum (screen.height) {
+        gop.fill(screen, 0, beat, screen.width, 1, paint(screen, season.mix(world.top, world.low, beat * 100 / screen.height)))
+    }
     @luck = dice.Dice { state = world.seed + 3 }
     @white = WHITE
     (world.evening == yes) { white = season.mix(world.low, WHITE, 45) }
@@ -212,8 +214,12 @@ skill compose(stage, angle, lift, base) {
         @painter = group.get(stage.painter, 0)
         render.begin(painter)
         cast.ground_collect(set, painter, camera, scene.CELLS)
-        drum (group.count(flats)) { cast.collect(set, painter, camera, group.get(flats, beat)) }
-        drum (group.count(bodies)) { cast.collect(set, painter, camera, group.get(bodies, beat)) }
+        drum (group.count(flats)) {
+            cast.collect(set, painter, camera, group.get(flats, beat))
+        }
+        drum (group.count(bodies)) {
+            cast.collect(set, painter, camera, group.get(bodies, beat))
+        }
         at = mark(stage, 1, at)
         @tails = intel_gpu.tails(group.get(back.accel, 0))
         @drawn = render.triangles(painter, render.Surface { at = back.frame, pitch = back.stride * graphics.PIXEL_BYTES, width = back.width, height = back.height })
@@ -230,8 +236,12 @@ skill compose(stage, angle, lift, base) {
         gop.copy_rect(base, back, stage.sky, 0, 0, back.width, back.height)
     }
     cast.ground_draw(set, back, camera, scene.CELLS)
-    drum (group.count(flats)) { cast.draw(set, back, camera, group.get(flats, beat)) }
-    drum (group.count(bodies)) { cast.draw(set, back, camera, group.get(bodies, beat)) }
+    drum (group.count(flats)) {
+        cast.draw(set, back, camera, group.get(flats, beat))
+    }
+    drum (group.count(bodies)) {
+        cast.draw(set, back, camera, group.get(bodies, beat))
+    }
     out at
 }
 

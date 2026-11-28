@@ -82,9 +82,10 @@ Choice = Box {
             out group.add(items, value)
         }
         @kept = []
-        drum (items) {
-            ((beat == value) == no) {
-                kept = group.add(kept, beat)
+        drum (group.count(items)) {
+            @item_2 = group.get(items, beat)
+            ((item_2 == value) == no) {
+                kept = group.add(kept, item_2)
             }
         }
         out kept

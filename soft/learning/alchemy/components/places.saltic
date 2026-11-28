@@ -40,11 +40,12 @@ skill cards(list, shape) {
     @height = group.get(shape, 2)
     @rows = []
     @made = []
-    drum (list) {
+    drum (group.count(list)) {
+        @entry = group.get(list, beat)
         @kind = "location-card"
-        @pairs = [["title", calls.quoted(beat.title)], ["note", calls.quoted(beat.note)], ["width", "{width}"], ["height", "{height}"]]
-        (str.bytes(beat.rank) > 0) { pairs = group.add(pairs, ["rank", calls.quoted(beat.rank)]) }
-        (str.bytes(beat.rank) == 0) { kind = "special-card" }
+        @pairs = [["title", calls.quoted(entry.title)], ["note", calls.quoted(entry.note)], ["width", "{width}"], ["height", "{height}"]]
+        (str.bytes(entry.rank) > 0) { pairs = group.add(pairs, ["rank", calls.quoted(entry.rank)]) }
+        (str.bytes(entry.rank) == 0) { kind = "special-card" }
         made = group.add(made, calls.call(kind, pairs))
         (group.count(made) == columns) {
             rows = group.add(rows, row(made))
