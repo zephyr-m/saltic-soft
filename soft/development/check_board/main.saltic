@@ -1,5 +1,5 @@
 -- check_board — «Проверка всего»: пульт global-check в окне Wayland, вид
--- docs/site/private/CHECK-LOOK.html на атомах и жителях UIEngine (решение
+-- бывшего CHECK-LOOK.html (в .archive с 28.11) на жителях UIEngine (решение
 -- автора 28.11.2026: сам запускает). При открытии показывает прошлый прогон по
 -- журналам ../saltic/.cache/build/workbench; «▶ быстрая» запускает just quick,
 -- «глобальная» — just global-check в ../saltic (SALTIC_PLAIN=1 — без своего окна и чека),
