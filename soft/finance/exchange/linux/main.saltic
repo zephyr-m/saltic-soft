@@ -85,10 +85,7 @@ program() {
     (group.count(host) == 0) { out none }
     @canvas = group.get(host, 0)
     @link = group.get(host, 1)
-    @regular = face(fonts.REGULAR)
-    @bold = face(fonts.BOLD)
-    @mono = face(fonts.MONO)
-    @palette = atoms.with_faces(themes.named("soft", canvas), regular, bold, mono)
+    @palette = atoms.with_faces(themes.named("soft", canvas), face(fonts.REGULAR), face(fonts.BOLD), face(fonts.MONO))
     @picker = Themes { left = canvas.width - WIDE - 150 }
     @reader = gestures.Reader {}
     @runtime = jtml.Runtime {}
@@ -122,7 +119,7 @@ program() {
                 @was = picker.chosen
                 @hit = jtml.hit(runtime, beat.x, beat.y)
                 (picker.choose(hit.id) == yes) {
-                    ((picker.chosen == was) == no) { palette = atoms.with_faces(themes.named(picker.chosen, canvas), regular, bold, mono) }
+                    ((picker.chosen == was) == no) { palette = atoms.with_faces(themes.named(picker.chosen, canvas), face(fonts.REGULAR), face(fonts.BOLD), face(fonts.MONO)) }
                     dirty = yes
                 }
             }

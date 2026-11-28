@@ -10,11 +10,12 @@
 -- перерисовывается готовый runtime; наведение на день в «Сборках» —
 -- подсказка поверх маленьким деревом. «×» окна — выход.
 --
--- Window { canvas, link, regular, bold, mono, set, palette, runtime, view,
+-- Window { canvas, link, palette, runtime, view,
 --     reader, packet, hold, joined } — open() — окно, шрифты, история,
 --     первый кадр; NoWindow; step() -> no, когда окно закрыто
 -- program() — вход; face(path) — навык окна: Typeface из файла шрифта
--- Внутри: dress() — палитра выбранной темы (фонарик сохраняется); build() —
+-- Внутри: dress() — палитра выбранной темы: шрифты и значки загружаются заново,
+--     хозяин у них один — палитра (фонарик сохраняется); build() —
 --     пересобрать экран; follow() -> yes, если свет сдвинулся; hover() —
 --     подсказка над наведённым
 use core.bytes
@@ -42,10 +43,6 @@ TIP_WIDE = 230
 Window = Box {
     canvas = graphics.Screen {},
     link = screen.Link {},
-    regular = typeface.Typeface {},
-    bold = typeface.Typeface {},
-    mono = typeface.Typeface {},
-    set = icons.Icons {},
     palette = atoms.Palette {},
     runtime = jtml.Runtime {},
     view = page.Polygon {},
@@ -63,11 +60,6 @@ Window = Box {
         (group.count(host) == 0) { out error.NoWindow }
         canvas = group.get(host, 0)
         link = group.get(host, 1)
-        regular = face(fonts.REGULAR)
-        bold = face(fonts.BOLD)
-        mono = face(fonts.MONO)
-        @sheet = file.read_bytes(icons.SHEET)
-        set = icons.open(ttf.from_bytes(sheet), bytes.count(sheet))
         view.refresh()
         dress()
         build()
@@ -78,7 +70,9 @@ Window = Box {
         view.worn = view.theme
         @glow_x = palette.glow_x
         @glow_y = palette.glow_y
-        palette = atoms.with_icons(atoms.with_faces(themes.named(view.worn, canvas), regular, bold, mono), set)
+        @sheet = file.read_bytes(icons.SHEET)
+        @faced = atoms.with_faces(themes.named(view.worn, canvas), face(fonts.REGULAR), face(fonts.BOLD), face(fonts.MONO))
+        palette = atoms.with_icons(faced, icons.open(ttf.from_bytes(sheet), bytes.count(sheet)))
         palette.glow_x = glow_x
         palette.glow_y = glow_y
         out none

@@ -7,7 +7,7 @@
 -- сохранение (saved). Сборка, запуск и создание проекта — пока макет: говорят
 -- в полосе, что подключатся после ОК автора.
 --
--- Doc { path, lines, info, first, light, column, dirty, writable } — файл
+-- Doc { path, lines, first, light, column, dirty, writable } — файл
 -- Page { head, tree, pane, foot, menus, builder, maker, docs, warned, wanted }
 --     — warned — о чьих правках предупредили; wanted — new / save / quit для
 --     хозяина (new — он открывает мастер со своими папками: maker.launch)
@@ -26,7 +26,8 @@
 --     yes, если клавиша что-то сделала (Esc — меню, мастер; F5 — собрать);
 --     saved() — хозяин записал; told(text) — в полосу; unsaved() -> yes/no
 -- opened(lines) -> Page — образец lines (code.PATH), только читать
--- jtml() -> текст страницы
+-- jtml() -> текст страницы: слева дерево, в середине код, справа цель сборки
+--     (builder.tools — места и «собрать»), в режиме «сборка» — журнал
 -- fit(height) — экран высотой height: строк кода — сколько влезет между
 --     заголовком, вкладками и полосой (CHROME точек на них), дереву — всё
 --     между заголовком и полосой (FRAME точек на них)
@@ -57,7 +58,6 @@ FRAME = 90
 Doc = Box {
     path = "",
     lines = [],
-    info = syntax.Info {},
     first = 1,
     light = 1,
     column = 0,
@@ -177,7 +177,6 @@ Page = Box {
             @fresh = Doc {
                 path = path,
                 lines = lines,
-                info = syntax.scan(lines),
                 writable = writable
             }
             docs = group.add(docs, fresh)
@@ -244,7 +243,6 @@ Page = Box {
             @doc = beat
             (doc.path == pane.active) {
                 doc.lines = pane.lines
-                doc.info = pane.info
                 doc.first = pane.first
                 doc.light = pane.light
                 doc.column = pane.column
@@ -258,7 +256,7 @@ Page = Box {
         }
         docs = made
         pane.lines = chosen.lines
-        pane.info = chosen.info
+        pane.info = syntax.scan(chosen.lines)
         pane.first = chosen.first
         pane.light = chosen.light
         pane.column = chosen.column
@@ -433,7 +431,7 @@ Page = Box {
     skill jtml() {
         @line = calls.call("bar", [["height", "1"], ["tone", calls.quoted("line")]])
         @upright = calls.call("bar", [["width", "1"], ["tone", calls.quoted("line")]])
-        @middle = calls.join([tree.jtml(), upright, pane.jtml()])
+        @middle = calls.join([tree.jtml(), upright, pane.jtml(), upright, builder.tools()])
         @body = "\{\"box\": \{\"flow\": \"row\", \"grow\": 1, \"gap\": 0, \"children\": [{middle}]\}\}"
         (foot.mode == status.BUILD) {
             body = builder.jtml()
