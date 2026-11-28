@@ -20,7 +20,7 @@
 --     cost — мс последнего кадра, по стадиям — в log.stages и в STAGES;
 --     кадр рисует только изменившееся (regions: spots_before — узлы прошлого
 --     кадра, parts — куски, whole — весь экран); show() — показать куски;
---     пока что-то идёт, кадр рисуется на каждом обороте, без пауз; frames / fps_at — кадров в текущей секунде (график к/с); log_asked / log_pending — хвост журнала в фоне;
+--     пока что-то идёт, кадр рисуется на каждом обороте, без пауз; frames / fps_at — кадров в текущей секунде (график к/с); log_asked / log_pending — хвост журнала в фоне; pulse_seen — последнее «ещё идёт», что прозвучало (hear_pulse);
 --     click(id) — щелчок по цели; listen() — озвучить новое с прошлого
 --     чтения (только свой прогон); fresh_log() / ask_log() / take_log() — хвост журнала вкладки по фильтру в
 --     фоне, окно его не ждёт; count() — новая цель счётчика и его
@@ -89,6 +89,7 @@ Window = Box {
     fps_at = 0,
     log_asked = 0,
     log_pending = no,
+    pulse_seen = "",
     heard = [0, 0, 0, 0],
     went = no,
     ended = no
@@ -243,7 +244,23 @@ Window = Box {
         (group.count(lines) < 2) { out yes }
         log.bytes = number(group.get(lines, 1))
         log.lines = group.without(group.slice(lines, 2, group.count(lines)), "")
+        hear_pulse()
         out yes
+    }
+
+    skill hear_pulse() {
+        @newest = ""
+        drum (log.lines) {
+            @line = group.get(log.lines, beat)
+            (str.contains(line, "ещё идёт") == yes) { newest = line }
+            (str.contains(line, "⏳ идут") == yes) { newest = line }
+        }
+        (str.bytes(newest) == 0) { out none }
+        ((newest == pulse_seen) == no) {
+            pulse_seen = newest
+            voice.play("pulse")
+        }
+        out none
     }
 
     skill listen() {
