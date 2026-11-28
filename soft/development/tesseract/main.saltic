@@ -1,12 +1,15 @@
 -- tesseract — скелет машины в окне Wayland: N измерений в проекции на 3D
 -- (сейчас три — этаж, сектор, время), слои пирога и клетки-кубики, пакетов
 -- пока нет. Тянуть левой — повернуть, средней — сдвинуть, колесо — ближе и
--- дальше, «1» — оси по кругу, «2» — X и Z местами, Esc или «×» — выход. Под
+-- дальше, «1» — оси по кругу, «2» — X и Z местами, «3», «4», «5» — ровно
+-- спереди, сбоку, сверху (у ровных углов мышь прилипает), «6» — прямая
+-- проекция или перспектива, Esc или «×» — выход. Под
 -- указателем — карточка клетки. Кадр рисуется заново, только когда что-то
 -- поменялось. В движении — кадр-дельта без стирания экрана (trace): рамки плит и
 -- крестики клеток; полный кадр рисуется за кадром и ложится целиком, когда
 -- кнопки отпущены и прошло SETTLE тихих кругов. Спим только без кадра.
--- Справа внизу — график кадров (meter).
+-- Наведение на клетку в покое — только подсветка и карточка (relit), не
+-- весь мир. Справа внизу — график кадров (meter).
 -- Черновик того же вида в браузере — docs/site/private/TESSERACT.html языка.
 --
 -- program() — вход; TITLE, WIDE, HIGH — окно; SETTLE — тихих кругов до полного кадра
@@ -89,6 +92,22 @@ program() {
                     shape.swapped()
                     moved = yes
                 }
+                (beat.text == "3") {
+                    eye.faced(camera.FRONT)
+                    moved = yes
+                }
+                (beat.text == "4") {
+                    eye.faced(camera.SIDE)
+                    moved = yes
+                }
+                (beat.text == "5") {
+                    eye.faced(camera.TOP)
+                    moved = yes
+                }
+                (beat.text == "6") {
+                    eye.flattened()
+                    moved = yes
+                }
             }
         }
         (moved == yes) {
@@ -104,8 +123,9 @@ program() {
                 changed = yes
             }
         }
+        @relit = no
         (picture.hovered(reader.x, reader.y) == yes) {
-            changed = yes
+            relit = (picture.rough == no)
         }
         (changed == yes) {
             @start = time.now()
@@ -113,7 +133,13 @@ program() {
             screen.present(link)
             picture.framed(start)
         }
-        (changed == no) {
+        (((changed == no) ○ (relit == yes))) {
+            @begun = time.now()
+            picture.relit()
+            screen.present(link)
+            picture.framed(begun)
+        }
+        ((changed == no) ○ (relit == no)) {
             socket.sleep(16)
         }
     }

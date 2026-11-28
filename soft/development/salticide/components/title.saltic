@@ -1,14 +1,27 @@
--- title — заголовок окна SalticIDE: огоньки окна, значок, путь открытого файла,
--- кнопки «тема» и «весь экран»; вид — житель title-bar.
+-- title — заголовок окна SalticIDE: значок, меню программы (components/menu),
+-- путь открытого файла, кнопки «тема» и «весь экран», огоньки окна (minimize,
+-- close). Тот же вид, что у жителя title-bar, плюс имена меню.
 --
--- TitleBar { path } — путь файла; jtml() -> текст JTML
+-- TitleBar { path } — путь файла; titled(menus) -> текст JTML, menus — имена
+--     меню (menu.titles)
 
+use core.group
 use tarantul.uiengine.jtml.calls
 
 TitleBar = Box {
     path = ""
 
-    skill jtml() {
-        out calls.call("title-bar", [["path", calls.quoted(path)]])
+    skill titled(menus) {
+        @items = [calls.call("coin", []), menus, "\{\"box\": \{\"width\": 8, \"gap\": 0\}\}"]
+        items = group.add(items, calls.call("console-line", [["text", calls.quoted(path)], ["tone", calls.quoted("quiet")], ["size", "13"]]))
+        items = group.add(items, "\{\"box\": \{\"grow\": 1, \"gap\": 0\}\}")
+        items = group.add(items, calls.call("pill", [["text", calls.quoted("тема")]]))
+        items = group.add(items, calls.call("pill", [["text", calls.quoted("весь экран")]]))
+        items = group.add(items, "\{\"box\": \{\"width\": 10, \"gap\": 0\}\}")
+        items = group.add(items, calls.call("window-button", [["id", calls.quoted("minimize")], ["icon", calls.quoted("arrow-down")], ["tone", calls.quoted("mustard")]]))
+        items = group.add(items, "\{\"box\": \{\"width\": 2, \"gap\": 0\}\}")
+        items = group.add(items, calls.call("window-button", [["id", calls.quoted("close")], ["icon", calls.quoted("x")], ["tone", calls.quoted("watermelon")]]))
+        @inside = calls.join(items)
+        out "\{\"plate\": \{\"tone\": \"panel\", \"children\": [\{\"box\": \{\"flow\": \"row\", \"height\": 42, \"padding\": [0, 14, 0, 14], \"gap\": 6, \"align\": \"center\", \"children\": [{inside}]\}\}]\}\}"
     }
 }

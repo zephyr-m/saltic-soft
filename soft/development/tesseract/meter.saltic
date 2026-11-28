@@ -3,9 +3,12 @@
 -- кадров в секунду хватило бы рисования и сколько кадров реально показано за
 -- прошлую секунду. Время — core.time, миллисекунды.
 --
--- Meter { spent, second, frames, rate } — spent — мс последних кадров; second —
---     начало текущей секунды; frames — кадров в ней; rate — кадров за прошлую
+-- Meter { spent, head, second, frames, rate } — spent — table.Table по кругу:
+--     мс последних SPAN кадров, head — куда писать следующий; second — начало
+--     текущей секунды; frames — кадров в ней; rate — кадров за прошлую
+--     readied() — круг в своей памяти, до первого кадра
 --     finished(start) — записать кадр, начатый в start (time.now())
+--     took(age) -> мс кадра age шагов назад (0 — последний)
 --     average() -> среднее последних кадров в десятых долях мс
 --     drawn(canvas, face) — панель с числами и графиком в (0, 0) холста
 -- SPAN — кадров в графике; CEILING — мс на верх графика; WIDE, HIGH — панель;
@@ -15,6 +18,7 @@ use core.group
 use core.time
 use tarantul.graphics.graphics
 use tarantul.uiengine.draw.typeface
+use soft.development.tesseract.table
 
 SPAN = 120
 CEILING = 50
@@ -25,25 +29,23 @@ GRAPH = 60
 RECENT = 30
 
 Meter = Box {
-    spent = [],
+    spent = table.Table {},
+    head = 0,
     second = 0,
     frames = 0,
     rate = 0
 
     skill finished(start) {
         @now = time.now()
-        @took = now - start
-        (took < 0) {
-            took = took + time.DAY_MILLISECONDS
+        @cost = now - start
+        (cost < 0) {
+            cost = cost + time.DAY_MILLISECONDS
         }
-        (group.count(spent) == SPAN) {
-            @kept = []
-            drum (SPAN - 1) {
-                kept = group.add(kept, group.get(spent, beat + 1))
-            }
-            spent = kept
+        spent.put(head, 0, cost)
+        head = (head + 1) % SPAN
+        (spent.count < SPAN) {
+            spent.count = spent.count + 1
         }
-        spent = group.add(spent, took)
         frames = frames + 1
         @passed = now - second
         (passed < 0) {
@@ -56,8 +58,16 @@ Meter = Box {
         }
     }
 
+    skill readied() {
+        spent = table.table_of("tesseract-spent", 1, SPAN)
+    }
+
+    skill took(age) {
+        out spent.at((head - 1 - age + SPAN * 2) % SPAN, 0)
+    }
+
     skill average() {
-        @count = group.count(spent)
+        @count = spent.count
         (count == 0) {
             out 0
         }
@@ -67,7 +77,7 @@ Meter = Box {
         }
         @sum = 0
         drum (tail) {
-            sum = sum + group.get(spent, count - 1 - beat)
+            sum = sum + took(beat)
         }
         out sum * 10 / tail
     }
@@ -98,9 +108,10 @@ Meter = Box {
         @good = graphics.color(canvas, 76, 205, 255)
         @slow = graphics.color(canvas, 228, 183, 64)
         @bad = graphics.color(canvas, 235, 87, 87)
-        drum (group.count(spent)) {
-            @took = group.get(spent, beat)
-            @height = took * GRAPH / CEILING
+        @count = spent.count
+        drum (count) {
+            @cost = took(count - 1 - beat)
+            @height = cost * GRAPH / CEILING
             (height > GRAPH) {
                 height = GRAPH
             }
@@ -108,10 +119,10 @@ Meter = Box {
                 height = 1
             }
             @ink = good
-            (took > 16) {
+            (cost > 16) {
                 ink = slow
             }
-            (took > 33) {
+            (cost > 33) {
                 ink = bad
             }
             graphics.fill(canvas, left + 12 + beat * BAR, base - height, BAR - 1, height, ink)

@@ -1,0 +1,153 @@
+-- builds — режим «сборка» SalticIDE: слева запуски сборки (последний сверху),
+-- в середине журнал выбранного со временем, справа цель и кнопки «собрать»
+-- (BUILD) и «запустить» (RUN). Пока сборок не было — пустой список и подсказка,
+-- как собрать.
+--
+-- Run { time, ok, seconds, lines } — сборка: время начала «чч:мм:сс», прошла ли,
+--     секунд, строки журнала [время, текст, тон]
+-- Builds { runs, target } — сборки и цель (linux); jtml() -> текст JTML
+-- demo(path) -> отметка для полосы («✗1» / «✓»): ДЕМО-сборка макета — новая
+--     запись сверху, нечётная падает с ошибкой, чётная проходит; настоящий
+--     компилятор подключится после ОК автора
+-- BUILD, RUN — id кнопок; AIM — начало id цели (дальше имя из TARGETS), щелчок
+--     — выбрать. Цель — где программа живёт (система и устройство), а не
+--     процессор: процессор — микросхемой ниже (решение автора 27.11.2026); сборщик
+--     по цели — главный, android, esp32, wasm или qemu_virt
+-- Внутри: chip(label, tone) — микросхема, как на сайте («Паутина»): корпус
+--     28×28 в квадрате 48, по три ножки с каждой стороны, подпись внутри;
+--     tile(item) — плитка цели; side() — список запусков; journal() — журнал последней; tools() —
+--     цель и кнопки
+
+use io.clock
+use core.group
+use tarantul.uiengine.jtml.calls
+
+BUILD = "build"
+RUN = "run"
+AIM = "aim:"
+TARGETS = [["linux", "x86", "Linux", "ноутбук"], ["acer", "UEFI", "Acer", "без ОС"], ["android", "A64", "Android", "телефон, APK"], ["esp32", "LX", "ESP32", "плата, без ОС"], ["browser", "wasm", "Браузер", "WebAssembly"], ["qemu-virt", "RV32", "qemu-virt", "наша ОС"], ["linux-rv64", "RV64", "Linux", "RISC-V 64"], ["linux-arm64", "A64", "Linux", "ARM64"]]
+PINS = [17, 24, 31]
+TILE = 117
+SIDE = 230
+TOOLS = 270
+
+Run = Box {
+    time = "",
+    ok = no,
+    seconds = "",
+    lines = []
+}
+
+Builds = Box {
+    runs = [],
+    target = "linux"
+
+    skill demo(path) {
+        @time = clock.stamp()
+        @name = path
+        (name == "") {
+            name = "main.saltic"
+        }
+        @lines = [[time, "демо: saltic {name} → {target}", "quiet"], [time, "читаю, проверяю, собираю", "quiet"]]
+        ((group.count(runs) % 2) == 0) {
+            lines = group.add(lines, [time, "{name}:41:12  неизвестное имя «spot» — щелчок, и ты на строке", "down"])
+            lines = group.add(lines, [time, "✗ не собралось · 1 ошибка · 0,8 с", "down"])
+            runs = group.concat([Run { time = time, ok = no, seconds = "0,8 с", lines = lines }], runs)
+            out "✗1"
+        }
+        lines = group.add(lines, [time, "пишу {target}: .cache/build/program", "quiet"])
+        lines = group.add(lines, [time, "✓ собралось · 69 760 байт · 6,4 с", "up"])
+        runs = group.concat([Run { time = time, ok = yes, seconds = "6,4 с", lines = lines }], runs)
+        out "✓"
+    }
+
+    skill side() {
+        @rows = []
+        drum (runs) {
+            @icon = "circle-x"
+            (beat.ok == yes) {
+                icon = "circle-check"
+            }
+            rows = group.add(rows, calls.call("menu-row", [["id", calls.quoted("")], ["icon", calls.quoted(icon)], ["text", calls.quoted(beat.time)], ["count", calls.quoted(beat.seconds)]]))
+        }
+        @hint = "ещё не собирали"
+        (group.count(runs) > 0) {
+            hint = ""
+        }
+        out calls.call("side-list", [["title", calls.quoted("запуски")], ["rows", calls.listed(rows)], ["hint", calls.quoted(hint)], ["width", "{SIDE}"]])
+    }
+
+    skill journal() {
+        @lines = [calls.call("hint", [["text", calls.quoted("F5 или «собрать» справа — журнал сборки появится здесь, ошибка — щелчком к строке")]])]
+        (group.count(runs) > 0) {
+            lines = []
+            @last = group.get(runs, 0)
+            drum (last.lines) {
+                lines = group.add(lines, calls.call("log-line", [["time", calls.quoted(group.get(beat, 0))], ["text", calls.quoted(group.get(beat, 1))], ["tone", calls.quoted(group.get(beat, 2))]]))
+            }
+        }
+        @inside = calls.join(lines)
+        out "\{\"plate\": \{\"tone\": \"ground\", \"grow\": 1, \"children\": [\{\"box\": \{\"padding\": 16, \"gap\": 6, \"grow\": 1, \"children\": [{inside}]\}\}]\}\}"
+    }
+
+    skill chip(label, tone) {
+        @parts = ["\{\"box\": \{\"at\": [10, 10], \"width\": 28, \"height\": 28, \"edge\": \"{tone}\", \"border\": 2, \"radius\": 4, \"justify\": \"center\", \"align\": \"center\", \"gap\": 0, \"children\": [\{\"text\": \{\"value\": \"{label}\", \"mono\": \"yes\", \"tone\": \"{tone}\", \"size\": 9\}\}]\}\}"]
+        drum (PINS) {
+            @at = beat - 1
+            parts = group.add(parts, "\{\"box\": \{\"at\": [{at}, 4], \"width\": 2, \"height\": 6, \"fill\": \"{tone}\", \"gap\": 0\}\}")
+            parts = group.add(parts, "\{\"box\": \{\"at\": [{at}, 38], \"width\": 2, \"height\": 6, \"fill\": \"{tone}\", \"gap\": 0\}\}")
+            parts = group.add(parts, "\{\"box\": \{\"at\": [4, {at}], \"width\": 6, \"height\": 2, \"fill\": \"{tone}\", \"gap\": 0\}\}")
+            parts = group.add(parts, "\{\"box\": \{\"at\": [38, {at}], \"width\": 6, \"height\": 2, \"fill\": \"{tone}\", \"gap\": 0\}\}")
+        }
+        @inside = calls.join(parts)
+        out "\{\"box\": \{\"width\": 48, \"height\": 48, \"gap\": 0, \"children\": [{inside}]\}\}"
+    }
+
+    skill tile(item) {
+        @name = group.get(item, 0)
+        @fill = "raise"
+        @edge = "line"
+        @tone = "quiet"
+        (name == target) {
+            fill = "accent_soft"
+            edge = "accent"
+            tone = "accent"
+        }
+        @title = calls.call("words", [["text", calls.quoted(group.get(item, 2))], ["tone", calls.quoted("ink")], ["weight", calls.quoted("bold")], ["grow", "0"]])
+        @note = calls.call("hint", [["text", calls.quoted(group.get(item, 3))]])
+        @drawn = chip(group.get(item, 1), tone)
+        @inside = "\{\"box\": \{\"padding\": 8, \"gap\": 4, \"align\": \"center\", \"children\": [{title}, {note}, {drawn}]\}\}"
+        @look = calls.call("cell", [["fill", calls.quoted(fill)], ["edge", calls.quoted(edge)], ["border", "1"], ["grow", "0"], ["children", "[{inside}]"]])
+        out "\{\"box\": \{\"id\": \"{AIM}{name}\", \"width\": {TILE}, \"gap\": 0, \"children\": [{look}]\}\}"
+    }
+
+    skill tools() {
+        @go = calls.call("pill-go", [["text", calls.quoted("собрать")]])
+        @run = calls.call("pill", [["text", calls.quoted("запустить")]])
+        @parts = [calls.call("caption", [["text", calls.quoted("цель")]])]
+        @row = []
+        drum (TARGETS) {
+            row = group.add(row, tile(beat))
+            (group.count(row) == 2) {
+                @pair = calls.join(row)
+                parts = group.add(parts, "\{\"box\": \{\"flow\": \"row\", \"gap\": 8, \"children\": [{pair}]\}\}")
+                row = []
+            }
+        }
+        (group.count(row) > 0) {
+            @rest = calls.join(row)
+            parts = group.add(parts, "\{\"box\": \{\"flow\": \"row\", \"gap\": 8, \"children\": [{rest}]\}\}")
+        }
+        parts = group.add(parts, "\{\"box\": \{\"height\": 8, \"gap\": 0\}\}")
+        parts = group.add(parts, "\{\"box\": \{\"id\": \"{BUILD}\", \"flow\": \"row\", \"gap\": 0, \"children\": [{go}]\}\}")
+        parts = group.add(parts, "\{\"box\": \{\"id\": \"{RUN}\", \"flow\": \"row\", \"gap\": 0, \"children\": [{run}]\}\}")
+        @inside = calls.join(parts)
+        out "\{\"plate\": \{\"tone\": \"panel\", \"children\": [\{\"box\": \{\"width\": {TOOLS}, \"padding\": 12, \"gap\": 8, \"grow\": 1, \"children\": [{inside}]\}\}]\}\}"
+    }
+
+    skill jtml() {
+        @upright = calls.call("bar", [["width", "1"], ["tone", calls.quoted("line")]])
+        @inside = calls.join([side(), upright, journal(), upright, tools()])
+        out "\{\"box\": \{\"flow\": \"row\", \"grow\": 1, \"gap\": 0, \"children\": [{inside}]\}\}"
+    }
+}

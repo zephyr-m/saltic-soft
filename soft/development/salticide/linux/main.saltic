@@ -8,7 +8,9 @@
 -- (page.click); колесо — прокрутка дерева файлов или кода, где стоит мышь
 -- (page.wheel); Ctrl+щелчок по имени — к его определению (lens/jump, тот же,
 -- что у VS Code); набор и клавиши — правка (page.typed, page.press); Ctrl+S —
--- сохранить активный файл (disk.write); Esc — выход. Выход (Esc или «×»), когда
+-- сохранить активный файл (disk.write); Esc — выход (сначала закрывает меню и
+-- поле имени); меню в шапке, Ctrl+N — новый проект, Ctrl+W — закрыть вкладку,
+-- F5 / Ctrl+F5 — собрать / запустить (пока макет, page.act). Выход (Esc или «×»), когда
 -- есть несохранённое, — сначала предупреждение в полосе, выход со второго раза.
 -- Файлы — с диска (salticide/linux/disk): дерево от папки запуска; папка —
 -- раскрыть, файл — во вкладку, крестик — закрыть. Поменялось — экран заново.
@@ -214,9 +216,24 @@ Window = Box {
                             save()
                             changed = yes
                         }
+                        (beat.text == "n") {
+                            view.wanted = "new"
+                            changed = yes
+                        }
+                        (beat.text == "w") {
+                            view.act("close")
+                            changed = yes
+                        }
+                        (beat.text == "f5") {
+                            view.act("run")
+                            changed = yes
+                        }
                     }
                     (view.press(beat.text) == yes) {
                         changed = yes
+                    }
+                    (beat.text == "escape") {
+                        closing = yes
                     }
                 }
             }
@@ -226,6 +243,13 @@ Window = Box {
                 changed = yes
             }
         }
+        ((view.wanted == "") == no) {
+            changed = yes
+        }
+        (view.wanted == "save") { save() }
+        (view.wanted == "quit") { closing = yes }
+        (view.wanted == "new") { view.offer(files.project_places()) }
+        view.wanted = ""
         (closing == yes) {
             (leaving() == yes) {
                 out no

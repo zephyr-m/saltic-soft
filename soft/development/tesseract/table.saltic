@@ -1,0 +1,71 @@
+-- table — таблица чисел в своей памяти (memfd): строки по columns чисел, не
+-- больше capacity строк. Для того, что меняется каждый кадр: запись в готовую
+-- память, ни одной новой группы — поля долгого Box не растут и не текут.
+-- Число хранится со сдвигом BIAS: от −BIAS до BIAS − 1.
+--
+-- Table { memory, columns, capacity, count } — memory — адрес числом
+--     cleared() — строк ноль
+--     added(row) — строка [число, …] в конец; TableFull — места нет
+--     at(index, column) -> число; put(index, column, value) — записать
+-- table_of(name, columns, capacity) -> Table; TableFailed — память не дали
+-- BIAS — сдвиг хранения
+
+use core.mem
+use core.num
+use core.u32
+use core.group
+use core.usize
+use core.socket
+use core.address
+
+BIAS = 1073741824
+
+Table = Box {
+    memory = 0,
+    columns = 1,
+    capacity = 0,
+    count = 0
+
+    skill cleared() {
+        count = 0
+    }
+
+    skill added(row) {
+        (count >= capacity) {
+            out error.TableFull
+        }
+        drum (columns) {
+            put(count, beat, group.get(row, beat))
+        }
+        count = count + 1
+    }
+
+    skill at(index, column) {
+        out num.from(mem.load32(address.from(memory), usize.from((index * columns + column) * 4))) - BIAS
+    }
+
+    skill put(index, column, value) {
+        mem.store32(address.from(memory), usize.from((index * columns + column) * 4), u32.from(value + BIAS))
+    }
+}
+
+skill table_of(name, columns, capacity) {
+    @bytes = columns * capacity * 4
+    @fd = socket.memory(name)
+    (fd < 0) {
+        out error.TableFailed
+    }
+    (socket.resize(fd, bytes) < 0) {
+        out error.TableFailed
+    }
+    @memory = socket.map(fd, bytes)
+    (memory < 0) {
+        out error.TableFailed
+    }
+    out Table {
+        memory = memory,
+        columns = columns,
+        capacity = capacity,
+        count = 0
+    }
+}

@@ -115,7 +115,7 @@ Catalog = Box {
 
     skill about_of(text) {
         @lines = []
-        drum (str.rows(text)) {
+        drum (str.lines(text)) {
             (str.starts_with(beat, "--") == no) {
                 out lines
             }

@@ -2,16 +2,22 @@
 -- синус и косинус считаются раз на поворот и хранятся целыми ×SCALE; сама
 -- проекция — в целых: мир — тысячные доли единицы, экран — точки.
 --
--- Camera { yaw, pitch, distance, pan_x, pan_y, center_x, center_y, focal,
---     cos_yaw, sin_yaw, cos_pitch, sin_pitch } — distance — до центра, ×1000
+-- Camera { yaw, pitch, yaw_raw, pitch_raw, flat, distance, pan_x, pan_y, center_x,
+--     center_y, focal, cos_yaw, sin_yaw, cos_pitch, sin_pitch } — yaw_raw,
+--     pitch_raw — куда натянула мышь, yaw, pitch — они же с магнитом к ровным
+--     углам; flat — yes: прямая проекция (без перспективы, как чертёж);
+--     distance — до центра, ×1000
 --     aimed(width, height) — центр и фокус по размеру окна
---     turned() — пересчитать синусы после поворота
+--     turned() — магнит и синусы после поворота
 --     dragged_by(dx, dy) — тяга левой: вправо — поворот, вниз — наклон вверх
+--     faced(view) — ровный вид: FRONT, SIDE, TOP; flattened() — перспектива ↔ прямая
+--     snapped(angle) -> angle, а в SNAP от кратного четверти оборота — оно само
 --     moved_by(dx, dy) — тяга средней: сдвиг картинки
 --     zoomed(steps) — колесо: вниз — дальше, вверх — ближе
 --     seen(x, y, z) -> [экранный x, экранный y, глубина ×1000]
 -- SCALE — множитель целых синусов; TURN — радиан на точку тяги; NEAREST,
---     FARTHEST — пределы расстояния
+--     FARTHEST — пределы расстояния; QUARTER — четверть оборота; SNAP — ширина
+--     магнита; FRONT, SIDE, TOP — виды
 
 use core.num
 use core.fraction
@@ -20,10 +26,18 @@ SCALE = 4096
 TURN = 0.008
 NEAREST = 2400
 FARTHEST = 9000
+QUARTER = 1.5707963
+SNAP = 0.04
+FRONT = 0
+SIDE = 1
+TOP = 2
 
 Camera = Box {
     yaw = -0.3,
     pitch = 0.3,
+    yaw_raw = -0.3,
+    pitch_raw = 0.3,
+    flat = no,
     distance = 5200,
     pan_x = 0,
     pan_y = 0,
@@ -45,7 +59,18 @@ Camera = Box {
         turned()
     }
 
+    skill snapped(angle) {
+        @near = fraction.from(num.round_school(angle / QUARTER)) * QUARTER
+        @gap = angle - near
+        ((gap < SNAP) ○ (gap > 0.0 - SNAP)) {
+            out near
+        }
+        out angle
+    }
+
     skill turned() {
+        yaw = snapped(yaw_raw)
+        pitch = snapped(pitch_raw)
         @scale = fraction.from(SCALE)
         cos_yaw = num.round_school(fraction.cos(yaw) * scale)
         sin_yaw = num.round_school(fraction.sin(yaw) * scale)
@@ -54,15 +79,33 @@ Camera = Box {
     }
 
     skill dragged_by(dx, dy) {
-        yaw = yaw + fraction.from(dx) * TURN
-        pitch = pitch - fraction.from(dy) * TURN
-        (pitch > 1.4) {
-            pitch = 1.4
+        yaw_raw = yaw_raw + fraction.from(dx) * TURN
+        pitch_raw = pitch_raw - fraction.from(dy) * TURN
+        (pitch_raw > QUARTER) {
+            pitch_raw = QUARTER
         }
-        (pitch < -1.4) {
-            pitch = -1.4
+        (pitch_raw < 0.0 - QUARTER) {
+            pitch_raw = 0.0 - QUARTER
         }
         turned()
+    }
+
+    skill faced(view) {
+        yaw_raw = 0.0
+        pitch_raw = 0.0
+        (view == SIDE) {
+            yaw_raw = QUARTER
+        }
+        (view == TOP) {
+            pitch_raw = QUARTER
+        }
+        pan_x = 0
+        pan_y = 0
+        turned()
+    }
+
+    skill flattened() {
+        flat = (flat == no)
     }
 
     skill moved_by(dx, dy) {
@@ -89,6 +132,10 @@ Camera = Box {
         (depth < 300) {
             depth = 300
         }
-        out [center_x + pan_x + x1 * focal / depth, center_y + pan_y - y2 * focal / depth, depth]
+        @lens = depth
+        (flat == yes) {
+            lens = distance
+        }
+        out [center_x + pan_x + x1 * focal / lens, center_y + pan_y - y2 * focal / lens, depth]
     }
 }

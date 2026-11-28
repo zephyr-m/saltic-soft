@@ -1,0 +1,148 @@
+-- wizard — мастер нового проекта SalticIDE, два шага на всю рабочую область:
+-- ① что делаем — вид проекта карточкой (KINDS: окно, консоль, библиотека,
+-- железо; от вида — файлы и пакеты), ② как зовут и где — имя (набор с
+-- клавиатуры), папка (щелчок — следующая из places) и что будет создано.
+-- Цель сборки здесь не выбирается: она у сборки (решение автора 27.11.2026).
+--
+-- Wizard { open, step, kind, draft, places, place } — открыт ли, шаг 1 или 2,
+--     вид, набранное имя, папки на выбор и номер выбранной; jtml() -> JTML
+-- KIND — начало id карточки вида; NEXT, BACK, CREATE, CANCEL, PLACE — id кнопок
+-- launch(places) — открыть с первого шага; folder() -> папка нового проекта;
+--     planned() -> [[файл, что в нём]] по виду
+-- Внутри: card(item) — карточка вида; button(id, text, go) — кнопка;
+--     labeled(text, value) — строка с подписью слева; first(),
+--     second() — тело шага; steps() — строка шагов
+
+use core.group
+use tarantul.uiengine.jtml.calls
+
+KIND = "kind:"
+NEXT = "wizard-next"
+BACK = "wizard-back"
+CREATE = "wizard-create"
+CANCEL = "wizard-cancel"
+PLACE = "wizard-place"
+KINDS = [["window", "app-window", "Окно", "программа с экраном"], ["console", "square-terminal", "Консоль", "ввод и вывод текстом"], ["library", "package", "Библиотека", "пакет для реестра"], ["hardware", "cpu", "Железо", "ESP32, Acer — без ОС"]]
+CARD = 190
+
+Wizard = Box {
+    open = no,
+    step = 1,
+    kind = "window",
+    draft = "",
+    places = ["."],
+    place = 0
+
+    skill launch(choices) {
+        open = yes
+        step = 1
+        draft = ""
+        places = choices
+        place = 0
+        out none
+    }
+
+    skill folder() {
+        @base = group.get(places, place)
+        (base == ".") {
+            out draft
+        }
+        out "{base}/{draft}"
+    }
+
+    skill planned() {
+        (kind == "console") {
+            out [["main.saltic", "program() с io.show"], ["tarantul.json", "без пакетов"]]
+        }
+        (kind == "library") {
+            out [["{draft}.saltic", "навыки пакета"], ["{draft}.passport.json", "паспорт пакета для реестра"]]
+        }
+        (kind == "hardware") {
+            out [["main.saltic", "program() на прошивке, без ОС"], ["tarantul.json", "адаптеры firmware и gop"]]
+        }
+        out [["main.saltic", "program() с окном и always"], ["tarantul.json", "wayland 4, graphics 4, input 5, uiengine 7"]]
+    }
+
+    skill card(item) {
+        @name = group.get(item, 0)
+        @fill = "raise"
+        @edge = "line"
+        (name == kind) {
+            fill = "accent_soft"
+            edge = "accent"
+        }
+        @icon = calls.call("glyph", [["icon", calls.quoted(group.get(item, 1))], ["tone", calls.quoted("accent")], ["size", "22"]])
+        @title = calls.call("words", [["text", calls.quoted(group.get(item, 2))], ["tone", calls.quoted("ink")], ["weight", calls.quoted("bold")], ["grow", "0"]])
+        @note = calls.call("hint", [["text", calls.quoted(group.get(item, 3))]])
+        @inside = "\{\"box\": \{\"height\": 110, \"padding\": 14, \"gap\": 8, \"children\": [{icon}, {title}, {note}]\}\}"
+        @look = calls.call("cell", [["fill", calls.quoted(fill)], ["edge", calls.quoted(edge)], ["border", "1"], ["grow", "0"], ["children", "[{inside}]"]])
+        out "\{\"box\": \{\"id\": \"{KIND}{name}\", \"width\": {CARD}, \"gap\": 0, \"children\": [{look}]\}\}"
+    }
+
+    skill button(id, text, go) {
+        @kind_name = "pill"
+        (go == yes) {
+            kind_name = "pill-go"
+        }
+        @look = calls.call(kind_name, [["text", calls.quoted(text)]])
+        out "\{\"box\": \{\"id\": \"{id}\", \"flow\": \"row\", \"gap\": 0, \"children\": [{look}]\}\}"
+    }
+
+    skill steps() {
+        @one = "quiet"
+        @two = "ink"
+        (step == 1) {
+            one = "ink"
+            two = "quiet"
+        }
+        @title = calls.call("words", [["text", calls.quoted("Новый проект")], ["tone", calls.quoted("ink")], ["weight", calls.quoted("bold")], ["grow", "1"]])
+        @first_step = calls.call("words", [["text", calls.quoted("① что")], ["tone", calls.quoted(one)], ["weight", calls.quoted("regular")], ["grow", "0"]])
+        @second_step = calls.call("words", [["text", calls.quoted("② как зовут и где")], ["tone", calls.quoted(two)], ["weight", calls.quoted("regular")], ["grow", "0"]])
+        out "\{\"box\": \{\"flow\": \"row\", \"gap\": 16, \"align\": \"center\", \"children\": [{title}, {first_step}, {second_step}]\}\}"
+    }
+
+    skill first() {
+        @cards = []
+        drum (KINDS) {
+            cards = group.add(cards, card(beat))
+        }
+        @row = calls.join(cards)
+        @question = calls.call("caption", [["text", calls.quoted("что делаем")]])
+        @buttons = calls.join(["\{\"box\": \{\"grow\": 1, \"gap\": 0\}\}", button(CANCEL, "отмена", no), button(NEXT, "дальше →", yes)])
+        out "{question}, \{\"box\": \{\"flow\": \"row\", \"gap\": 12, \"children\": [{row}]\}\}, \{\"box\": \{\"flow\": \"row\", \"gap\": 8, \"children\": [{buttons}]\}\}"
+    }
+
+    skill labeled(text, value) {
+        @label = calls.call("label", [["text", calls.quoted(text)]])
+        out "\{\"box\": \{\"flow\": \"row\", \"gap\": 12, \"align\": \"center\", \"children\": [\{\"box\": \{\"width\": 70, \"gap\": 0, \"children\": [{label}]\}\}, {value}]\}\}"
+    }
+
+    skill second() {
+        @typed = calls.call("words", [["text", calls.quoted("{draft}▏")], ["tone", calls.quoted("ink")], ["weight", calls.quoted("regular")], ["grow", "1"]])
+        @line = "\{\"box\": \{\"flow\": \"row\", \"height\": 36, \"padding\": [0, 12, 0, 12], \"align\": \"center\", \"gap\": 0, \"children\": [{typed}]\}\}"
+        @field = calls.call("cell", [["fill", calls.quoted("well")], ["edge", calls.quoted("accent")], ["border", "1"], ["grow", "1"], ["children", "[{line}]"]])
+        @named = labeled("имя", field)
+        @base = group.get(places, place)
+        @placed = labeled("папка", button(PLACE, "{base}/  ▾", no))
+        @made = folder()
+        @lines = [calls.call("caption", [["text", calls.quoted("будет создано")]]), calls.call("console-line", [["text", calls.quoted("{made}/")], ["tone", calls.quoted("ink")], ["size", "13"]])]
+        drum (planned()) {
+            @file_name = group.get(beat, 0)
+            lines = group.add(lines, calls.call("log-line", [["time", calls.quoted("    {file_name}")], ["text", calls.quoted(group.get(beat, 1))], ["tone", calls.quoted("quiet")]]))
+        }
+        @shown = calls.join(lines)
+        @buttons = calls.join(["\{\"box\": \{\"grow\": 1, \"gap\": 0\}\}", button(BACK, "← назад", no), button(CREATE, "создать", yes)])
+        out "{named}, {placed}, \{\"box\": \{\"gap\": 6, \"padding\": [8, 0, 8, 0], \"children\": [{shown}]\}\}, \{\"box\": \{\"flow\": \"row\", \"gap\": 8, \"children\": [{buttons}]\}\}"
+    }
+
+    skill jtml() {
+        @body = first()
+        (step == 2) {
+            body = second()
+        }
+        @head = steps()
+        @inside = "\{\"box\": \{\"width\": 830, \"padding\": 24, \"gap\": 18, \"children\": [{head}, {body}]\}\}"
+        @card = calls.call("cell", [["fill", calls.quoted("panel")], ["edge", calls.quoted("line")], ["border", "1"], ["grow", "0"], ["children", "[{inside}]"]])
+        out "\{\"box\": \{\"grow\": 1, \"justify\": \"center\", \"align\": \"center\", \"gap\": 0, \"children\": [{card}]\}\}"
+    }
+}

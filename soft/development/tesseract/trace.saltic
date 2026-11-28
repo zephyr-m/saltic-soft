@@ -5,10 +5,11 @@
 -- (шапка, график) отрезки не задевают. Цвета — сплошные: полупрозрачное чисто
 -- не погасить.
 --
--- Trace { canvas, marks, stamp, old, fresh, places } — canvas — куда рисовать;
---     marks — слой отметок того же stride, что canvas; old / fresh — отрезки
---     [x0, y0, x1, y1] и крестики [x, y] прошлого и этого кадра; places — места
---     «навсегда» [x, y, ширина, высота]
+-- Trace { canvas, marks, stamp, banks, now, places } — canvas — куда рисовать;
+--     marks — слой отметок того же stride, что canvas; banks — две table.Table
+--     штрихов [вид, x0, y0, x1, y1] (вид LINE или DOT): now — этого кадра,
+--     другая — прошлого; places — места «навсегда» [x, y, ширина, высота]
+--     banked(name) — банки в своей памяти, до первого кадра
 --     began() — новый кадр; line(x0, y0, x1, y1, value) — отрезок с отметкой
 --     dot(x, y, value) — крестик в 5 точек с отметкой
 --     finished(background) — погасить старое фоном
@@ -19,7 +20,10 @@
 -- canvas_of(name, width, height, format) -> graphics.Screen в своей памяти (memfd);
 --     CanvasFailed — память не дали
 -- put(from, to, x, y) — холст from целиком на холст to в (x, y), за краем — ничего
--- FOREVER — отметка «навсегда»; FIRST — отметка первого кадра; CROSS — точки крестика
+-- copied(from, to, x, y, width, height) — кусок с from на то же место to
+--     (холсты одного размера), за краем — ничего
+-- FOREVER — отметка «навсегда»; FIRST — отметка первого кадра; CROSS — точки
+--     крестика; LINE, DOT — виды штриха; STROKES — штрихов в банке
 
 use core.mem
 use core.num
@@ -29,31 +33,42 @@ use core.group
 use core.socket
 use core.address
 use tarantul.graphics.graphics
+use soft.development.tesseract.table
 
 FOREVER = 1
 FIRST = 2
 CROSS = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]]
+LINE = 4
+DOT = 2
+STROKES = 8192
 
 Trace = Box {
     canvas = graphics.Screen {},
     marks = graphics.Screen {},
     stamp = FIRST,
-    old = [],
-    fresh = [],
+    banks = [],
+    now = 0,
     places = []
+
+    skill banked(name) {
+        banks = [table.table_of("{name}-a", 5, STROKES), table.table_of("{name}-b", 5, STROKES)]
+    }
 
     skill began() {
         stamp = stamp + 1
-        fresh = []
+        @fresh = group.get(banks, now)
+        fresh.cleared()
     }
 
     skill line(x0, y0, x1, y1, value) {
-        fresh = group.add(fresh, [x0, y0, x1, y1])
+        @fresh = group.get(banks, now)
+        fresh.added([LINE, x0, y0, x1, y1])
         walk(x0, y0, x1, y1, value, yes)
     }
 
     skill dot(x, y, value) {
-        fresh = group.add(fresh, [x, y])
+        @fresh = group.get(banks, now)
+        fresh.added([DOT, x, y, 0, 0])
         cross(x, y, value, yes)
     }
 
@@ -89,16 +104,17 @@ Trace = Box {
     }
 
     skill finished(background) {
-        drum (old) {
-            (group.count(beat) == 2) {
-                cross(group.get(beat, 0), group.get(beat, 1), background, no)
+        @old = group.get(banks, 1 - now)
+        drum (old.count) {
+            (old.at(beat, 0) == DOT) {
+                cross(old.at(beat, 1), old.at(beat, 2), background, no)
             }
-            (group.count(beat) == 4) {
-                walk(group.get(beat, 0), group.get(beat, 1), group.get(beat, 2), group.get(beat, 3), background, no)
+            (old.at(beat, 0) == LINE) {
+                walk(old.at(beat, 1), old.at(beat, 2), old.at(beat, 3), old.at(beat, 4), background, no)
             }
         }
-        old = fresh
-        fresh = []
+        old.cleared()
+        now = 1 - now
     }
 
     skill forgot() {
@@ -106,8 +122,9 @@ Trace = Box {
         drum (places) {
             graphics.fill(marks, group.get(beat, 0), group.get(beat, 1), group.get(beat, 2), group.get(beat, 3), FOREVER)
         }
-        old = []
-        fresh = []
+        drum (banks) {
+            beat.cleared()
+        }
     }
 
     skill kept(x, y, width, height) {
@@ -134,7 +151,7 @@ Trace = Box {
         }
         @x = x0
         @y = y0
-        @error = dx - dy
+        @drift = dx - dy
         @base = address.from(canvas.memory)
         @field = address.from(marks.memory)
         @point = u32.from(value)
@@ -158,13 +175,13 @@ Trace = Box {
                     }
                 }
             }
-            @twice = error * 2
+            @twice = drift * 2
             (twice > 0 - dy) {
-                error = error - dy
+                drift = drift - dy
                 x = x + step_x
             }
             (twice < dx) {
-                error = error + dx
+                drift = drift + dx
                 y = y + step_y
             }
         }
@@ -193,6 +210,28 @@ skill canvas_of(name, width, height, format) {
         memory = memory,
         accel = [],
         vsync = no
+    }
+}
+
+skill copied(from, to, x, y, width, height) {
+    @source = address.from(from.memory)
+    @target = address.from(to.memory)
+    @left = x
+    @right = x + width
+    (left < 0) {
+        left = 0
+    }
+    (right > from.width) {
+        right = from.width
+    }
+    drum (height) {
+        @row = y + beat
+        (((row >= 0) ○ (row < from.height)) ○ (left < right)) {
+            drum (right - left) {
+                @at = usize.from((row * from.stride + left + beat) * graphics.PIXEL_BYTES)
+                mem.store32(target, at, mem.load32(source, at))
+            }
+        }
     }
 }
 

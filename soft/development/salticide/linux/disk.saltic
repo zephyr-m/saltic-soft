@@ -3,7 +3,7 @@
 -- сверху, потом файлы, по алфавиту байтов; скрытые (с точки) не видны.
 -- Раскрытые папки — opened, щелчок переключает. Файл читается текстом, если
 -- его окончание из TEXTS; иначе и при ошибке чтения — одна строка с причиной.
--- Строки — str.rows, точно как в файле, с пустыми: сохранение возвращает
+-- Строки — str.lines, точно как в файле, с пустыми: сохранение возвращает
 -- файл байт в байт. Длинный файл — первые LIMIT строк и строка, сколько не показано; такой,
 -- как и не текст, — только читать (whole no), иначе сохранение отрезало бы
 -- хвост.
@@ -14,6 +14,8 @@
 -- toggle(path) — раскрыть или свернуть папку
 -- read(path) -> Text
 -- write(path, lines) — записать строки, склеив через «\n»
+-- project_places() -> папки для нового проекта: корень «.», папки корня и их папки
+--     (скрытые не видны); folders_in(place) -> папки внутри place по алфавиту
 -- Внутри: walk(folder, depth) -> строки поддерева; folder(path) -> yes, если
 --     папка; sorted(names) — по алфавиту байтов; before(a, b) -> yes/no
 
@@ -93,6 +95,28 @@ Disk = Box {
         out made
     }
 
+    skill folders_in(place) {
+        @names = file.list(place) rescue |err| { out [] }
+        @found = []
+        drum (sorted(names)) {
+            ((str.byte(beat, 0) == HIDDEN) == no) {
+                @path = beat
+                ((place == ".") == no) { path = "{place}/{beat}" }
+                (folder(path) == yes) { found = group.add(found, path) }
+            }
+        }
+        out found
+    }
+
+    skill project_places() {
+        @found = ["."]
+        drum (folders_in(".")) {
+            found = group.add(found, beat)
+            found = group.concat(found, folders_in(beat))
+        }
+        out found
+    }
+
     skill rows() {
         out walk(".", 0)
     }
@@ -125,7 +149,7 @@ Disk = Box {
                 lines = ["-- {path}: не прочитан ({err})"]
             }
         }
-        @lines = str.rows(text)
+        @lines = str.lines(text)
         @count = group.count(lines)
         (count <= LIMIT) {
             out Text {

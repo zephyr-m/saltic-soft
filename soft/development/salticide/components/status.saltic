@@ -1,21 +1,44 @@
--- status — нижняя полоса SalticIDE: слева сообщение окна (сохранено, только
+-- status — нижняя полоса SalticIDE, как на сайте: слева режимы окна («код»,
+-- «сборка» — щелчок переключает), дальше сообщение окна (сохранено, только
 -- чтение, не сохранён), справа место курсора «строка:столбец». Показывает
--- только правду: ветка, цель и ошибки появятся, когда их будет откуда взять
--- (решение автора 21.11.2026 — муляж убрать). Вид — plate панели с жителями
--- status.
+-- только правду: ветка и цель появятся, когда их будет откуда взять
+-- (решение автора 21.11.2026 — муляж убрать). У «сборки» — отметка mark
+-- последней сборки («✓», «✗3»; "" — ещё не собирали).
 --
--- StatusBar { place, note } — место курсора и сообщение ("" — нет);
---     jtml() -> текст JTML
+-- StatusBar { place, note, mode, mark } — место курсора, сообщение ("" — нет),
+--     режим (CODE или BUILD), отметка сборки; jtml() -> текст JTML
+-- MODE — начало id режима (дальше CODE или BUILD)
+-- Внутри: mode_tab(name, icon, text) — вкладка режима, выбранная — житель mode-active
 
 use core.group
 use tarantul.uiengine.jtml.calls
 
+MODE = "mode:"
+CODE = "code"
+BUILD = "build"
+
 StatusBar = Box {
     place = "1:1",
-    note = ""
+    note = "",
+    mode = "code",
+    mark = ""
+
+    skill mode_tab(name, icon, text) {
+        @kind = "mode"
+        (name == mode) {
+            kind = "mode-active"
+        }
+        @look = calls.call(kind, [["text", calls.quoted(text)], ["icon", calls.quoted(icon)]])
+        out "\{\"box\": \{\"id\": \"{MODE}{name}\", \"gap\": 0, \"children\": [{look}]\}\}"
+    }
 
     skill jtml() {
-        @items = []
+        @label = "сборка"
+        ((mark == "") == no) {
+            label = "сборка {mark}"
+        }
+        @tabs = calls.join([mode_tab(CODE, "code", "код"), mode_tab(BUILD, "hammer", label)])
+        @items = [calls.call("cell", [["fill", calls.quoted("raise")], ["edge", calls.quoted("line")], ["border", "0"], ["grow", "0"], ["children", "[\{\"box\": \{\"flow\": \"row\", \"padding\": 3, \"gap\": 2, \"children\": [{tabs}]\}\}]"]])]
         ((note == "") == no) {
             items = group.add(items, calls.call("status", [["icon", calls.quoted("info")], ["text", calls.quoted(note)], ["tone", calls.quoted("ink")], ["mono", calls.quoted("no")]]))
         }

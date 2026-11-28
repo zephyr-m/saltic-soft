@@ -3,28 +3,30 @@
 -- осей, шапку и карточку клетки под указателем. Мир — тысячные доли единицы,
 -- цвет — только по смыслу (docs/design/LANGUAGE.md языка).
 --
--- Painter { canvas, screen, back, panel, delta, tracing, shape, eye, words, digits,
---     centers, taken, hover, rough, pulse } — canvas — куда рисуют части кадра;
---     screen — экран окна; back — полный кадр за кадром, на экран целиком;
---     panel — свой холст графика; delta — trace.Trace; tracing — экран держит
---     кадр движения; shape — skeleton.Skeleton, eye — camera.Camera, words /
---     digits — шрифты слов и моноширинный; centers — [x, y, по X, по Y, по Z]
---     клеток прошлого кадра; taken — места подписей кадра; hover — клетка под
---     указателем или []; rough — yes в движении; pulse — meter.Meter
---     prepared() — холсты и места «навсегда» после того, как дан canvas
+-- Painter { canvas, screen, back, clean, panel, delta, tracing, shape, eye, words,
+--     digits, spots, taken, hovering, hover_x/y/z, lit_x/y/w/h, rough, pulse } —
+--     canvas — куда рисуют части; screen — окно; back — кадр за кадром; clean —
+--     полный кадр без подсветки и карточки; panel — холст графика; delta —
+--     trace.Trace; tracing — экран держит кадр движения; shape, eye — скелет и
+--     камера; words / digits — шрифты; spots — table.Table [x, y, по X, Y, Z]
+--     клеток кадра; taken — table.Table мест подписей; hovering, hover_x/y/z —
+--     клетка под указателем; lit_* — рамка подсветки на экране (lit_w 0 — нет);
+--     rough — yes в движении; pulse — meter.Meter. За кадр — ни одной новой группы
+--     prepared() — холсты, таблицы и места «навсегда» после того, как дан canvas
 --     painted() — кадр: в покое полный за кадром, в движении — traced() дельтой
 --     traced() — рамки плит и крестики клеток сплошными цветами через delta
+--     highlighted() — подсветка и карточка; relit() — только они: старое место и
+--     карточка из clean, новое поверх, на экран — лишь эти куски
 --     hovered(x, y) -> yes, если под указателем другая клетка
 --     framed(start) — кадр, начатый в start, — в график
 --     axis_spread(axis, index) / axis_step(axis) -> место значения и шаг сетки
---     box_seen(x, y, z, hx, hy, hz) -> 8 углов на экране: низ 0–3, верх 4–7
---     box_lines(corners, value, alpha) — 12 рёбер
+--     box_seen(x, y, z, hx, hy, hz) -> 8 углов: низ 0–3, верх 4–7; box_lines(corners,
+--     value, alpha) — 12 рёбер; side_labels(axis, base) — подписи оси вдоль ребра
 --     slabs_drawn / cells_drawn / labels_drawn / title_drawn / card_drawn — части кадра
---     side_labels(axis, base) — подписи одной оси вдоль ребра
 --     text_at(face, x, y, text, size, ink) -> x после строки; label_fits(x, y, width,
 --     height) -> yes, если место свободно (и занимает его); rgb(red, green, blue) -> точка
--- STRETCH — полудлины осей ×1000; CELL — полкубика в процентах шага; SIGNS,
---     EDGES — углы и рёбра коробки
+-- STRETCH — полудлины осей ×1000; CELL — полкубика в процентах шага; CARD_WIDE,
+--     CARD_HIGH — карточка; TITLE_HIGH — высота шапки; SIGNS, EDGES — углы и рёбра
 
 use core.group
 use core.str
@@ -34,9 +36,13 @@ use soft.development.tesseract.skeleton
 use soft.development.tesseract.camera
 use soft.development.tesseract.meter
 use soft.development.tesseract.trace
+use soft.development.tesseract.table
 
 STRETCH = [1700, 1350, 800]
 CELL = 30
+CARD_WIDE = 380
+CARD_HIGH = 196
+TITLE_HIGH = 150
 SIGNS = [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1], [-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1]]
 EDGES = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]
 
@@ -44,6 +50,7 @@ Painter = Box {
     canvas = graphics.Screen {},
     screen = graphics.Screen {},
     back = graphics.Screen {},
+    clean = graphics.Screen {},
     panel = graphics.Screen {},
     delta = trace.Trace {},
     tracing = no,
@@ -51,9 +58,16 @@ Painter = Box {
     eye = camera.Camera {},
     words = typeface.Typeface {},
     digits = typeface.Typeface {},
-    centers = [],
-    taken = [],
-    hover = [],
+    spots = table.Table {},
+    taken = table.Table {},
+    hovering = no,
+    hover_x = 0,
+    hover_y = 0,
+    hover_z = 0,
+    lit_x = 0,
+    lit_y = 0,
+    lit_w = 0,
+    lit_h = 0,
     rough = no,
     pulse = meter.Meter {}
 
@@ -106,14 +120,14 @@ Painter = Box {
     }
 
     skill label_fits(x, y, width, height) {
-        drum (taken) {
-            @apart = ((x + width < group.get(beat, 0)) ○○ (group.get(beat, 2) < x))
-            @away = ((y + height < group.get(beat, 1)) ○○ (group.get(beat, 3) < y))
+        drum (taken.count) {
+            @apart = ((x + width < taken.at(beat, 0)) ○○ (taken.at(beat, 2) < x))
+            @away = ((y + height < taken.at(beat, 1)) ○○ (taken.at(beat, 3) < y))
             ((apart == no) ○ (away == no)) {
                 out no
             }
         }
-        taken = group.add(taken, [x, y, x + width, y + height])
+        taken.added([x, y, x + width, y + height])
         out yes
     }
 
@@ -148,7 +162,7 @@ Painter = Box {
         @wide = shape.dimension_size(shape.on_axis(0))
         @high = shape.dimension_size(shape.on_axis(1))
         @deep = shape.dimension_size(shape.on_axis(2))
-        centers = []
+        spots.cleared()
         drum (high) {
             @iy = beat
             drum (wide) {
@@ -166,18 +180,64 @@ Painter = Box {
                         alpha = 25
                     }
                     box_lines(box_seen(x, y, z, hx, hy, hz), ink, alpha)
-                    centers = group.add(centers, [group.get(middle, 0), group.get(middle, 1), ix, iy, beat])
+                    spots.added([group.get(middle, 0), group.get(middle, 1), ix, iy, beat])
                 }
             }
         }
-        (group.count(hover) == 3) {
-            @x = axis_spread(0, group.get(hover, 0))
-            @y = axis_spread(1, group.get(hover, 1))
-            @z = axis_spread(2, group.get(hover, 2))
-            @lit = box_seen(x, y, z, hx, hy, hz)
+    }
+
+    skill highlighted() {
+        lit_w = 0
+        (hovering == yes) {
+            @hx = axis_step(0) * CELL / 100
+            @hy = axis_step(1) * CELL / 100
+            @hz = axis_step(2) * CELL / 100
+            @lit = box_seen(axis_spread(0, hover_x), axis_spread(1, hover_y), axis_spread(2, hover_z), hx, hy, hz)
             graphics.canvas_polygon(canvas, [group.get(lit, 4), group.get(lit, 5), group.get(lit, 6), group.get(lit, 7)], rgb(76, 205, 255), 40)
             box_lines(lit, rgb(76, 205, 255), 255)
+            @x0 = group.get(group.get(lit, 0), 0)
+            @y0 = group.get(group.get(lit, 0), 1)
+            @x1 = x0
+            @y1 = y0
+            drum (lit) {
+                (group.get(beat, 0) < x0) {
+                    x0 = group.get(beat, 0)
+                }
+                (group.get(beat, 0) > x1) {
+                    x1 = group.get(beat, 0)
+                }
+                (group.get(beat, 1) < y0) {
+                    y0 = group.get(beat, 1)
+                }
+                (group.get(beat, 1) > y1) {
+                    y1 = group.get(beat, 1)
+                }
+            }
+            lit_x = x0 - 2
+            lit_y = y0 - 2
+            lit_w = x1 - x0 + 5
+            lit_h = y1 - y0 + 5
         }
+        card_drawn()
+    }
+
+    skill relit() {
+        @old_x = lit_x
+        @old_y = lit_y
+        @old_w = lit_w
+        @old_h = lit_h
+        @card_x = screen.width - 16 - CARD_WIDE
+        canvas = back
+        trace.copied(clean, back, old_x, old_y, old_w, old_h)
+        trace.copied(clean, back, card_x, 16, CARD_WIDE, CARD_HIGH)
+        highlighted()
+        trace.copied(back, screen, old_x, old_y, old_w, old_h)
+        trace.copied(back, screen, lit_x, lit_y, lit_w, lit_h)
+        trace.copied(back, screen, card_x, 16, CARD_WIDE, CARD_HIGH)
+        @meter_x = screen.width - 16 - meter.WIDE
+        @meter_y = screen.height - 16 - meter.HIGH
+        pulse.drawn(panel, digits)
+        trace.put(panel, screen, meter_x, meter_y)
     }
 
     skill side_labels(axis, base) {
@@ -236,7 +296,7 @@ Painter = Box {
         (group.get(eye.seen(x_edge, ground, 0), 2) > group.get(eye.seen(0 - x_edge, ground, 0), 2)) {
             near_x = 0 - x_edge
         }
-        taken = []
+        taken.cleared()
         side_labels(0, [0, ground, near_z])
         side_labels(2, [near_x, ground, 0])
         @accent = rgb(76, 205, 255)
@@ -260,25 +320,32 @@ Painter = Box {
 
     skill title_drawn() {
         @cells = shape.dimension_size(0) * shape.dimension_size(1) * shape.dimension_size(2)
-        graphics.blend(canvas, 16, 16, 430, 128, rgb(17, 23, 35), 235)
+        graphics.blend(canvas, 16, 16, 430, TITLE_HIGH, rgb(17, 23, 35), 235)
         @ink = rgb(238, 241, 246)
         @quiet = rgb(139, 148, 164)
         text_at(words, 32, 28, "Tesseract", 26, ink)
         text_at(digits, 32, 66, "скелет машины · клеток {cells} · пакетов пока нет", 12, quiet)
         text_at(digits, 32, 90, "тянуть — повернуть · средняя — сдвинуть · колесо — ближе", 12, quiet)
         text_at(digits, 32, 112, "1 — оси по кругу · 2 — X и Z местами · Esc — выход", 12, quiet)
+        text_at(digits, 32, 134, "3 спереди · 4 сбоку · 5 сверху · 6 — плоско / объём", 12, quiet)
     }
 
     skill card_drawn() {
-        (group.count(hover) == 0) {
+        (hovering == no) {
             out none
         }
-        @left = canvas.width - 16 - 380
-        graphics.blend(canvas, left, 16, 380, 196, rgb(24, 32, 48), 245)
+        @left = canvas.width - 16 - CARD_WIDE
+        graphics.blend(canvas, left, 16, CARD_WIDE, CARD_HIGH, rgb(24, 32, 48), 245)
         text_at(words, left + 16, 26, "Пустая клетка — сюда сядут пакеты", 15, rgb(238, 241, 246))
         drum (3) {
             @dimension = shape.on_axis(beat)
-            @index = group.get(hover, beat)
+            @index = hover_x
+            (beat == 1) {
+                index = hover_y
+            }
+            (beat == 2) {
+                index = hover_z
+            }
             @top = 58 + beat * 50
             text_at(digits, left + 16, top, shape.dimension_title(dimension), 11, rgb(93, 102, 117))
             text_at(words, left + 110, top - 2, shape.value_label(dimension, index), 14, rgb(238, 241, 246))
@@ -287,11 +354,14 @@ Painter = Box {
     }
 
     skill hovered(x, y) {
-        @found = []
+        @found = no
+        @fx = 0
+        @fy = 0
+        @fz = 0
         @best = 16
-        drum (centers) {
-            @dx = group.get(beat, 0) - x
-            @dy = group.get(beat, 1) - y
+        drum (spots.count) {
+            @dx = spots.at(beat, 0) - x
+            @dy = spots.at(beat, 1) - y
             (dx < 0) {
                 dx = 0 - dx
             }
@@ -300,30 +370,39 @@ Painter = Box {
             }
             (dx + dy < best) {
                 best = dx + dy
-                found = [group.get(beat, 2), group.get(beat, 3), group.get(beat, 4)]
+                found = yes
+                fx = spots.at(beat, 2)
+                fy = spots.at(beat, 3)
+                fz = spots.at(beat, 4)
             }
         }
-        (group.count(found) == group.count(hover)) {
-            @same = yes
-            drum (group.count(found)) {
-                ((group.get(found, beat) == group.get(hover, beat)) == no) {
-                    same = no
-                }
-            }
-            (same == yes) {
-                out no
+        @same = (found == hovering)
+        (found == yes) {
+            ((((fx == hover_x) ○ (fy == hover_y)) ○ (fz == hover_z)) == no) {
+                same = no
             }
         }
-        hover = found
+        (same == yes) {
+            out no
+        }
+        hovering = found
+        hover_x = fx
+        hover_y = fy
+        hover_z = fz
         out yes
     }
 
     skill prepared() {
         screen = canvas
         back = trace.canvas_of("tesseract-back", screen.width, screen.height, screen.format)
+        clean = trace.canvas_of("tesseract-clean", screen.width, screen.height, screen.format)
         panel = trace.canvas_of("tesseract-meter", meter.WIDE, meter.HIGH, screen.format)
         delta.marks = trace.canvas_of("tesseract-marks", screen.width, screen.height, screen.format)
-        delta.kept(16, 16, 430, 128)
+        spots = table.table_of("tesseract-spots", 5, 4096)
+        taken = table.table_of("tesseract-taken", 4, 256)
+        delta.banked("tesseract-strokes")
+        pulse.readied()
+        delta.kept(16, 16, 430, TITLE_HIGH)
         delta.kept(screen.width - 16 - meter.WIDE, screen.height - 16 - meter.HIGH, meter.WIDE, meter.HIGH)
     }
 
@@ -338,9 +417,10 @@ Painter = Box {
             cells_drawn()
             labels_drawn()
             title_drawn()
-            card_drawn()
             pulse.drawn(panel, digits)
             trace.put(panel, back, meter_x, meter_y)
+            trace.put(back, clean, 0, 0)
+            highlighted()
             trace.put(back, screen, 0, 0)
             tracing = no
             out none
@@ -390,7 +470,7 @@ Painter = Box {
         @wide = shape.dimension_size(shape.on_axis(0))
         @high = shape.dimension_size(shape.on_axis(1))
         @deep = shape.dimension_size(shape.on_axis(2))
-        centers = []
+        spots.cleared()
         drum (high) {
             @iy = beat
             drum (wide) {
@@ -398,7 +478,7 @@ Painter = Box {
                 drum (deep) {
                     @middle = eye.seen(axis_spread(0, ix), axis_spread(1, iy), axis_spread(2, beat))
                     delta.dot(group.get(middle, 0), group.get(middle, 1), ink)
-                    centers = group.add(centers, [group.get(middle, 0), group.get(middle, 1), ix, iy, beat])
+                    spots.added([group.get(middle, 0), group.get(middle, 1), ix, iy, beat])
                 }
             }
         }

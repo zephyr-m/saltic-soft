@@ -1,0 +1,94 @@
+-- menu — меню программы SalticIDE в шапке: «Файл» и «Сборка»; щелчок по имени
+-- раскрывает список под ним, по пункту — действие, мимо или Esc — закрыть.
+-- Список лежит поверх страницы (at), поэтому пункт ищется по месту щелчка,
+-- а не по цели jtml: под списком — строки кода со своими целями.
+--
+-- Menu { open, left } — раскрытое меню ("" — нет) и край его списка в точках
+-- NAME — начало id имени меню (дальше имя)
+-- titles() -> JTML имён для шапки; drop() -> JTML списка ("" — закрыто)
+-- unfold(name, x) — раскрыть name под x или закрыть, если оно уже раскрыто
+-- picked(x, y) -> действие пункта под точкой ("" — мимо); меню закрывается
+-- Внутри: items() -> пункты раскрытого: [действие, значок, текст, клавиши]
+
+use core.group
+use tarantul.uiengine.jtml.calls
+
+NAME = "menu:"
+NAMES = ["Файл", "Сборка"]
+FILE_ITEMS = [["new", "folder-plus", "Новый проект", "Ctrl+N"], ["save", "save", "Сохранить", "Ctrl+S"], ["close", "x", "Закрыть вкладку", "Ctrl+W"], ["quit", "log-out", "Выход", "Esc"]]
+BUILD_ITEMS = [["build", "hammer", "Собрать", "F5"], ["run", "play", "Запустить", "Ctrl+F5"]]
+TOP = 42
+PAD = 6
+ROW = 36
+WIDTH = 270
+
+Menu = Box {
+    open = "",
+    left = 0
+
+    skill items() {
+        (open == "Файл") {
+            out FILE_ITEMS
+        }
+        (open == "Сборка") {
+            out BUILD_ITEMS
+        }
+        out []
+    }
+
+    skill unfold(name, x) {
+        (open == name) {
+            open = ""
+            out none
+        }
+        open = name
+        left = x
+        out none
+    }
+
+    skill picked(x, y) {
+        @rows = items()
+        open = ""
+        (x < left) {
+            out ""
+        }
+        (x >= left + WIDTH) {
+            out ""
+        }
+        @at = (y - TOP - PAD - 1) / ROW
+        (y < TOP + PAD + 1) {
+            out ""
+        }
+        (at >= group.count(rows)) {
+            out ""
+        }
+        out group.get(group.get(rows, at), 0)
+    }
+
+    skill titles() {
+        @made = []
+        drum (NAMES) {
+            @tone = "quiet"
+            (beat == open) {
+                tone = "ink"
+            }
+            @words = calls.call("words", [["text", calls.quoted(beat)], ["tone", calls.quoted(tone)], ["weight", calls.quoted("regular")], ["grow", "0"]])
+            made = group.add(made, "\{\"box\": \{\"id\": \"{NAME}{beat}\", \"height\": 30, \"padding\": [0, 10, 0, 10], \"justify\": \"center\", \"gap\": 0, \"children\": [{words}]\}\}")
+        }
+        out calls.join(made)
+    }
+
+    skill drop() {
+        (open == "") {
+            out ""
+        }
+        @rows = []
+        drum (items()) {
+            rows = group.add(rows, calls.call("menu-row", [["id", calls.quoted("")], ["icon", calls.quoted(group.get(beat, 1))], ["text", calls.quoted(group.get(beat, 2))], ["count", calls.quoted(group.get(beat, 3))]]))
+        }
+        @inside = calls.join(rows)
+        @list = "\{\"box\": \{\"padding\": {PAD}, \"gap\": 0, \"children\": [{inside}]\}\}"
+        @card = calls.call("cell", [["fill", calls.quoted("raise")], ["edge", calls.quoted("line")], ["border", "1"], ["grow", "0"], ["children", "[{list}]"]])
+        out "\{\"box\": \{\"at\": [{left}, {TOP}], \"width\": {WIDTH}, \"gap\": 0, \"children\": [{card}]\}\}"
+    }
+}
